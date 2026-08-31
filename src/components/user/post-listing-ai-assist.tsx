@@ -29,6 +29,7 @@ import {
   isAiCategoryMismatch,
   isAiContentRestricted,
   isAiDailyLimitError,
+  jobPromptRequestsCoverImage,
   mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
@@ -188,7 +189,10 @@ export function PostListingAiAssist({
       setError(t.aiImport.formEmpty);
       return;
     }
-    let imageUrls = ready.imageUrls || [];
+    const keepJobCoverImage =
+      ready.category !== 'job-listings' ||
+      jobPromptRequestsCoverImage(accepted.sourcePrompt ?? draft.sourcePrompt ?? '');
+    let imageUrls = keepJobCoverImage ? ready.imageUrls || [] : [];
     const needsHost = imageUrls.some((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
     if (needsHost) {
       const folder = UPLOAD_FOLDER[ready.category] || 'listings';
@@ -316,15 +320,17 @@ export function PostListingAiAssist({
         return;
       }
 
-      const imageUrls =
-        uploadedUrls.length > 0
+      const keepJobCoverImage = category !== 'job-listings' || jobPromptRequestsCoverImage(trimmed);
+      const imageUrls = keepJobCoverImage
+        ? uploadedUrls.length > 0
           ? mergeAttachedImageUrls({
               remoteUrls: ready.imageUrls ?? [],
               uploadedUrls,
               roles: ready.imageRoles,
               max: category === 'professionals' ? 2 : 8,
             })
-          : (ready.imageUrls ?? []);
+          : (ready.imageUrls ?? [])
+        : [];
 
       let hostedUrls = imageUrls;
       const needsHost = imageUrls.some((u) => /^https?:\/\//i.test(u) && !isOurStorageUrl(u));
@@ -334,6 +340,9 @@ export function PostListingAiAssist({
       }
 
       const shaped = aiDraftToInitialListing({ ...ready, imageUrls: hostedUrls });
+      if (category === 'job-listings' && keepJobCoverImage && hostedUrls.length > 0) {
+        shaped.coverMode = 'image';
+      }
       const payload = liveListing ? mergeAiIntoListing(liveListing, shaped) : shaped;
 
       onApply(payload);

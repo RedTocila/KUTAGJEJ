@@ -108,6 +108,8 @@ type JobFormState = {
   industry: string;
   cityId: string;
   zoneId: string;
+  cityNameHint: string;
+  zoneNameHint: string;
   locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
@@ -126,6 +128,7 @@ type JobFormState = {
   responsibilities: string[];
   requirements: string[];
   benefitIds: string[];
+  customBenefitEnabled: boolean;
   customBenefit: string;
 };
 
@@ -137,6 +140,8 @@ function emptyForm(): JobFormState {
     industry: '',
     cityId: '',
     zoneId: '',
+    cityNameHint: '',
+    zoneNameHint: '',
     locationMode: '',
     mapsUrl: '',
     locationLat: null,
@@ -155,12 +160,21 @@ function emptyForm(): JobFormState {
     responsibilities: [],
     requirements: [],
     benefitIds: [],
+    customBenefitEnabled: false,
     customBenefit: '',
   };
 }
 
 function normalizeLines(lines: string[]): string[] {
   return lines.map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+function normalizeLocationName(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase('sq-AL')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
 }
 
 function buildBenefitsPayload(f: JobFormState): { id: string; label: string }[] {
@@ -170,7 +184,7 @@ function buildBenefitsPayload(f: JobFormState): { id: string; label: string }[] 
     if (preset) items.push({ id: preset.id, label: preset.label });
   }
   const custom = f.customBenefit.replace(/\s+/g, ' ').trim();
-  if (custom.length >= 3) {
+  if (f.customBenefitEnabled && custom.length >= 3) {
     items.push({ id: 'custom', label: custom });
   }
   return items;
@@ -230,6 +244,8 @@ function formFromListing(l: JobMineListing): JobFormState {
     industry: l.industry || '',
     cityId: l.cityId ? String(l.cityId) : '',
     zoneId: l.zoneId ? String(l.zoneId) : '',
+    cityNameHint: l.cityName ?? '',
+    zoneNameHint: l.zoneName ?? '',
     mapsUrl: l.mapsUrl ?? '',
     locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
@@ -248,6 +264,7 @@ function formFromListing(l: JobMineListing): JobFormState {
     responsibilities: (l.responsibilities?.length ? l.responsibilities : []) as string[],
     requirements: (l.requirements?.length ? l.requirements : []) as string[],
     benefitIds,
+    customBenefitEnabled: customBenefit.trim().length > 0,
     customBenefit,
   };
 }
@@ -286,7 +303,11 @@ export function JobListingForm({
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const formSnapshot = React.useMemo(
-    () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
+    () =>
+      ({
+        ...form,
+        imageUrls: form.coverMode === 'image' ? existingImageUrls : [],
+      }) as Record<string, unknown>,
     [form, existingImageUrls]
   );
   usePublishListingFormSnapshot(formSnapshot, !isEdit);
@@ -315,6 +336,31 @@ export function JobListingForm({
       cancelled = true;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!cities.length || form.locationMode === 'map') return;
+    const cityHint = normalizeLocationName(form.cityNameHint);
+    const zoneHint = normalizeLocationName(form.zoneNameHint);
+    if (!cityHint && !zoneHint) return;
+
+    const hintedCity = cityHint
+      ? cities.find((city) => normalizeLocationName(city.name) === cityHint)
+      : cities.find((city) => city.id === form.cityId);
+    if (!hintedCity) return;
+
+    const hintedZone = zoneHint
+      ? hintedCity.zones.find((zone) => normalizeLocationName(zone.name) === zoneHint)
+      : hintedCity.zones.find((zone) => zone.id === form.zoneId);
+    const nextZoneId = hintedZone?.id ?? (hintedCity.id === form.cityId ? form.zoneId : '');
+    if (form.cityId === hintedCity.id && form.zoneId === nextZoneId && form.locationMode === 'city') return;
+
+    setForm((previous) => ({
+      ...previous,
+      cityId: hintedCity.id,
+      zoneId: nextZoneId,
+      locationMode: 'city',
+    }));
+  }, [cities, form.cityId, form.cityNameHint, form.locationMode, form.zoneId, form.zoneNameHint]);
 
   React.useEffect(() => {
     if (!initialListing) return;
@@ -577,13 +623,24 @@ export function JobListingForm({
             />
           ))}
         </FormGroup>
-        <ListingTextField
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={form.customBenefitEnabled}
+              onChange={(e) => setForm((previous) => ({ ...previous, customBenefitEnabled: e.target.checked }))}
+            />
+          }
           label="Përfitim tjetër (opsional)"
-          value={form.customBenefit}
-          onChange={onField('customBenefit')}
-          fullWidth
-          placeholder="p.sh. Ditë pushimi shtesë"
         />
+        {form.customBenefitEnabled ? (
+          <ListingTextField
+            label="Përfitim tjetër"
+            value={form.customBenefit}
+            onChange={onField('customBenefit')}
+            fullWidth
+            placeholder="p.sh. Ditë pushimi shtesë"
+          />
+        ) : null}
       </ListingFormSection>
 
       <ListingFormSection>

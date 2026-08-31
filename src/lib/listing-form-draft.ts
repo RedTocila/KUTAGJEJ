@@ -30,13 +30,16 @@ const DEFAULT_SKIP_KEYS = new Set([
   'createdAt',
   'updatedAt',
   'imageUrls',
+  'coverMode',
+  'cityNameHint',
+  'zoneNameHint',
   'responseTimeHours',
 ]);
 
 /** True when the user (or AI) has filled more than known profile/location defaults. */
 export function listingFormHasUserProgress(
   snapshot: Record<string, unknown> | null | undefined,
-  extra?: { existingImageUrls?: string[]; images?: File[] },
+  extra?: { existingImageUrls?: string[]; images?: File[] }
 ): boolean {
   if (extra?.images && extra.images.length > 0) return true;
   if (extra?.existingImageUrls && extra.existingImageUrls.some(Boolean)) return true;

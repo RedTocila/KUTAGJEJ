@@ -993,7 +993,7 @@ async function enrichInstagramSnapshot(url, parentSignal) {
     const fromProfile = await fetchInstagramCarouselViaProfile(
       shortcode,
       graphql?.authorName || oembed?.authorName,
-      parentSignal,
+      parentSignal
     );
     if (fromProfile.length > imageUrls.length) {
       imageUrls = mergeImageUrlLists(fromProfile, imageUrls);
@@ -1377,6 +1377,9 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - Do NOT classify a vehicle as motorcycle from the word "motor" alone; "motor boat" / "motorboat" is a boat, and car engine text (e.g. "motor 2.0") is not a vehicle type.
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
   - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address + landmark → description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from street/neighborhood when obvious (Rruga e Kavajës → Tiranë).
+  - ALWAYS extract cityName and zoneName/neighborhood when they appear in the prompt, caption, or image. Return them separately so the form can select the matching city and zone; leave them empty when not supported by evidence.
+  - SEO JOB DESCRIPTION: when enough information is available, write a substantial, keyword-rich description (roughly 500–1100 characters) using the exact role, role synonyms, employer, city/zone, work arrangement, salary, responsibilities, requirements, shifts, and benefits. Use natural Albanian search phrases and structured bullets; never invent missing facts just to make it longer.
+  - JOB COVER IMAGE RULE: attached images are reference material for OCR and job information by default, not the listing cover. Set imageUrls to [] and imageRoles to [] unless the user explicitly asks to use the attached image as the cover (for example, "use this image as cover" / "përdor foton si kopertinë"). If explicitly requested, set the first attached image role to "cover".
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
 businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight
 professionals: title, description, category (konsulent|freelance|sherbim|kurse|dizajn-it|marketing|mjekesi|arsim), servicesHighlight, price, currency, contactPhone, responseTimeHours
@@ -2240,10 +2243,7 @@ function normalizeCarFormFields(form, snapshot, interpreted) {
   const normalizedVehicleType = normalizeVehicleTypeValue(form.vehicleType);
   const inferredVehicleType = inferVehicleTypeFromText(blob);
   let vehicleType = normalizedVehicleType || inferredVehicleType;
-  if (
-    inferredVehicleType === 'boat' ||
-    (inferredVehicleType === 'motorcycle' && normalizedVehicleType === 'car')
-  ) {
+  if (inferredVehicleType === 'boat' || (inferredVehicleType === 'motorcycle' && normalizedVehicleType === 'car')) {
     vehicleType = inferredVehicleType;
   }
   if (!vehicleType && VEHICLE_TYPE_VALUES.includes(String(form.vehicleType || '').trim())) {
@@ -2856,11 +2856,7 @@ async function compressAttachedVisionImage(img, parentSignal) {
 }
 
 /** Download a few scraped post photos so the model can visually identify vehicle type/make. */
-async function prepareSnapshotVisionImages(
-  snapshotImageUrls,
-  maxImages = MAX_SNAPSHOT_VISION_IMAGES,
-  signal,
-) {
+async function prepareSnapshotVisionImages(snapshotImageUrls, maxImages = MAX_SNAPSHOT_VISION_IMAGES, signal) {
   const cap = Math.max(0, Math.min(MAX_SNAPSHOT_VISION_IMAGES, Number(maxImages) || 0));
   const urls = Array.isArray(snapshotImageUrls) ? snapshotImageUrls : [];
   const out = [];
@@ -2895,15 +2891,11 @@ async function interpretListing({
   // When the user didn't attach photos, analyze the scraped post images with vision.
   let visionImages = userAttached;
   if (!visionImages.length && Array.isArray(snapshot?.imageUrls) && snapshot.imageUrls.length) {
-    visionImages = await prepareSnapshotVisionImages(
-      snapshot.imageUrls,
-      maxSnapshotVisionImages,
-      signal,
-    );
+    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls, maxSnapshotVisionImages, signal);
   } else if (visionImages.length) {
-    visionImages = (
-      await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img, signal)))
-    ).filter(Boolean);
+    visionImages = (await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img, signal)))).filter(
+      Boolean
+    );
   }
 
   const motorcycleMakes = makesForVehicleType('motorcycle')

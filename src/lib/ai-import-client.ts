@@ -1,6 +1,6 @@
-import { clientFetch } from '@/lib/api-client';
-import type { AiListingDraft } from '@/lib/ai-listing-draft';
 import type { ListingCategoryKey } from '@/types/listing-category';
+import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { clientFetch } from '@/lib/api-client';
 
 export type AiImageRole = 'cover' | 'profile' | 'gallery' | 'portfolio';
 
@@ -13,6 +13,7 @@ export interface AiImportDraftResult {
   title: string;
   summary: string;
   cityName?: string;
+  zoneName?: string;
   imageUrls: string[];
   imageRoles?: AiImageRole[];
   form: Record<string, unknown>;
@@ -102,11 +103,7 @@ export interface AiUsageSnapshot {
   events: AiUsageEvent[];
 }
 
-export function isAiDailyLimitError(input: {
-  code?: string | null;
-  error?: string | null;
-  status?: number;
-}): boolean {
+export function isAiDailyLimitError(input: { code?: string | null; error?: string | null; status?: number }): boolean {
   if (input.code === AI_INSUFFICIENT_BC_CODE || input.code === AI_DAILY_LIMIT_CODE) return true;
   if (input.status === 403 && /Boost Coins|AI Build/i.test(String(input.error || ''))) return true;
   return false;
@@ -118,11 +115,10 @@ export function aiDailyLimitMessage(
       insufficientBc: string;
     };
   },
-  _planCode?: string | null,
+  _planCode?: string | null
 ): string {
   return t.aiImport.insufficientBc;
 }
-
 
 function parseBcCost(value: unknown, fallback: number): number {
   const n = Number(value);
@@ -138,7 +134,7 @@ export async function fetchAiUsage(): Promise<{
     {
       method: 'GET',
     },
-    5,
+    5
   );
   if (!res.ok) {
     return { snapshot: null, error: res.error || 'Failed to load AI usage' };
@@ -157,38 +153,23 @@ export async function fetchAiUsage(): Promise<{
   };
 }
 
-export function isAiCategoryMismatch(
-  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
-): boolean {
-  return (
-    draft.errorCode === AI_CATEGORY_MISMATCH_CODE ||
-    draft.error === AI_CATEGORY_MISMATCH_CODE
-  );
+export function isAiCategoryMismatch(draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>): boolean {
+  return draft.errorCode === AI_CATEGORY_MISMATCH_CODE || draft.error === AI_CATEGORY_MISMATCH_CODE;
 }
 
-export function isAiContentRestricted(
-  draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>,
-): boolean {
-  return (
-    draft.errorCode === AI_CONTENT_RESTRICTED_CODE ||
-    draft.error === AI_CONTENT_RESTRICTED_CODE
-  );
+export function isAiContentRestricted(draft: Pick<AiImportDraftResult, 'error' | 'errorCode'>): boolean {
+  return draft.errorCode === AI_CONTENT_RESTRICTED_CODE || draft.error === AI_CONTENT_RESTRICTED_CODE;
 }
 
-export function isAiRateLimitError(input: {
-  errorCode?: string | null;
-  error?: string | null;
-}): boolean {
+export function isAiRateLimitError(input: { errorCode?: string | null; error?: string | null }): boolean {
   if (input.errorCode === AI_RATE_LIMIT_CODE) return true;
-  return /rate limit reached|tokens per min|\bTPM\b|too many listings at once/i.test(
-    String(input.error || ''),
-  );
+  return /rate limit reached|tokens per min|\bTPM\b|too many listings at once/i.test(String(input.error || ''));
 }
 
 /** Clear the mismatch block after the user switches to the detected category. */
 export function acceptAiCategoryCorrection(
   draft: AiImportDraftResult,
-  nextCategory?: ListingCategoryKey | null,
+  nextCategory?: ListingCategoryKey | null
 ): AiImportDraftResult | null {
   const category = nextCategory || draft.detectedCategory || draft.category;
   if (!category) return null;
@@ -304,6 +285,7 @@ export function toAiListingDraft(draft: AiImportDraftResult): AiListingDraft | n
     title: draft.title,
     summary: draft.summary,
     cityName: draft.cityName,
+    zoneName: draft.zoneName,
     imageUrls: draft.imageUrls ?? [],
     imageRoles: draft.imageRoles,
     form: draft.form ?? {},
@@ -366,7 +348,7 @@ async function compressImageFile(file: File): Promise<string | null> {
  */
 export async function filesToAiImagePayload(
   files: File[],
-  hints: string[] = [],
+  hints: string[] = []
 ): Promise<Array<{ url: string; hint?: string }>> {
   const out: Array<{ url: string; hint?: string }> = [];
   for (let i = 0; i < files.length; i += 1) {
@@ -422,4 +404,24 @@ export function mergeAttachedImageUrls(input: {
   }
 
   return ordered.slice(0, max);
+}
+
+/**
+ * Job images are evidence for OCR by default. Only treat one as the cover when
+ * the user explicitly asks for that in the prompt.
+ */
+export function jobPromptRequestsCoverImage(prompt: string): boolean {
+  const normalized = prompt
+    .toLocaleLowerCase('sq-AL')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  const mentionsImage = /\b(image|photo|picture|foto|fotografi|imazh)\w*\b/.test(normalized);
+  const mentionsCover = /\b(cover|kopertin\w*)\b/.test(normalized);
+  const requestsUse = /\b(use|perdor|vendos|set|choose|zgjidh|si|as|for|per)\b/.test(normalized);
+  const rejectsCoverUse =
+    /\b(didnt|did not|don't|do not|not|without|pa|mos|nuk)\b.{0,60}\b(use|perdor|vendos|set|choose|zgjidh)\b.{0,60}\b(image|photo|picture|foto|fotografi|imazh|cover|kopertin\w*)\b.{0,60}\b(image|photo|picture|foto|fotografi|imazh|cover|kopertin\w*)\b/.test(
+      normalized
+    );
+  if (rejectsCoverUse) return false;
+  return mentionsImage && mentionsCover && requestsUse;
 }

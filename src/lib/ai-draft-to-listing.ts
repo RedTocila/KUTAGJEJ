@@ -2,9 +2,9 @@ import type { AiListingDraft } from '@/lib/ai-listing-draft';
 import { normalizeFuelType } from '@/lib/car-constants';
 import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import {
-  isVehicleType,
   isValidVehicleMake,
   isValidVehicleModel,
+  isVehicleType,
   parseCarDetailsFromTitleOrText,
   type VehicleType,
 } from '@/lib/vehicle-catalog';
@@ -30,34 +30,37 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
 
   switch (draft.category) {
     case 'real-estate':
-      return withKnownDefaults({
-        id: draft.id,
-        title: str(f.title) || draft.title,
-        description: str(f.description),
-        propertyCategory: str(f.propertyCategory),
-        transactionType: f.transactionType === 'rent' || f.transactionType === 'sale' ? f.transactionType : 'sale',
-        price: num(f.price),
-        currency: f.currency === 'LEK' ? 'LEK' : 'EUR',
-        surfaceM2: num(f.surfaceM2),
-        cityName: draft.cityName || str(f.cityName) || null,
-        zoneName: str(f.zoneName) || null,
-        cityId: str(f.cityId) || null,
-        zoneId: str(f.zoneId) || null,
-        contactPhone: str(f.contactPhone) || null,
-        condition: str(f.condition) || null,
-        apartmentTypeSlug: null,
-        floor: num(f.floor),
-        totalFloors: num(f.totalFloors),
-        parkingFloor: num(f.parkingFloor),
-        bedrooms: num(f.bedrooms),
-        bathrooms: num(f.bathrooms),
-        furnishing: str(f.furnishing) || null,
-        yearBuilt: num(f.yearBuilt),
-        imageUrls,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }, true);
+      return withKnownDefaults(
+        {
+          id: draft.id,
+          title: str(f.title) || draft.title,
+          description: str(f.description),
+          propertyCategory: str(f.propertyCategory),
+          transactionType: f.transactionType === 'rent' || f.transactionType === 'sale' ? f.transactionType : 'sale',
+          price: num(f.price),
+          currency: f.currency === 'LEK' ? 'LEK' : 'EUR',
+          surfaceM2: num(f.surfaceM2),
+          cityName: draft.cityName || str(f.cityName) || null,
+          zoneName: str(f.zoneName) || null,
+          cityId: str(f.cityId) || null,
+          zoneId: str(f.zoneId) || null,
+          contactPhone: str(f.contactPhone) || null,
+          condition: str(f.condition) || null,
+          apartmentTypeSlug: null,
+          floor: num(f.floor),
+          totalFloors: num(f.totalFloors),
+          parkingFloor: num(f.parkingFloor),
+          bedrooms: num(f.bedrooms),
+          bathrooms: num(f.bathrooms),
+          furnishing: str(f.furnishing) || null,
+          yearBuilt: num(f.yearBuilt),
+          imageUrls,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        true
+      );
 
     case 'cars': {
       let vehicleType = str(f.vehicleType);
@@ -123,6 +126,8 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         industry: str(f.industry),
         cityId: str(f.cityId) || null,
         cityName: draft.cityName || null,
+        zoneId: str(f.zoneId) || null,
+        zoneName: draft.zoneName || str(f.zoneName) || null,
         education: str(f.education),
         experience: str(f.experience),
         jobType: str(f.jobType),
@@ -194,7 +199,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
  */
 export function mergeAiIntoListing(
   current: Record<string, unknown>,
-  patch: Record<string, unknown>,
+  patch: Record<string, unknown>
 ): Record<string, unknown> {
   const next: Record<string, unknown> = { ...current };
 

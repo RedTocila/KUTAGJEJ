@@ -10,6 +10,7 @@ export interface AiListingDraft {
   title: string;
   summary: string;
   cityName?: string;
+  zoneName?: string;
   imageUrls: string[];
   imageRoles?: Array<'cover' | 'profile' | 'gallery' | 'portfolio'>;
   form: Record<string, unknown>;
@@ -59,7 +60,7 @@ export function peekAiListingDraft(): AiListingDraft | null {
 /** Read and clear the pending AI draft (once). Prefer draftId when opening one of many. */
 export function consumeAiListingDraft(
   expectedCategory?: ListingCategoryKey,
-  draftId?: string | null,
+  draftId?: string | null
 ): AiListingDraft | null {
   if (typeof window === 'undefined') return null;
 

@@ -82,22 +82,34 @@ type JobListingFallbackProps = {
   position?: string | null;
   salary?: string | null;
   location?: string | null;
+  /** Posted listings pass their ID so the selected theme remains stable. */
+  seed?: string | null;
 };
+
+function themeIndexFromSeed(seed: string): number {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+  return hash % THEMES.length;
+}
 
 /**
  * Compact, photo-free job cover inspired by printed hiring posters.
  * All listing details stay live so the artwork is useful in forms and cards.
  */
-export function JobListingFallback({ position, salary, location }: JobListingFallbackProps) {
+export function JobListingFallback({ position, salary, location, seed }: JobListingFallbackProps) {
   const role = position?.trim() || 'POZICION I HAPUR';
   const salaryLabel = salary?.trim() || 'Pagë e diskutueshme';
   const locationLabel = location?.trim() || 'Shqipëri';
-  const [themeIndex, setThemeIndex] = React.useState(0);
+  const hasSeed = Boolean(seed?.trim());
+  const [randomThemeIndex, setRandomThemeIndex] = React.useState(0);
 
   React.useEffect(() => {
-    setThemeIndex(Math.floor(Math.random() * THEMES.length));
-  }, []);
+    if (!hasSeed) setRandomThemeIndex(Math.floor(Math.random() * THEMES.length));
+  }, [hasSeed]);
 
+  const themeIndex = hasSeed ? themeIndexFromSeed(seed!.trim()) : randomThemeIndex;
   const theme = THEMES[themeIndex] ?? THEMES[0];
 
   return (

@@ -212,6 +212,7 @@ export function CategoryTopViewedSlider({
                         position={slide.title}
                         salary={slide.fallbackSalary}
                         location={slide.fallbackLocation}
+                        seed={slide.id}
                       />
                     ) : undefined
                   }

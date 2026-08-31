@@ -258,6 +258,7 @@ export function JobListingDetailView({
                 position={listing.title}
                 salary={salary}
                 location={locationLine || listing.cityName}
+                seed={listing.id}
               />
             }
             browseListHref={ownerPreview ? undefined : paths.public.jobs}

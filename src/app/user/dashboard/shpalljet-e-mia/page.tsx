@@ -757,6 +757,7 @@ function JobCard({
             position={l.title}
             salary={l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : undefined}
             location={l.cityName}
+            seed={l.id}
           />
         ) : undefined
       }

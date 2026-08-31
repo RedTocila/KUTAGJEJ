@@ -554,7 +554,12 @@ export function JobListingForm({
                 overflow: 'hidden',
               }}
             >
-              <JobListingFallback position={form.title} salary={previewSalary} location={previewLocation} />
+              <JobListingFallback
+                position={form.title}
+                salary={previewSalary}
+                location={previewLocation}
+                seed={isEdit ? editListingId : undefined}
+              />
             </Box>
           </Stack>
         ) : (

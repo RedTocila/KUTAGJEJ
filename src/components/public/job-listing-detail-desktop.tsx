@@ -166,7 +166,12 @@ export function JobListingDetailDesktop({
                   }}
                 />
               ) : (
-                <JobListingFallback position={listing.title} salary={salary} location={locationLabel} />
+                <JobListingFallback
+                  position={listing.title}
+                  salary={salary}
+                  location={locationLabel}
+                  seed={listing.id}
+                />
               )}
               <Box
                 sx={{

@@ -124,7 +124,12 @@ export function JobCard({
           imageUrl={displayImageUrl}
           FallbackIcon={BriefcaseIcon}
           fallbackContent={
-            <JobListingFallback position={listing.title} salary={salaryLabel} location={locationLabel} />
+            <JobListingFallback
+              position={listing.title}
+              salary={salaryLabel}
+              location={locationLabel}
+              seed={listing.id}
+            />
           }
           alt={listing.title}
           height={{ xs: 185, md: 200 }}

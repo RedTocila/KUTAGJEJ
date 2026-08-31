@@ -73,6 +73,10 @@ export function HeroCategoryCircles({
   onSelect,
   includeAi = true,
 }: HeroCategoryCirclesProps) {
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [canScrollPrev, setCanScrollPrev] = React.useState(false);
+  const [canScrollNext, setCanScrollNext] = React.useState(false);
+  const rafRef = React.useRef(0);
   const pathname = usePathname();
   const displayPathname = useDisplayPathname();
   const { language } = useLanguage();
@@ -97,6 +101,49 @@ export function HeroCategoryCircles({
   }, [heroVerticals, displayPathname]);
 
   const selectedIndex = variant === 'tabs' && selectedIndexProp != null ? selectedIndexProp : selectedFromPath;
+
+  const refreshScrollState = React.useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const maxScroll = element.scrollWidth - element.clientWidth;
+    setCanScrollPrev(element.scrollLeft > 1);
+    setCanScrollNext(element.scrollLeft < maxScroll - 1);
+  }, []);
+
+  const scheduleScrollStateRefresh = React.useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      rafRef.current = 0;
+      refreshScrollState();
+    });
+  }, [refreshScrollState]);
+
+  React.useEffect(() => {
+    refreshScrollState();
+    const element = scrollRef.current;
+    if (!element) return;
+    element.addEventListener('scroll', scheduleScrollStateRefresh, { passive: true });
+    const resizeObserver = new ResizeObserver(scheduleScrollStateRefresh);
+    resizeObserver.observe(element);
+    return () => {
+      element.removeEventListener('scroll', scheduleScrollStateRefresh);
+      resizeObserver.disconnect();
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    };
+  }, [refreshScrollState, scheduleScrollStateRefresh, language, includeAi]);
+
+  const maskImage = (() => {
+    if (canScrollPrev && canScrollNext) {
+      return 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)';
+    }
+    if (canScrollPrev) {
+      return 'linear-gradient(to right, transparent 0, black 24px, black 100%)';
+    }
+    if (canScrollNext) {
+      return 'linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%)';
+    }
+    return undefined;
+  })();
 
   /** Soft tint on hover; selected never goes solid-fill. */
   const itemSx = (mode: AccentMode) => {
@@ -138,6 +185,7 @@ export function HeroCategoryCircles({
 
   return (
     <Box
+      ref={scrollRef}
       component="nav"
       aria-label={t.chrome.categoriesAria}
       data-no-tab-swipe
@@ -159,6 +207,9 @@ export function HeroCategoryCircles({
         maxWidth: '100%',
         minWidth: 0,
         '&::-webkit-scrollbar': { display: 'none' },
+        maskImage: { xs: maskImage, md: 'none' },
+        WebkitMaskImage: { xs: maskImage, md: 'none' },
+        transition: 'mask-image 160ms linear',
       }}
     >
       {heroVerticals.map((v, i) => {

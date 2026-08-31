@@ -67,6 +67,7 @@ type Snapshot = {
   finish: string[];
   extras: string[];
   cityId: string | null;
+  zoneId: string | null;
   cityName: string | null;
   mapsUrl: string | null;
   locationAddress: string | null;
@@ -93,6 +94,7 @@ function snapFrom(d: CarMineListing): Snapshot {
     finish: d.finish ?? [],
     extras: d.extras ?? [],
     cityId: d.cityId ?? null,
+    zoneId: d.zoneId ?? null,
     cityName: d.cityName ?? null,
     mapsUrl: d.mapsUrl ?? null,
     locationAddress: d.locationAddress ?? null,
@@ -196,6 +198,7 @@ export function CarOwnerEdit({
         finish: draft.finish ?? [],
         extras: draft.extras ?? [],
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -333,7 +336,14 @@ export function CarOwnerEdit({
           cityId={draft.cityId ?? ''}
           onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
-            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+            setDraft((d) => ({ ...d, cityId: v || null, zoneId: null, cityName }));
+          }}
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
+            const zone = cities
+              .find((city) => city.id === (draft.cityId ?? ''))
+              ?.zones.find((item) => item.id === v);
+            setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
           cities={cities}
           maps={{
@@ -351,6 +361,7 @@ export function CarOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
+          showZone
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

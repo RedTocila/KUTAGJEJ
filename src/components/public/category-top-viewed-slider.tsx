@@ -23,6 +23,7 @@ import type {
 } from '@/lib/public-listings-client';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
 import { BannerSliderPager } from '@/components/public/banner-slider-pager';
 import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
@@ -34,6 +35,9 @@ type SlideModel = {
   id: string;
   title: string;
   subtitle: string | null;
+  bottomRightLabel?: string | null;
+  fallbackSalary?: string | null;
+  fallbackLocation?: string | null;
   imageUrl: string | null;
   href: string;
 };
@@ -76,11 +80,16 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
     }
     case 'jobs': {
       const l = listing as PublicJobListing;
+      const salaryLabel = l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : 'Pagë e diskutueshme';
+      const locationLabel = [l.zoneName, l.cityName].filter(Boolean).join(', ') || null;
       return {
         id: l.id,
         title: l.title,
-        subtitle: l.salary != null ? formatPrice(l.salary, l.currency) : (l.cityName ?? null),
-        imageUrl: l.imageUrl,
+        subtitle: l.title || null,
+        bottomRightLabel: [salaryLabel, locationLabel].filter(Boolean).join(' • '),
+        fallbackSalary: salaryLabel,
+        fallbackLocation: locationLabel,
+        imageUrl: l.coverMode === 'mockup' ? null : l.imageUrl,
         href: listingJobPublicHref(l),
       };
     }
@@ -197,6 +206,15 @@ export function CategoryTopViewedSlider({
                   href={slide.href}
                   suppressNavRef={suppressNavRef}
                   imageUrl={slide.imageUrl}
+                  fallbackContent={
+                    verticalId === 'jobs' ? (
+                      <JobListingFallback
+                        position={slide.title}
+                        salary={slide.fallbackSalary}
+                        location={slide.fallbackLocation}
+                      />
+                    ) : undefined
+                  }
                   fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                   eager={eager}
                   title={slide.title}
@@ -215,6 +233,7 @@ export function CategoryTopViewedSlider({
                       slide.subtitle
                     )
                   }
+                  bottomRightLabel={slide.bottomRightLabel}
                   showNavigationArrow={false}
                   contentPlacement="below"
                   hideTitleBelowImage

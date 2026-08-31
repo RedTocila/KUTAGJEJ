@@ -127,6 +127,12 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         experience: str(f.experience),
         jobType: str(f.jobType),
         workLocation: str(f.workLocation),
+        preferredGender:
+          f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
+            ? f.preferredGender
+            : '',
+        preferredAgeMin: num(f.preferredAgeMin),
+        preferredAgeMax: num(f.preferredAgeMax),
         salary: num(f.salary),
         currency: f.currency === 'LEK' ? 'LEK' : f.currency === 'EUR' ? 'EUR' : null,
         contactPhone: str(f.contactPhone),

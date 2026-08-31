@@ -67,6 +67,14 @@ export const WORK_LOCATION_OPTIONS = [
   { value: 'remote', label: 'Remote (Nga shtëpia)' },
 ] as const;
 
+export const JOB_GENDER_OPTIONS = [
+  { value: 'male', label: 'Mashkull' },
+  { value: 'female', label: 'Femër' },
+  { value: 'both', label: 'Të dyja' },
+] as const;
+
+export type JobGenderValue = (typeof JOB_GENDER_OPTIONS)[number]['value'];
+
 /** Preset benefits for job create form and detail icons. */
 export const JOB_BENEFIT_PRESETS = [
   { id: 'pay', label: 'Pagë konkurruese' },

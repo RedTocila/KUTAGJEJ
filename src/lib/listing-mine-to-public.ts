@@ -1,17 +1,10 @@
-import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
+import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
+import type { BusinessMineListing, ProfessionalMineListing } from '@/lib/directory-listings-client';
 import { extractPlaceQueryFromMapsUrl } from '@/lib/google-maps-location';
-import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import type {
-  BusinessMineListing,
-  ProfessionalMineListing,
-} from '@/lib/directory-listings-client';
 import { isPersistableImageUrl } from '@/lib/image-url';
-import type {
-  CarMineListing,
-  JobMineListing,
-  MarketplaceMineListing,
-} from '@/lib/listings-client';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import type { CarMineListing, JobMineListing, MarketplaceMineListing } from '@/lib/listings-client';
 import { PROFESSIONAL_CATEGORY_OPTIONS } from '@/lib/professional-constants';
 import type {
   PublicCarListingDetail,
@@ -20,18 +13,13 @@ import type {
   PublicMarketplaceListingDetail,
   PublicRealEstateListingDetail,
 } from '@/lib/public-listings-client';
-import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
+import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
 
 function durableUrls(urls: string[] | null | undefined): string[] {
   return (urls ?? []).filter(isPersistableImageUrl);
 }
 
-function metricsFrom(mine: {
-  viewCount?: number;
-  shareCount?: number;
-  saveCount?: number;
-  saved?: boolean;
-}) {
+function metricsFrom(mine: { viewCount?: number; shareCount?: number; saveCount?: number; saved?: boolean }) {
   return {
     viewCount: mine.viewCount ?? 0,
     shareCount: mine.shareCount ?? 0,
@@ -59,6 +47,7 @@ export function professionalMineToPublic(mine: ProfessionalMineListing): PublicD
     price: mine.price,
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     cityName: mine.cityName,
+    zoneName: mine.zoneName ?? null,
     contactPhone: mine.contactPhone ?? null,
     imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
     imageUrls: durableUrls(mine.imageUrls),
@@ -109,9 +98,7 @@ export function businessMineToPublic(mine: BusinessMineListing): PublicDirectory
     zoneId: mine.zoneId ?? null,
     zoneName: mine.zoneName ?? null,
     mapsUrl: mine.mapsUrl ?? null,
-    mapsPlaceQuery:
-      mine.mapsPlaceQuery ??
-      (mine.mapsUrl ? extractPlaceQueryFromMapsUrl(mine.mapsUrl) : null),
+    mapsPlaceQuery: mine.mapsPlaceQuery ?? (mine.mapsUrl ? extractPlaceQueryFromMapsUrl(mine.mapsUrl) : null),
     locationAddress: mine.locationAddress ?? null,
     locationLat: mine.locationLat ?? null,
     locationLng: mine.locationLng ?? null,
@@ -185,6 +172,7 @@ export function carMineToPublic(mine: CarMineListing): PublicCarListingDetail {
     finish: mine.finish ?? [],
     extras: mine.extras ?? [],
     cityName: mine.cityName,
+    zoneName: mine.zoneName ?? null,
     contactPhone: mine.contactPhone ?? null,
     imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
     imageUrls: durableUrls(mine.imageUrls),
@@ -210,12 +198,20 @@ export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
     kind: 'job',
     title: mine.title,
     description: mine.description ?? '',
+    coverMode: mine.coverMode === 'mockup' ? 'mockup' : 'image',
     industry: mine.industry,
     cityName: mine.cityName,
+    zoneName: mine.zoneName ?? null,
     education: mine.education,
     experience: mine.experience,
     jobType: mine.jobType,
     workLocation,
+    preferredGender:
+      mine.preferredGender === 'male' || mine.preferredGender === 'female' || mine.preferredGender === 'both'
+        ? mine.preferredGender
+        : null,
+    preferredAgeMin: mine.preferredAgeMin ?? null,
+    preferredAgeMax: mine.preferredAgeMax ?? null,
     salary: mine.salary,
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     contactPhone: mine.contactPhone ?? null,
@@ -248,6 +244,7 @@ export function marketplaceMineToPublic(mine: MarketplaceMineListing): PublicMar
     price: mine.price,
     currency: mine.currency === 'EUR' || mine.currency === 'LEK' ? mine.currency : null,
     cityName: mine.cityName,
+    zoneName: mine.zoneName ?? null,
     contactPhone: mine.contactPhone ?? null,
     imageUrl: durableUrls(mine.imageUrls)[0] ?? null,
     imageUrls: durableUrls(mine.imageUrls),

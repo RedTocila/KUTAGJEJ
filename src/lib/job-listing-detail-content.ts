@@ -1,29 +1,9 @@
-import {
-  JOB_EDUCATION_OPTIONS,
-  JOB_EXPERIENCE_OPTIONS,
-  JOB_INDUSTRY_OPTIONS,
-  JOB_TYPE_OPTIONS,
-  WORK_LOCATION_OPTIONS,
-} from '@/lib/job-constants';
 import { businessLocationLine } from '@/lib/google-maps-location';
+import { JOB_EXPERIENCE_OPTIONS, JOB_GENDER_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import type { PublicJobListingDetail } from '@/lib/public-listings-client';
-
 import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
 
-const ALBANIAN_MONTHS = [
-  'Jan',
-  'Shk',
-  'Mar',
-  'Pri',
-  'Maj',
-  'Qer',
-  'Kor',
-  'Gus',
-  'Sht',
-  'Tet',
-  'Nën',
-  'Dhj',
-] as const;
+const ALBANIAN_MONTHS = ['Jan', 'Shk', 'Mar', 'Pri', 'Maj', 'Qer', 'Kor', 'Gus', 'Sht', 'Tet', 'Nën', 'Dhj'] as const;
 
 export function formatJobPostedDate(iso: string): string {
   const date = new Date(iso);
@@ -52,12 +32,10 @@ export interface JobDetailSections {
 }
 
 export function buildJobDetailSections(listing: PublicJobListingDetail): JobDetailSections {
-  const responsibilities =
-    listing.responsibilities?.filter((line) => line.trim().length > 0) ?? [];
+  const responsibilities = listing.responsibilities?.filter((line) => line.trim().length > 0) ?? [];
   const requirements = listing.requirements?.filter((line) => line.trim().length > 0) ?? [];
   const benefits =
-    listing.benefits?.filter((b) => b.id && b.label?.trim()).map((b) => ({ id: b.id, label: b.label.trim() })) ??
-    [];
+    listing.benefits?.filter((b) => b.id && b.label?.trim()).map((b) => ({ id: b.id, label: b.label.trim() })) ?? [];
 
   return {
     intro: listing.description.trim(),
@@ -73,14 +51,22 @@ export function jobDetailMetaRows(listing: PublicJobListingDetail) {
       locationAddress: listing.locationAddress,
       cityName: listing.cityName,
     }) || 'Shqipëri';
+  const preferredGender = findOptionLabel(JOB_GENDER_OPTIONS, listing.preferredGender);
+  const preferredAge =
+    listing.preferredAgeMin != null && listing.preferredAgeMax != null
+      ? `${listing.preferredAgeMin}–${listing.preferredAgeMax} vjeç`
+      : '';
   return [
     { label: 'Lokacioni', value: location, fullWidth: true as const },
     { label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType) },
     { label: 'Përvoja', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience) },
+    ...(preferredGender ? [{ label: 'Gjinia e preferuar', value: preferredGender }] : []),
+    ...(preferredAge ? [{ label: 'Mosha e preferuar', value: preferredAge }] : []),
   ] as const;
 }
 
 export function jobCoverImageUrls(listing: PublicJobListingDetail): string[] {
+  if (listing.coverMode === 'mockup') return [];
   const images = listing.imageUrls.filter(Boolean);
   if (images.length > 0) return [images[0]!];
   if (listing.imageUrl) return [listing.imageUrl];

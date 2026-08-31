@@ -6,17 +6,13 @@ const { getSupabaseAdmin } = require('../lib/supabase');
 const { camelizeRow } = require('../lib/profiles');
 const { validateJobPayload } = require('../lib/job-field-rules');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
-const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
+const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
-const { resolveOptionalCityId } = require('../lib/listing-city');
+const { resolveOptionalCityAndZone } = require('../lib/listing-city');
 const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
 const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
-const {
-  parseMapsFieldsFromBody,
-  mapsColumnsFromParsed,
-  mapsJsonFromDoc,
-} = require('../lib/listing-maps-fields');
+const { parseMapsFieldsFromBody, mapsColumnsFromParsed, mapsJsonFromDoc } = require('../lib/listing-maps-fields');
 
 const router = express.Router();
 
@@ -25,7 +21,9 @@ const MAX_JOB_IMAGES = 1;
 function requirePortalUser(req, res, next) {
   const model = req.user?.constructor?.modelName;
   if (model !== 'IndividualUser' && model !== 'BusinessUser') {
-    return res.status(403).json({ message: 'Ky veprim është i disponueshëm vetëm për llogaritë individuale ose të biznesit.' });
+    return res
+      .status(403)
+      .json({ message: 'Ky veprim është i disponueshëm vetëm për llogaritë individuale ose të biznesit.' });
   }
   next();
 }
@@ -74,7 +72,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateJobPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const city = await resolveOptionalCityId(body.cityId);
+    const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
     if (!city.ok) return res.status(400).json({ message: city.message });
     const cityId = city.cityId;
 
@@ -89,11 +87,16 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       permalink_slug: slugifyTitle(body.title),
       description: String(body.description).trim(),
       industry: body.industry,
+      cover_mode: body.coverMode,
       city_id: cityId,
+      zone_id: city.zoneId,
       education: body.education,
       experience: body.experience,
       job_type: body.jobType,
       work_location: body.workLocation,
+      preferred_gender: body.preferredGender,
+      preferred_age_min: body.preferredAgeMin,
+      preferred_age_max: body.preferredAgeMax,
       salary: hasSalary ? Number(body.salary) : null,
       contact_phone: String(body.contactPhone || '').trim(),
       responsibilities: v.responsibilities,
@@ -103,8 +106,6 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       status: 'approved',
       ...mapsColumnsFromParsed(maps),
     };
-    const photos = requireListingPhotos(row.image_urls);
-    if (!photos.ok) return res.status(400).json({ message: photos.message });
     if (hasSalary) row.currency = body.currency;
 
     const { data: created, error: insErr } = await getSupabaseAdmin()
@@ -153,7 +154,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validateJobPayload(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const city = await resolveOptionalCityId(body.cityId);
+    const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
     if (!city.ok) return res.status(400).json({ message: city.message });
     const cityId = city.cityId;
 
@@ -166,11 +167,16 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       title: String(body.title).trim(),
       description: String(body.description).trim(),
       industry: body.industry,
+      cover_mode: body.coverMode,
       city_id: cityId,
+      zone_id: city.zoneId,
       education: body.education,
       experience: body.experience,
       job_type: body.jobType,
       work_location: body.workLocation,
+      preferred_gender: body.preferredGender,
+      preferred_age_min: body.preferredAgeMin,
+      preferred_age_max: body.preferredAgeMax,
       salary: hasSalary ? Number(body.salary) : null,
       // Column is NOT NULL DEFAULT 'EUR' — never write null on update.
       currency: hasSalary ? body.currency : 'EUR',
@@ -181,8 +187,6 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       image_urls: sanitizeImageUrls(body.imageUrls, MAX_JOB_IMAGES),
       updated_at: new Date().toISOString(),
     };
-    const photos = requireListingPhotos(patch.image_urls);
-    if (!photos.ok) return res.status(400).json({ message: photos.message });
     if (!maps.skip) Object.assign(patch, mapsColumnsFromParsed(maps));
 
     const { data: updated, error: updErr } = await getSupabaseAdmin()

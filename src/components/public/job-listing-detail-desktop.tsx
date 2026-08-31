@@ -12,14 +12,13 @@ import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
 import { Avatar, Box, ButtonBase, Chip, Container, Grid, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
@@ -31,6 +30,7 @@ import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { listingHeroImageUrl } from '@/lib/storage-image';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -58,7 +58,12 @@ function benefitIcon(id: JobDetailBenefit['id']) {
   }
 }
 
-const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, ScheduleOutlined] as const;
+function metaIcon(label: string) {
+  if (label === 'Lokacioni') return LocationOnOutlined;
+  if (label === 'Lloji i punës') return WorkOutlineOutlined;
+  if (label === 'Gjinia e preferuar') return GroupsOutlined;
+  return ScheduleOutlined;
+}
 
 export function JobListingDetailDesktop({
   listing,
@@ -98,13 +103,19 @@ export function JobListingDetailDesktop({
     [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
   const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
-  const heroImage = listing.imageUrl ?? listing.imageUrls[0] ?? null;
+  const heroImage = listing.coverMode === 'mockup' ? null : (listing.imageUrl ?? listing.imageUrls[0] ?? null);
   const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
     : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
+  const locationLabel =
+    businessLocationLine({
+      locationAddress: listing.locationAddress,
+      cityName: listing.cityName,
+      zoneName: listing.zoneName,
+    }) || 'Shqipëri';
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
 
   if (ownerPreview) return null;
@@ -155,19 +166,7 @@ export function JobListingDetailDesktop({
                   }}
                 />
               ) : (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: 'grey.900',
-                    color: 'primary.main',
-                    opacity: 0.35,
-                  }}
-                >
-                  <BriefcaseIcon size={72} weight="duotone" />
-                </Box>
+                <JobListingFallback position={listing.title} salary={salary} location={locationLabel} />
               )}
               <Box
                 sx={{
@@ -367,7 +366,7 @@ export function JobListingDetailDesktop({
               }}
             >
               {metaRows.map((row, index) => {
-                const Icon = metaIcons[index] ?? ScheduleOutlined;
+                const Icon = metaIcon(row.label);
                 const isLocation = row.label === 'Lokacioni';
                 const isFullWidth = 'fullWidth' in row && row.fullWidth;
                 const content = (

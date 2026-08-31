@@ -40,6 +40,7 @@ type Snapshot = {
   originalPrice: number | null;
   currency: 'EUR' | 'LEK' | null;
   cityId: string | null;
+  zoneId: string | null;
   cityName: string | null;
   mapsUrl: string | null;
   locationAddress: string | null;
@@ -58,6 +59,7 @@ function snapFrom(d: MarketplaceMineListing): Snapshot {
     originalPrice: d.originalPrice ?? null,
     currency: d.currency === 'EUR' || d.currency === 'LEK' ? d.currency : null,
     cityId: d.cityId ?? null,
+    zoneId: d.zoneId ?? null,
     cityName: d.cityName ?? null,
     mapsUrl: d.mapsUrl ?? null,
     locationAddress: d.locationAddress ?? null,
@@ -154,6 +156,7 @@ export function MarketplaceOwnerEdit({
         originalPrice: draft.originalPrice ?? null,
         currency: draft.currency,
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -247,7 +250,14 @@ export function MarketplaceOwnerEdit({
           cityId={draft.cityId ?? ''}
           onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
-            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+            setDraft((d) => ({ ...d, cityId: v || null, zoneId: null, cityName }));
+          }}
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
+            const zone = cities
+              .find((city) => city.id === (draft.cityId ?? ''))
+              ?.zones.find((item) => item.id === v);
+            setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
           cities={cities}
           maps={{
@@ -265,6 +275,7 @@ export function MarketplaceOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
+          showZone
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

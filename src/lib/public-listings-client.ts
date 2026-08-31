@@ -150,6 +150,7 @@ export interface PublicCarListing extends ListingMetricsFields {
   currency: 'EUR' | 'LEK';
   color: string;
   cityName: string | null;
+  zoneName?: string | null;
   contactPhone: string | null;
   imageUrl: string | null;
   imageUrls: string[];
@@ -175,12 +176,17 @@ export interface PublicJobListing extends ListingMetricsFields {
   kind: 'job';
   title: string;
   description: string;
+  coverMode?: 'image' | 'mockup';
   industry: string;
   cityName: string | null;
+  zoneName?: string | null;
   education: string;
   experience: string;
   jobType: string;
   workLocation: 'onsite' | 'hybrid' | 'remote';
+  preferredGender: 'male' | 'female' | 'both' | null;
+  preferredAgeMin: number | null;
+  preferredAgeMax: number | null;
   salary: number | null;
   currency: 'EUR' | 'LEK' | null;
   contactPhone: string | null;
@@ -219,6 +225,7 @@ export interface PublicMarketplaceListing extends ListingMetricsFields {
   originalPrice?: number | null;
   currency: 'EUR' | 'LEK' | null;
   cityName: string | null;
+  zoneName?: string | null;
   contactPhone: string | null;
   imageUrl: string | null;
   imageUrls: string[];

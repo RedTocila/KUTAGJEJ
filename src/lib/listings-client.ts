@@ -1,15 +1,15 @@
 'use client';
 
 import type { ListingCategory } from '@/types/listing-category';
-import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
-import type { BusinessMineListing, ProfessionalMineListing } from '@/lib/directory-listings-client';
 import { authHeaders, authHeadersAsync, getAccessToken } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
+import type { BusinessMineListing, ProfessionalMineListing } from '@/lib/directory-listings-client';
+import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 
 async function jsonAuthFetch<T extends Record<string, unknown>>(
   path: string,
-  init: RequestInit,
+  init: RequestInit
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
   try {
     const res = await fetch(getApiUrl(path), {
@@ -36,7 +36,6 @@ async function jsonAuthFetch<T extends Record<string, unknown>>(
     return { ok: false, error: 'Nuk u arrit lidhja me serverin.' };
   }
 }
-
 
 export interface RealEstateListingPayload {
   propertyCategory?: string;
@@ -96,7 +95,9 @@ export interface CarMineListing extends ListingMetrics {
   finish?: string[];
   extras?: string[];
   cityId?: string | null;
+  zoneId?: string | null;
   cityName: string | null;
+  zoneName?: string | null;
   mapsUrl?: string | null;
   locationAddress?: string | null;
   locationLat?: number | null;
@@ -116,9 +117,12 @@ export interface JobMineListing extends ListingMetrics {
   id: string;
   title: string;
   description?: string;
+  coverMode?: 'image' | 'mockup';
   industry: string;
   cityId?: string | null;
+  zoneId?: string | null;
   cityName: string | null;
+  zoneName?: string | null;
   mapsUrl?: string | null;
   locationAddress?: string | null;
   locationLat?: number | null;
@@ -127,6 +131,9 @@ export interface JobMineListing extends ListingMetrics {
   experience: string;
   jobType: string;
   workLocation: string;
+  preferredGender: 'male' | 'female' | 'both' | null;
+  preferredAgeMin: number | null;
+  preferredAgeMax: number | null;
   salary: number | null;
   currency: string | null;
   contactPhone?: string | null;
@@ -154,7 +161,9 @@ export interface MarketplaceMineListing extends ListingMetrics {
   originalPrice?: number | null;
   currency: string | null;
   cityId?: string | null;
+  zoneId?: string | null;
   cityName: string | null;
+  zoneName?: string | null;
   mapsUrl?: string | null;
   locationAddress?: string | null;
   locationLat?: number | null;
@@ -246,13 +255,11 @@ export type ListingCreateResult = {
   error?: string;
 };
 
-export async function createRealEstateListing(
-  body: RealEstateListingPayload,
-): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    '/listings/real-estate',
-    { method: 'POST', body: JSON.stringify(body) },
-  );
+export async function createRealEstateListing(body: RealEstateListingPayload): Promise<ListingCreateResult> {
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>('/listings/real-estate', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -263,12 +270,12 @@ export async function createRealEstateListing(
 
 export async function updateRealEstateListing(
   id: string,
-  body: RealEstateListingPayload,
+  body: RealEstateListingPayload
 ): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    `/listings/real-estate/${encodeURIComponent(id)}`,
-    { method: 'PUT', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>(`/listings/real-estate/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -331,14 +338,17 @@ export async function listMyMarketplaceListings(): Promise<{ listings?: Marketpl
   try {
     const res = await fetch(getApiUrl('/listings/marketplace/mine'), { headers: authHeaders(), cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Could not load marketplace listings.' };
+    if (!res.ok)
+      return { error: typeof data.message === 'string' ? data.message : 'Could not load marketplace listings.' };
     return { listings: data.listings as MarketplaceMineListing[] };
   } catch {
     return { error: 'Could not reach the server.' };
   }
 }
 
-export async function getMyMarketplaceListing(id: string): Promise<{ listing?: MarketplaceMineListing; error?: string }> {
+export async function getMyMarketplaceListing(
+  id: string
+): Promise<{ listing?: MarketplaceMineListing; error?: string }> {
   try {
     const res = await fetch(getApiUrl(`/listings/marketplace/mine/${encodeURIComponent(id)}`), {
       headers: authHeaders(),
@@ -360,13 +370,18 @@ export interface JobListingBenefitPayload {
 export interface JobListingPayload {
   title: string;
   description: string;
+  coverMode?: 'image' | 'mockup';
   industry: string;
   cityId?: string | null;
+  zoneId?: string | null;
   mapsUrl?: string | null;
   education: string;
   experience: string;
   jobType: string;
   workLocation: string;
+  preferredGender?: 'male' | 'female' | 'both' | null;
+  preferredAgeMin?: number | null;
+  preferredAgeMax?: number | null;
   salary: number | null;
   currency: string | null;
   contactPhone: string;
@@ -377,10 +392,10 @@ export interface JobListingPayload {
 }
 
 export async function createJobListing(body: JobListingPayload): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    '/listings/jobs',
-    { method: 'POST', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>('/listings/jobs', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -390,10 +405,10 @@ export async function createJobListing(body: JobListingPayload): Promise<Listing
 }
 
 export async function updateJobListing(id: string, body: JobListingPayload): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    `/listings/jobs/${encodeURIComponent(id)}`,
-    { method: 'PUT', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>(`/listings/jobs/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -412,16 +427,17 @@ export interface MarketplaceListingPayload {
   originalPrice?: number | null;
   currency?: string | null;
   cityId?: string | null;
+  zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];
 }
 
 export async function createMarketplaceListing(body: MarketplaceListingPayload): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    '/listings/marketplace',
-    { method: 'POST', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>('/listings/marketplace', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -432,12 +448,12 @@ export async function createMarketplaceListing(body: MarketplaceListingPayload):
 
 export async function updateMarketplaceListing(
   id: string,
-  body: MarketplaceListingPayload,
+  body: MarketplaceListingPayload
 ): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    `/listings/marketplace/${encodeURIComponent(id)}`,
-    { method: 'PUT', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>(`/listings/marketplace/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -485,16 +501,17 @@ export type CarListingJsonPayload = {
   finish: string[];
   extras: string[];
   cityId?: string | null;
+  zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls?: string[];
 };
 
 export async function updateCarListing(id: string, body: CarListingJsonPayload): Promise<ListingCreateResult> {
-  const res = await jsonAuthFetch<{ listing?: { id?: string; status?: ListingCreateResult['status'] }; message?: string }>(
-    `/listings/cars/${encodeURIComponent(id)}`,
-    { method: 'PUT', body: JSON.stringify(body) },
-  );
+  const res = await jsonAuthFetch<{
+    listing?: { id?: string; status?: ListingCreateResult['status'] };
+    message?: string;
+  }>(`/listings/cars/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) });
   if (!res.ok) return { error: res.error };
   return {
     id: res.data.listing?.id,
@@ -505,21 +522,16 @@ export async function updateCarListing(id: string, body: CarListingJsonPayload):
 
 export type DeleteMyListingItem = { kind: ListingMetricKind; id: string };
 
-export async function deleteMyListing(
-  kind: ListingMetricKind,
-  id: string,
-): Promise<{ ok?: true; error?: string }> {
+export async function deleteMyListing(kind: ListingMetricKind, id: string): Promise<{ ok?: true; error?: string }> {
   const res = await jsonAuthFetch<{ ok?: boolean; message?: string }>(
     `/listings/owner/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
-    { method: 'DELETE' },
+    { method: 'DELETE' }
   );
   if (!res.ok) return { error: res.error };
   return { ok: true };
 }
 
-export async function deleteMyListings(
-  items: DeleteMyListingItem[],
-): Promise<{
+export async function deleteMyListings(items: DeleteMyListingItem[]): Promise<{
   deleted?: DeleteMyListingItem[];
   failed?: Array<DeleteMyListingItem & { message?: string }>;
   error?: string;
@@ -529,7 +541,7 @@ export async function deleteMyListings(
       items
         .map((item) => ({ kind: item.kind, id: String(item.id || '').trim() }))
         .filter((item) => item.kind && item.id)
-        .map((item) => [`${item.kind}:${item.id}`, item] as const),
+        .map((item) => [`${item.kind}:${item.id}`, item] as const)
     ).values(),
   ];
   if (unique.length === 0) return { error: 'Nuk u zgjodh asnjë njoftim.' };

@@ -77,6 +77,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { TransientNotification } from '@/components/core/transient-success-alert';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
@@ -148,6 +149,7 @@ function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.Rea
 
 function CardImageHeader({
   imageUrl,
+  fallbackContent,
   fallbackIcon: FallbackIcon,
   alt,
   status,
@@ -160,6 +162,7 @@ function CardImageHeader({
   selected = false,
 }: {
   imageUrl: string | null;
+  fallbackContent?: React.ReactNode;
   fallbackIcon: PhosphorIcon;
   alt: string;
   status: ReturnType<typeof normalizeListingModerationStatus>;
@@ -249,6 +252,8 @@ function CardImageHeader({
             setImageFailed(true);
           }}
         />
+      ) : fallbackContent ? (
+        fallbackContent
       ) : (
         <Stack
           aria-hidden
@@ -316,6 +321,7 @@ function BaseCard({
   metrics,
   status,
   imageUrl,
+  fallbackContent,
   fallbackIcon,
   listingId,
   kind,
@@ -343,6 +349,7 @@ function BaseCard({
   metrics?: Partial<ListingMetrics>;
   status?: string | null;
   imageUrl: string | null;
+  fallbackContent?: React.ReactNode;
   fallbackIcon: PhosphorIcon;
   listingId?: string;
   kind?: ListingMetricKind;
@@ -404,6 +411,7 @@ function BaseCard({
     >
       <CardImageHeader
         imageUrl={imageUrl}
+        fallbackContent={fallbackContent}
         fallbackIcon={fallbackIcon}
         alt={title}
         status={moderationStatus}
@@ -723,6 +731,8 @@ function JobCard({
   const [initialNowMs] = React.useState(() => Date.now());
   const nowMs = useSharedSecondTick();
   const industryLabel = findLabel(JOB_INDUSTRY_OPTIONS, l.industry);
+  const imageUrl = coverImage(l.imageUrls);
+  const showMockup = l.coverMode === 'mockup' || (!l.coverMode && !imageUrl);
   const isExpired =
     normalizeListingModerationStatus(l.status) === 'approved' &&
     !isJobListingActive(l.createdAt, new Date(nowMs || initialNowMs), l.bumpedAt);
@@ -740,7 +750,16 @@ function JobCard({
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
-      imageUrl={coverImage(l.imageUrls)}
+      imageUrl={showMockup ? null : imageUrl}
+      fallbackContent={
+        showMockup ? (
+          <JobListingFallback
+            position={l.title}
+            salary={l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : undefined}
+            location={l.cityName}
+          />
+        ) : undefined
+      }
       fallbackIcon={BriefcaseIcon}
       listingId={l.id}
       kind="job"

@@ -7,7 +7,7 @@ const { camelizeRow } = require('../lib/profiles');
 const { notifyAdminsListingSubmitted } = require('../lib/listing-moderation');
 const { sanitizeImageUrls, requireListingPhotos } = require('../lib/image-upload');
 const { isUuid } = require('../lib/public-listings/query-helpers');
-const { resolveOptionalCityId } = require('../lib/listing-city');
+const { resolveOptionalCityAndZone } = require('../lib/listing-city');
 const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { parseComparePrice } = require('../lib/listing-compare-price');
 const { formatMineMarketplace, formatMineMarketplaceFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
@@ -111,7 +111,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validate(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const city = await resolveOptionalCityId(body.cityId);
+    const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
     if (!city.ok) return res.status(400).json({ message: city.message });
     const cityId = city.cityId;
 
@@ -138,6 +138,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       original_price: cmp.value,
       currency: body.currency,
       city_id: cityId,
+      zone_id: city.zoneId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: imageUrls,
       status: 'approved',
@@ -189,7 +190,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
     const v = validate(body);
     if (!v.ok) return res.status(400).json({ message: v.message });
 
-    const city = await resolveOptionalCityId(body.cityId);
+    const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
     if (!city.ok) return res.status(400).json({ message: city.message });
     const cityId = city.cityId;
 
@@ -214,6 +215,7 @@ router.put('/:id', authMiddleware, requirePortalUser, async (req, res) => {
       original_price: cmp.value,
       currency: body.currency,
       city_id: cityId,
+      zone_id: city.zoneId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: imageUrls,
       updated_at: new Date().toISOString(),

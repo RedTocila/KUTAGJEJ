@@ -38,6 +38,8 @@ export type BannerSlideCardProps = {
   href: string | null;
   suppressNavRef: React.MutableRefObject<boolean>;
   imageUrl?: string | null;
+  /** Optional custom artwork when no image is available. */
+  fallbackContent?: React.ReactNode;
   fallbackBg?: string;
   eager?: boolean;
   title?: string | null;
@@ -71,6 +73,7 @@ export function BannerSlideCard({
   href,
   suppressNavRef,
   imageUrl,
+  fallbackContent,
   fallbackBg = BANNER_SLIDE_VISUALS[0].bg,
   eager = true,
   title,
@@ -162,6 +165,7 @@ export function BannerSlideCard({
             style={{ objectFit: 'cover' }}
           />
         ) : null}
+        {!imageSrc && fallbackContent ? fallbackContent : null}
         {topRightLabel ? (
           <Stack
             direction="row"

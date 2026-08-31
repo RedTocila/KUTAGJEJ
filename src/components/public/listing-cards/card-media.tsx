@@ -35,6 +35,8 @@ export interface CardMediaProps {
   /** Primary image to render — `null` falls back to a tinted icon panel. */
   imageUrl: string | null;
   FallbackIcon: PhosphorIcon;
+  /** Optional custom placeholder, used for photo-free job listings. */
+  fallbackContent?: React.ReactNode;
   alt: string;
   topLeftBadge?: string;
   /** Custom overlay on the image (e.g. rating chip) — rendered at top-left. */
@@ -73,6 +75,7 @@ export function CardMedia({
   listingId,
   imageUrl,
   FallbackIcon,
+  fallbackContent,
   alt,
   topLeftBadge,
   topLeftOverlay,
@@ -224,6 +227,8 @@ export function CardMedia({
             setImageFailed(true);
           }}
         />
+      ) : fallbackContent ? (
+        fallbackContent
       ) : (
         <Stack
           aria-hidden

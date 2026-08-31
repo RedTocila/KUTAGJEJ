@@ -65,6 +65,8 @@ export function RealEstateListingGallery(props: {
   title: string;
   imageUrls: string[];
   placeholderIcon?: ListingGalleryPlaceholderKey;
+  /** Optional custom placeholder content for photo-free listing types. */
+  placeholderContent?: React.ReactNode;
   /** Default: `/prona` */
   browseListHref?: string;
   browseListAriaLabel?: string;
@@ -103,6 +105,7 @@ export function RealEstateListingGallery(props: {
     title,
     imageUrls: urlsRaw,
     placeholderIcon = 'buildings',
+    placeholderContent,
     browseListHref = paths.public.realEstate,
     browseListAriaLabel = 'Prapa te lista e pronës',
     heroSizes = '100vw',
@@ -536,7 +539,9 @@ export function RealEstateListingGallery(props: {
             : undefined,
         }}
       >
-        {showPlaceholder ? (
+        {showPlaceholder && placeholderContent ? (
+          placeholderContent
+        ) : showPlaceholder ? (
           <Stack
             sx={(theme) => ({
               position: 'absolute',

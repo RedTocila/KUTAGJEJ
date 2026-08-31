@@ -2,7 +2,12 @@
 
 const { getSupabaseAdmin } = require('../supabase');
 const { camelizeRows } = require('../profiles');
-const { attachMetricsToListings, attachMetricsToListing, fetchMetricsMap, saverFromUser } = require('../listing-metrics');
+const {
+  attachMetricsToListings,
+  attachMetricsToListing,
+  fetchMetricsMap,
+  saverFromUser,
+} = require('../listing-metrics');
 const { reviewStatsByListingIds } = require('../business-review-stats');
 const { professionalReviewStatsByListingIds } = require('../professional-review-stats');
 const {
@@ -26,13 +31,7 @@ const {
 } = require('./query-helpers');
 const { mergePublicFilter } = require('../listing-moderation');
 const { hasBumpedAtColumn } = require('../ensure-bumped-at-schema');
-const {
-  formatRealEstate,
-  formatCar,
-  formatJob,
-  formatMarketplace,
-  formatDirectory,
-} = require('./formatters');
+const { formatRealEstate, formatCar, formatJob, formatMarketplace, formatDirectory } = require('./formatters');
 const { loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('./load-poster-brief');
 
 const TABLE_BY_KIND = {
@@ -90,6 +89,7 @@ const LIST_SELECT_BY_TABLE = {
     'currency',
     'color',
     'city_id',
+    'zone_id',
     'contact_phone',
     'image_urls',
     'permalink_slug',
@@ -105,13 +105,18 @@ const LIST_SELECT_BY_TABLE = {
     'title',
     'description',
     'industry',
+    'cover_mode',
     'education',
     'experience',
     'job_type',
     'work_location',
+    'preferred_gender',
+    'preferred_age_min',
+    'preferred_age_max',
     'salary',
     'currency',
     'city_id',
+    'zone_id',
     'contact_phone',
     'image_urls',
     'permalink_slug',
@@ -133,6 +138,7 @@ const LIST_SELECT_BY_TABLE = {
     'original_price',
     'currency',
     'city_id',
+    'zone_id',
     'contact_phone',
     'image_urls',
     'permalink_slug',
@@ -198,17 +204,12 @@ function baseFilterForKind(kind) {
 }
 
 function sortLooksPremium(sortSpec) {
-  return (
-    Array.isArray(sortSpec) &&
-    sortSpec.some((s) => s.column === 'premium_until' || s.column === 'okazion_until')
-  );
+  return Array.isArray(sortSpec) && sortSpec.some((s) => s.column === 'premium_until' || s.column === 'okazion_until');
 }
 
 /** True when browse sort is chronological (newest feed), not price/rating. */
 function sortIsNewestFeed(sortSpec = []) {
-  const nonFeatured = (sortSpec || []).filter(
-    (s) => s.column !== 'premium_until' && s.column !== 'okazion_until',
-  );
+  const nonFeatured = (sortSpec || []).filter((s) => s.column !== 'premium_until' && s.column !== 'okazion_until');
   if (!nonFeatured.length) return true;
   const col = nonFeatured[0].column;
   return col === 'bumped_at' || col === 'created_at';
@@ -219,21 +220,14 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const effectiveSort = sortSpec && sortSpec.length ? sortSpec : buildSort('newest');
 
   const run = async (spec, selectOverride, filterOverride = filterSpec) => {
-    let q = applyFilterSpec(
-      sb.from(table).select(selectOverride || listSelectForTable(table)),
-      filterOverride,
-    );
+    let q = applyFilterSpec(sb.from(table).select(selectOverride || listSelectForTable(table)), filterOverride);
     q = applySort(q, spec);
     if (limit > 0) q = q.range(skip, skip + limit - 1);
     return q;
   };
 
   let { data, error } = await run(effectiveSort);
-  if (
-    error &&
-    sortLooksPremium(effectiveSort) &&
-    /(premium_until|okazion_until)/i.test(String(error.message || ''))
-  ) {
+  if (error && sortLooksPremium(effectiveSort) && /(premium_until|okazion_until)/i.test(String(error.message || ''))) {
     ({ data, error } = await run(withoutPremiumSort(effectiveSort)));
   }
   if (error && /bumped_at/i.test(String(error.message || ''))) {
@@ -245,7 +239,7 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
     ({ data, error } = await run(
       withoutBumpedAtSort(withoutPremiumSort(effectiveSort)),
       selectWithoutBump,
-      withoutBumpedAtFilter(filterSpec),
+      withoutBumpedAtFilter(filterSpec)
     ));
   }
   if (error) throw error;
@@ -306,7 +300,13 @@ async function formatDocsForKind(kind, docs) {
 }
 
 const LATEST_VERTICAL_SPECS = [
-  { key: 'realEstate', kind: 'real-estate', table: 'real_estate_listings', filter: {}, sort: () => buildSort('newest') },
+  {
+    key: 'realEstate',
+    kind: 'real-estate',
+    table: 'real_estate_listings',
+    filter: {},
+    sort: () => buildSort('newest'),
+  },
   { key: 'cars', kind: 'car', table: 'car_listings', filter: {}, sort: () => buildSort('newest') },
   {
     key: 'jobs',
@@ -315,7 +315,13 @@ const LATEST_VERTICAL_SPECS = [
     filter: activeJobCreatedAtFilter(),
     sort: () => buildSort('newest'),
   },
-  { key: 'marketplace', kind: 'marketplace', table: 'marketplace_listings', filter: {}, sort: () => buildSort('newest') },
+  {
+    key: 'marketplace',
+    kind: 'marketplace',
+    table: 'marketplace_listings',
+    filter: {},
+    sort: () => buildSort('newest'),
+  },
   {
     key: 'businesses',
     kind: 'businesses',
@@ -339,8 +345,8 @@ const LATEST_VERTICAL_SPECS = [
 async function queryLatestVerticals(limit) {
   const docGroups = await Promise.all(
     LATEST_VERTICAL_SPECS.map((spec) =>
-      runListingQuery(spec.table, mergePublicFilter(spec.filter), spec.sort(), limit, 0),
-    ),
+      runListingQuery(spec.table, mergePublicFilter(spec.filter), spec.sort(), limit, 0)
+    )
   );
 
   const allDocs = docGroups.flat();
@@ -354,8 +360,7 @@ async function queryLatestVerticals(limit) {
 
   const formattedGroups = docGroups.map((docs, i) => {
     const kind = LATEST_VERTICAL_SPECS[i].kind;
-    const reviewStats =
-      kind === 'businesses' ? bizReviews : kind === 'professionals' ? proReviews : null;
+    const reviewStats = kind === 'businesses' ? bizReviews : kind === 'professionals' ? proReviews : null;
     return formatDocsLocal(kind, docs, cityById, reviewStats);
   });
 
@@ -386,8 +391,7 @@ async function topRatedDirectoryByKind(kind, limit) {
   if (!table || limit <= 0) return [];
   if (kind !== 'businesses' && kind !== 'professionals') return [];
 
-  const reviewTable =
-    kind === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
+  const reviewTable = kind === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
   const baseFilter = baseFilterForKind(kind);
   const sb = getSupabaseAdmin();
 
@@ -424,7 +428,7 @@ async function topRatedDirectoryByKind(kind, limit) {
       mergePublicFilter(baseFilter),
       buildDirectorySort('newest'),
       limit * 2,
-      0,
+      0
     );
     for (const doc of fillers) {
       const id = String(doc.id);
@@ -487,13 +491,7 @@ async function topViewedByKind(kind, limit) {
   }
 
   if (orderedDocs.length < limit) {
-    const fillers = await runListingQuery(
-      table,
-      mergePublicFilter(baseFilter),
-      buildSort('newest'),
-      limit * 2,
-      0,
-    );
+    const fillers = await runListingQuery(table, mergePublicFilter(baseFilter), buildSort('newest'), limit * 2, 0);
     for (const doc of fillers) {
       const id = String(doc.id);
       if (seen.has(id)) continue;
@@ -508,13 +506,7 @@ async function topViewedByKind(kind, limit) {
 }
 
 async function queryRealEstate(limit, filter = {}, sort = null, skip = 0) {
-  const docs = await runListingQuery(
-    'real_estate_listings',
-    mergePublicFilter(filter),
-    sort,
-    limit,
-    skip,
-  );
+  const docs = await runListingQuery('real_estate_listings', mergePublicFilter(filter), sort, limit, skip);
   return formatDocsForKind('real-estate', docs);
 }
 
@@ -537,7 +529,7 @@ async function queryJobs(limit, filter, sort = null, skip = 0) {
     mergePublicFilter(filter ?? activeJobCreatedAtFilter()),
     sort,
     limit,
-    skip,
+    skip
   );
   return formatDocsForKind('job', docs);
 }
@@ -551,13 +543,7 @@ async function countActiveJobs() {
 }
 
 async function queryMarketplace(limit, filter = {}, sort = null, skip = 0) {
-  const docs = await runListingQuery(
-    'marketplace_listings',
-    mergePublicFilter(filter),
-    sort,
-    limit,
-    skip,
-  );
+  const docs = await runListingQuery('marketplace_listings', mergePublicFilter(filter), sort, limit, skip);
   return formatDocsForKind('marketplace', docs);
 }
 
@@ -567,8 +553,7 @@ async function countMarketplace(filter = {}) {
 
 async function queryDirectoryOrderedByRating(vertical, limit, filter, ascending, skip) {
   const table = 'directory_listings';
-  const reviewTable =
-    vertical === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
+  const reviewTable = vertical === 'businesses' ? 'business_listing_reviews' : 'professional_listing_reviews';
   const spec = mergePublicFilter(filter);
   const sb = getSupabaseAdmin();
 
@@ -601,7 +586,7 @@ async function queryDirectoryOrderedByRating(vertical, limit, filter, ascending,
     mergePublicFilter(mergeSpecs(filter, { in: { id: pageIds } })),
     [{ column: 'id', ascending: true }],
     pageIds.length,
-    0,
+    0
   );
   const byId = new Map(docs.map((doc) => [String(doc.id), doc]));
   const orderedDocs = pageIds.map((id) => byId.get(id)).filter(Boolean);
@@ -614,13 +599,7 @@ async function queryDirectory(vertical, limit, filter = { eq: { vertical } }, so
     const ascending = Boolean(sortSpec.find((s) => s.column === 'rating_average')?.ascending);
     return queryDirectoryOrderedByRating(vertical, limit, filter, ascending, skip);
   }
-  const docs = await runListingQuery(
-    'directory_listings',
-    mergePublicFilter(filter),
-    sortSpec,
-    limit,
-    skip,
-  );
+  const docs = await runListingQuery('directory_listings', mergePublicFilter(filter), sortSpec, limit, skip);
   return formatDocsForKind(vertical, docs);
 }
 
@@ -682,7 +661,9 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
     { kind: 'marketplace', table: 'marketplace_listings', base: {} },
   ];
 
-  const rawKind = String(query.kind ?? '').trim().toLowerCase();
+  const rawKind = String(query.kind ?? '')
+    .trim()
+    .toLowerCase();
   const selectedKind = VERTICAL_TO_KIND[rawKind] || null;
   const kinds = selectedKind ? allKinds.filter((k) => k.kind === selectedKind) : allKinds;
 
@@ -698,35 +679,23 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
           if (groups.length === 1) filter = mergeSpecs(filter, { or: groups[0] });
           else if (groups.length > 1) filter = mergeSpecs(filter, { andOr: groups });
         }
-        const docs = await runListingQuery(
-          table,
-          mergePublicFilter(filter),
-          sortSpec,
-          take,
-          0,
-        );
+        const docs = await runListingQuery(table, mergePublicFilter(filter), sortSpec, take, 0);
         return docs.map((d) => ({ kind, doc: d }));
       } catch (err) {
         if (/okazion_until/i.test(String(err.message || ''))) return [];
         throw err;
       }
-    }),
+    })
   );
 
-  const merged = batches
-    .flat()
-    .sort((a, b) => {
-      const aUntil = new Date(a.doc.okazionUntil || a.doc.okazion_until || 0).getTime();
-      const bUntil = new Date(b.doc.okazionUntil || b.doc.okazion_until || 0).getTime();
-      if (bUntil !== aUntil) return bUntil - aUntil;
-      const aBump = new Date(
-        a.doc.bumpedAt || a.doc.bumped_at || a.doc.createdAt || a.doc.created_at || 0,
-      ).getTime();
-      const bBump = new Date(
-        b.doc.bumpedAt || b.doc.bumped_at || b.doc.createdAt || b.doc.created_at || 0,
-      ).getTime();
-      return bBump - aBump;
-    });
+  const merged = batches.flat().sort((a, b) => {
+    const aUntil = new Date(a.doc.okazionUntil || a.doc.okazion_until || 0).getTime();
+    const bUntil = new Date(b.doc.okazionUntil || b.doc.okazion_until || 0).getTime();
+    if (bUntil !== aUntil) return bUntil - aUntil;
+    const aBump = new Date(a.doc.bumpedAt || a.doc.bumped_at || a.doc.createdAt || a.doc.created_at || 0).getTime();
+    const bBump = new Date(b.doc.bumpedAt || b.doc.bumped_at || b.doc.createdAt || b.doc.created_at || 0).getTime();
+    return bBump - aBump;
+  });
 
   const total = merged.length;
   const pageDocs = merged.slice(skip, skip + limit);
@@ -744,12 +713,10 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
         const id = String(docs[idx]?.id || listing.id);
         formattedById.set(`${kind}:${id}`, listing);
       });
-    }),
+    })
   );
 
-  const listings = pageDocs
-    .map(({ kind, doc }) => formattedById.get(`${kind}:${String(doc.id)}`))
-    .filter(Boolean);
+  const listings = pageDocs.map(({ kind, doc }) => formattedById.get(`${kind}:${String(doc.id)}`)).filter(Boolean);
 
   return { listings, total };
 }

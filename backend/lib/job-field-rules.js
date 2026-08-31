@@ -4,31 +4,46 @@ const { validateJobSections } = require('./job-listing-sections');
 const { isUuid } = require('./public-listings/query-helpers');
 
 const INDUSTRY_VALUES = [
-  'biznes-menaxhim', 'horeka', 'instalime-mirembajtje', 'ligjore',
-  'prokurim-logjistike', 'shitje-zhvillim', 'finance', 'ndertim-industri',
-  'burime-njerezore', 'administrim', 'teknologji-informacioni',
-  'marketing-produkte', 'art-televizion', 'sherbim-klienti',
-  'mjekesore-shendetesore', 'profesioniste', 'siguria-kompjuterike',
-  'siguria-teknike', 'security', 'prodhim', 'finance-banke', 'retail',
-  'mjedisi', 'magazine', 'teknik', 'pastrim',
+  'biznes-menaxhim',
+  'horeka',
+  'instalime-mirembajtje',
+  'ligjore',
+  'prokurim-logjistike',
+  'shitje-zhvillim',
+  'finance',
+  'ndertim-industri',
+  'burime-njerezore',
+  'administrim',
+  'teknologji-informacioni',
+  'marketing-produkte',
+  'art-televizion',
+  'sherbim-klienti',
+  'mjekesore-shendetesore',
+  'profesioniste',
+  'siguria-kompjuterike',
+  'siguria-teknike',
+  'security',
+  'prodhim',
+  'finance-banke',
+  'retail',
+  'mjedisi',
+  'magazine',
+  'teknik',
+  'pastrim',
 ];
 
-const EDUCATION_VALUES = [
-  'no-requirement', 'primary', 'secondary', 'vocational',
-  'bachelor', 'master', 'phd',
-];
+const EDUCATION_VALUES = ['no-requirement', 'primary', 'secondary', 'vocational', 'bachelor', 'master', 'phd'];
 
-const EXPERIENCE_VALUES = [
-  'no-experience', 'less-than-1', '1-2', '2-3', '3-5', '5-10', 'more-than-10',
-];
+const EXPERIENCE_VALUES = ['no-experience', 'less-than-1', '1-2', '2-3', '3-5', '5-10', 'more-than-10'];
 
-const JOB_TYPE_VALUES = [
-  'full-time', 'part-time', 'remote', 'internship', 'weekend', 'seasonal', 'freelance',
-];
+const JOB_TYPE_VALUES = ['full-time', 'part-time', 'remote', 'internship', 'weekend', 'seasonal', 'freelance'];
 
 const WORK_LOCATION_VALUES = ['onsite', 'hybrid', 'remote'];
 
+const PREFERRED_GENDER_VALUES = ['male', 'female', 'both'];
+
 const CURRENCY_VALUES = ['EUR', 'LEK'];
+const COVER_MODE_VALUES = ['image', 'mockup'];
 
 /**
  * Returns { ok: true } or { ok: false, message }.
@@ -76,6 +91,45 @@ function validateJobPayload(body) {
   }
   body.workLocation = workLocation || null;
 
+  const coverMode = String(body?.coverMode || '').trim();
+  if (coverMode && !COVER_MODE_VALUES.includes(coverMode)) {
+    return { ok: false, message: 'Lloji i kopertinës nuk është i vlefshëm.' };
+  }
+  body.coverMode = coverMode || 'image';
+
+  const preferredGender = String(body?.preferredGender || '').trim();
+  if (preferredGender && !PREFERRED_GENDER_VALUES.includes(preferredGender)) {
+    return { ok: false, message: 'Gjinia e preferuar nuk është e vlefshme.' };
+  }
+  body.preferredGender = preferredGender || null;
+
+  const rawMinAge = body?.preferredAgeMin;
+  const rawMaxAge = body?.preferredAgeMax;
+  const hasMinAge = rawMinAge !== null && rawMinAge !== undefined && String(rawMinAge).trim() !== '';
+  const hasMaxAge = rawMaxAge !== null && rawMaxAge !== undefined && String(rawMaxAge).trim() !== '';
+  if (hasMinAge !== hasMaxAge) {
+    return { ok: false, message: 'Ju lutem plotësoni moshën minimale dhe maksimale.' };
+  }
+  let preferredAgeMin = null;
+  let preferredAgeMax = null;
+  if (hasMinAge && hasMaxAge) {
+    preferredAgeMin = Number(rawMinAge);
+    preferredAgeMax = Number(rawMaxAge);
+    if (
+      !Number.isInteger(preferredAgeMin) ||
+      !Number.isInteger(preferredAgeMax) ||
+      preferredAgeMin < 18 ||
+      preferredAgeMax > 65
+    ) {
+      return { ok: false, message: 'Mosha duhet të jetë nga 18 deri në 65 vjeç.' };
+    }
+    if (preferredAgeMin > preferredAgeMax) {
+      return { ok: false, message: 'Mosha minimale nuk mund të jetë më e madhe se maksimalja.' };
+    }
+  }
+  body.preferredAgeMin = preferredAgeMin;
+  body.preferredAgeMax = preferredAgeMax;
+
   // Salary is optional — but if provided, currency must also be present.
   if (body?.salary !== null && body?.salary !== undefined && body?.salary !== '') {
     const s = Number(body.salary);
@@ -111,5 +165,6 @@ module.exports = {
   EXPERIENCE_VALUES,
   JOB_TYPE_VALUES,
   WORK_LOCATION_VALUES,
+  PREFERRED_GENDER_VALUES,
   validateJobPayload,
 };

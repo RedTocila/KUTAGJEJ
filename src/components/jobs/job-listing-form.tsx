@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  Box,
   Checkbox,
   FormControl,
   FormControlLabel,
@@ -10,24 +12,42 @@ import {
   InputAdornment,
   Radio,
   RadioGroup,
+  Slider,
   Stack,
+  Typography,
 } from '@mui/material';
 
 import {
+  JOB_BENEFIT_PRESETS,
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
+  JOB_GENDER_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
-  JOB_BENEFIT_PRESETS,
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
+import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
+import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
+import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
+import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { uploadListingImages } from '@/lib/uploads-client';
+import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
+import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
+import { useUser } from '@/hooks/use-user';
+import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { JobFormStringList } from '@/components/jobs/job-form-string-list';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
   ListingLocationChoice,
   type ListingLocationMode,
 } from '@/components/listings/listing-location-choice';
+import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
+import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
   ListingDescriptionField,
   ListingFormActionError,
@@ -36,7 +56,6 @@ import {
   ListingTextField,
   ListingToggle,
 } from '@/components/user/listing-form-ui';
-import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import {
   activateOkazionAfterCreate,
   OkazionPostActions,
@@ -49,22 +68,6 @@ import {
   PremiumPostActions,
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
-import { JobFormStringList } from '@/components/jobs/job-form-string-list';
-import { ListingImagePicker } from '@/components/common/listing-image-picker';
-import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
-import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { useUser } from '@/hooks/use-user';
-import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
-import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
-import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
-import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
-import {
-  applyEmptyKnownDefaults,
-  knownCreateDefaultsFromStorage,
-} from '@/lib/listing-form-defaults';
-import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
-import { uploadListingImages } from '@/lib/uploads-client';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 const MAX_JOB_IMAGES = 1;
 
@@ -72,12 +75,18 @@ const MAX_JOB_IMAGES = 1;
 // Helpers
 // ---------------------------------------------------------------------------
 
-
 function parseFloatStrict(s: string): number | null {
   const t = s.trim();
   if (t === '' || !/^\d+(\.\d+)?$/.test(t)) return null;
   const n = Number.parseFloat(t);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseAgeStrict(s: string): number | null {
+  const t = s.trim();
+  if (t === '' || !/^\d+$/.test(t)) return null;
+  const n = Number(t);
+  return Number.isInteger(n) ? n : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,8 +104,10 @@ export interface JobListingFormProps {
 type JobFormState = {
   title: string;
   description: string;
+  coverMode: 'image' | 'mockup';
   industry: string;
   cityId: string;
+  zoneId: string;
   locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
@@ -106,6 +117,9 @@ type JobFormState = {
   experience: string;
   jobType: string;
   workLocation: string;
+  preferredGender: 'male' | 'female' | 'both' | '';
+  preferredAgeMin: string;
+  preferredAgeMax: string;
   salary: string;
   currency: '' | 'EUR' | 'LEK';
   contactPhone: string;
@@ -119,8 +133,10 @@ function emptyForm(): JobFormState {
   return {
     title: '',
     description: '',
+    coverMode: 'mockup',
     industry: '',
     cityId: '',
+    zoneId: '',
     locationMode: '',
     mapsUrl: '',
     locationLat: null,
@@ -130,11 +146,14 @@ function emptyForm(): JobFormState {
     experience: '',
     jobType: '',
     workLocation: '',
+    preferredGender: '',
+    preferredAgeMin: '',
+    preferredAgeMax: '',
     salary: '',
     currency: '',
     contactPhone: '',
-    responsibilities: [''],
-    requirements: [''],
+    responsibilities: [],
+    requirements: [],
     benefitIds: [],
     customBenefit: '',
   };
@@ -170,6 +189,18 @@ function validateForm(f: JobFormState): string | null {
     if (f.currency !== 'EUR' && f.currency !== 'LEK') return 'Ju lutem zgjidhni monedhën.';
   }
 
+  const hasAgeMin = f.preferredAgeMin.trim() !== '';
+  const hasAgeMax = f.preferredAgeMax.trim() !== '';
+  if (hasAgeMin !== hasAgeMax) return 'Ju lutem plotësoni moshën minimale dhe maksimale.';
+  if (hasAgeMin && hasAgeMax) {
+    const minAge = parseAgeStrict(f.preferredAgeMin);
+    const maxAge = parseAgeStrict(f.preferredAgeMax);
+    if (minAge === null || maxAge === null || minAge < 18 || maxAge > 100) {
+      return 'Mosha duhet të jetë nga 18 deri në 65 vjeç.';
+    }
+    if (minAge > maxAge) return 'Mosha minimale nuk mund të jetë më e madhe se maksimalja.';
+  }
+
   const phone = f.contactPhone.trim();
   if (phone.length < 6) return 'Numri i telefonit duhet të ketë të paktën 6 karaktere.';
   if (phone.length > 40) return 'Numri i telefonit është shumë i gjatë.';
@@ -194,8 +225,11 @@ function formFromListing(l: JobMineListing): JobFormState {
   return {
     title: l.title || '',
     description: l.description || '',
+    coverMode:
+      l.coverMode === 'image' || l.coverMode === 'mockup' ? l.coverMode : l.imageUrls?.length ? 'image' : 'mockup',
     industry: l.industry || '',
     cityId: l.cityId ? String(l.cityId) : '',
+    zoneId: l.zoneId ? String(l.zoneId) : '',
     mapsUrl: l.mapsUrl ?? '',
     locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
@@ -205,11 +239,14 @@ function formFromListing(l: JobMineListing): JobFormState {
     experience: l.experience || '',
     jobType: l.jobType || '',
     workLocation: l.workLocation || '',
+    preferredGender: l.preferredGender || '',
+    preferredAgeMin: l.preferredAgeMin != null ? String(l.preferredAgeMin) : '',
+    preferredAgeMax: l.preferredAgeMax != null ? String(l.preferredAgeMax) : '',
     salary: l.salary != null ? String(l.salary) : '',
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : '',
     contactPhone: l.contactPhone || '',
-    responsibilities: (l.responsibilities?.length ? l.responsibilities : ['']) as string[],
-    requirements: (l.requirements?.length ? l.requirements : ['']) as string[],
+    responsibilities: (l.responsibilities?.length ? l.responsibilities : []) as string[],
+    requirements: (l.requirements?.length ? l.requirements : []) as string[],
     benefitIds,
     customBenefit,
   };
@@ -224,7 +261,7 @@ export function JobListingForm({
 }: JobListingFormProps) {
   const isEdit = Boolean(editListingId);
   const { checkSession } = useUser();
-  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit });
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
@@ -232,7 +269,7 @@ export function JobListingForm({
 
   const [form, setForm] = React.useState<JobFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as JobFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), { withZone: true }) as JobFormState;
     return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
@@ -242,15 +279,15 @@ export function JobListingForm({
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [images, setImages] = React.useState<File[]>([]);
-  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(
-    () => (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES),
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>(() =>
+    (initialListing?.imageUrls ?? []).filter(Boolean).slice(0, MAX_JOB_IMAGES)
   );
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const formSnapshot = React.useMemo(
     () => ({ ...form, imageUrls: existingImageUrls }) as Record<string, unknown>,
-    [form, existingImageUrls],
+    [form, existingImageUrls]
   );
   usePublishListingFormSnapshot(formSnapshot, !isEdit);
   const { clearDraft } = useListingFormDraft({
@@ -281,10 +318,9 @@ export function JobListingForm({
 
   React.useEffect(() => {
     if (!initialListing) return;
-    const fromAi = applyEmptyKnownDefaults(
-      formFromListing(initialListing),
-      knownCreateDefaultsFromStorage(),
-    ) as JobFormState;
+    const fromAi = applyEmptyKnownDefaults(formFromListing(initialListing), knownCreateDefaultsFromStorage(), {
+      withZone: true,
+    }) as JobFormState;
     const shaped = {
       ...fromAi,
       locationMode: fromAi.locationMode || inferListingLocationMode(fromAi.cityId, fromAi.mapsUrl),
@@ -303,7 +339,7 @@ export function JobListingForm({
       };
     });
     setExistingImageUrls((prev) =>
-      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_JOB_IMAGES),
+      mergeImageUrls(prev, (initialListing.imageUrls ?? []).filter(Boolean), MAX_JOB_IMAGES)
     );
   }, [initialListing, isEdit]);
 
@@ -322,11 +358,9 @@ export function JobListingForm({
   // Handlers
   // -------------------------------------------------------------------------
 
-  const onField =
-    (key: keyof JobFormState) =>
-    (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setForm((prev) => ({ ...prev, [key]: ev.target.value }));
-    };
+  const onField = (key: keyof JobFormState) => (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm((prev) => ({ ...prev, [key]: ev.target.value }));
+  };
 
   // -------------------------------------------------------------------------
   // Submit
@@ -341,11 +375,6 @@ export function JobListingForm({
       setSubmitError(err);
       return;
     }
-    if (existingImageUrls.length + images.length < 1) {
-      setSubmitError('Shtoni të paktën një foto.');
-      return;
-    }
-
     setSubmitting(true);
     try {
       let uploaded: string[] = [];
@@ -363,31 +392,34 @@ export function JobListingForm({
         description: form.description.trim(),
         industry: form.industry,
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
         education: form.education,
         experience: form.experience,
         jobType: form.jobType,
         workLocation: form.workLocation,
+        preferredGender: form.preferredGender || null,
+        preferredAgeMin: form.preferredAgeMin.trim() ? parseAgeStrict(form.preferredAgeMin) : null,
+        preferredAgeMax: form.preferredAgeMax.trim() ? parseAgeStrict(form.preferredAgeMax) : null,
         salary: form.salary.trim() ? parseFloatStrict(form.salary) : null,
         currency: form.salary.trim() ? form.currency : null,
         contactPhone: form.contactPhone.trim(),
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
         benefits: buildBenefitsPayload(form),
-        imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES),
+        imageUrls: form.coverMode === 'image' ? [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES) : [],
+        coverMode: form.coverMode,
       };
 
       const result =
-        isEdit && editListingId
-          ? await updateJobListing(editListingId, payload)
-          : await createJobListing(payload);
+        isEdit && editListingId ? await updateJobListing(editListingId, payload) : await createJobListing(payload);
       if (result.error) {
         setSubmitError(result.error);
         return;
       }
       if (!isEdit) {
         clearDraft();
-        rememberLocation({ cityId: loc.cityId ?? '' });
+        rememberLocation({ cityId: loc.cityId ?? '', zoneId: loc.zoneId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -425,28 +457,72 @@ export function JobListingForm({
     }
   };
 
+  const preferredRangeEnabled = form.preferredAgeMin.trim() !== '' && form.preferredAgeMax.trim() !== '';
+  const preferredAgeRange: [number, number] = [
+    parseAgeStrict(form.preferredAgeMin) ?? 18,
+    parseAgeStrict(form.preferredAgeMax) ?? 65,
+  ];
+  const previewSalary = form.salary.trim()
+    ? `${formatPrice(Number(form.salary), form.currency)} / muaj`
+    : 'Pagë e diskutueshme';
+  const previewCity = cities.find((city) => city.id === form.cityId);
+  const previewZone = previewCity?.zones.find((zone) => zone.id === form.zoneId);
+  const previewLocation =
+    form.locationMode === 'map'
+      ? form.locationAddress
+      : [previewZone?.name, previewCity?.name].filter(Boolean).join(', ');
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
   return (
-    <Stack
-      ref={formRef}
-      component="form"
-      spacing={2.25}
-      onSubmit={(e) => void handleSubmit(e)}
-    >
+    <Stack ref={formRef} component="form" spacing={2.25} onSubmit={(e) => void handleSubmit(e)}>
       <ListingFormSection>
-        <ListingImagePicker
-          value={images}
-          onChange={setImages}
-          existingUrls={existingImageUrls}
-          onExistingUrlsChange={setExistingImageUrls}
-          max={MAX_JOB_IMAGES}
-          variant="gallery"
-          label="Foto e kopertinës"
+        <ListingToggle
+          label="Kopertina e njoftimit"
+          value={form.coverMode}
+          onChange={(value) =>
+            setForm((previous) => ({
+              ...previous,
+              coverMode: value === 'image' ? 'image' : 'mockup',
+            }))
+          }
+          options={[
+            { value: 'mockup', label: 'Mockup automatik' },
+            { value: 'image', label: 'Foto kopertine' },
+          ]}
           disabled={submitting}
         />
+        {form.coverMode === 'mockup' ? (
+          <Stack spacing={0.75} sx={{ width: '100%', maxWidth: 520 }}>
+            <Typography variant="caption" color="text.secondary">
+              Mockup-i përdoret si kopertinë; fotografia nuk do të shfaqet.
+            </Typography>
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '5 / 4',
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              <JobListingFallback position={form.title} salary={previewSalary} location={previewLocation} />
+            </Box>
+          </Stack>
+        ) : (
+          <ListingImagePicker
+            value={images}
+            onChange={setImages}
+            existingUrls={existingImageUrls}
+            onExistingUrlsChange={setExistingImageUrls}
+            max={MAX_JOB_IMAGES}
+            variant="gallery"
+            label="Foto e kopertinës"
+            disabled={submitting}
+          />
+        )}
         <ListingTextField
           label="Titulli i punës"
           value={form.title}
@@ -466,14 +542,16 @@ export function JobListingForm({
 
       <ListingFormSection>
         <JobFormStringList
-          label="Detyrat dhe përgjegjësitë"
+          label="Detyrat dhe përgjegjësitë (opsionale)"
           items={form.responsibilities}
           onChange={(responsibilities) => setForm((p) => ({ ...p, responsibilities }))}
+          minItems={0}
         />
         <JobFormStringList
-          label="Kërkesat"
+          label="Kërkesat (opsionale)"
           items={form.requirements}
           onChange={(requirements) => setForm((p) => ({ ...p, requirements }))}
+          minItems={0}
         />
       </ListingFormSection>
 
@@ -521,7 +599,9 @@ export function JobListingForm({
           mode={form.locationMode}
           onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
           cityId={form.cityId}
-          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId }))}
+          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId, zoneId: '' }))}
+          zoneId={form.zoneId}
+          onZoneIdChange={(zoneId) => setForm((p) => ({ ...p, zoneId }))}
           cities={cities}
           maps={{
             mapsUrl: form.mapsUrl,
@@ -540,13 +620,14 @@ export function JobListingForm({
           }
           loadingCities={loadingCities}
           disabled={submitting}
+          showZone
         />
       </ListingFormSection>
 
       <ListingFormSection>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <SearchableSelect
-            label="Edukimi"
+            label="Edukimi (opsionale)"
             value={form.education}
             onChange={(v) => setForm((p) => ({ ...p, education: v }))}
             options={JOB_EDUCATION_OPTIONS}
@@ -554,7 +635,7 @@ export function JobListingForm({
             clearable
           />
           <SearchableSelect
-            label="Eksperienca"
+            label="Eksperienca (opsionale)"
             value={form.experience}
             onChange={(v) => setForm((p) => ({ ...p, experience: v }))}
             options={JOB_EXPERIENCE_OPTIONS}
@@ -562,6 +643,62 @@ export function JobListingForm({
             clearable
           />
         </Stack>
+      </ListingFormSection>
+
+      <ListingFormSection>
+        <ListingToggle
+          label="Gjinia e preferuar (opsionale)"
+          value={form.preferredGender}
+          onChange={(v) =>
+            setForm((p) => ({
+              ...p,
+              preferredGender: v === 'male' || v === 'female' || v === 'both' ? v : '',
+            }))
+          }
+          options={JOB_GENDER_OPTIONS}
+          disabled={submitting}
+        />
+        <Box sx={{ px: 1, pt: 0.5 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={preferredRangeEnabled}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    preferredAgeMin: e.target.checked ? String(preferredAgeRange[0]) : '',
+                    preferredAgeMax: e.target.checked ? String(preferredAgeRange[1]) : '',
+                  }))
+                }
+                disabled={submitting}
+              />
+            }
+            label="Përcakto moshën e preferuar (opsionale)"
+          />
+          <Box sx={{ px: 1, pt: 1, opacity: preferredRangeEnabled ? 1 : 0.5 }}>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, mb: 0.5 }}>
+              {preferredAgeRange[0]} – {preferredAgeRange[1]} vjeç
+            </Typography>
+            <Slider
+              value={preferredAgeRange}
+              onChange={(_, value) => {
+                if (!Array.isArray(value)) return;
+                const [minAge, maxAge] = value;
+                setForm((p) => ({
+                  ...p,
+                  preferredAgeMin: String(minAge),
+                  preferredAgeMax: String(maxAge),
+                }));
+              }}
+              min={18}
+              max={65}
+              step={1}
+              valueLabelDisplay="auto"
+              disabled={submitting || !preferredRangeEnabled}
+              aria-label="Mosha e preferuar"
+            />
+          </Box>
+        </Box>
       </ListingFormSection>
 
       <ListingFormSection>
@@ -584,11 +721,7 @@ export function JobListingForm({
           <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
             Vendi i punës
           </FormLabel>
-          <RadioGroup
-            row
-            value={form.workLocation}
-            onChange={(_, v) => setForm((p) => ({ ...p, workLocation: v }))}
-          >
+          <RadioGroup row value={form.workLocation} onChange={(_, v) => setForm((p) => ({ ...p, workLocation: v }))}>
             {WORK_LOCATION_OPTIONS.map((o) => (
               <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
             ))}

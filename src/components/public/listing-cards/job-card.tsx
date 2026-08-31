@@ -23,6 +23,7 @@ import {
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import type { PublicJobListing } from '@/lib/public-listings-client';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
@@ -87,10 +88,12 @@ export function JobCard({
   const workLocationLabel = findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation);
   const experienceLabel = findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience);
   const educationLabel = findOptionLabel(JOB_EDUCATION_OPTIONS, listing.education);
+  const locationLabel = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const salaryLabel =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const cardRating = resolveListingCardRating(null, sellerRating);
+  const displayImageUrl = listing.coverMode === 'mockup' ? null : listing.imageUrl;
 
   const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
@@ -118,8 +121,11 @@ export function JobCard({
         <CardMedia
           listingKind="job"
           listingId={listing.id}
-          imageUrl={listing.imageUrl}
+          imageUrl={displayImageUrl}
           FallbackIcon={BriefcaseIcon}
+          fallbackContent={
+            <JobListingFallback position={listing.title} salary={salaryLabel} location={locationLabel} />
+          }
           alt={listing.title}
           height={{ xs: 185, md: 200 }}
           aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
@@ -141,8 +147,8 @@ export function JobCard({
             category: industryLabel,
             priceLabel: salaryLabel,
             badge: jobTypeLabel,
-            imageUrl: listing.imageUrl,
-            location: listing.cityName || undefined,
+            imageUrl: displayImageUrl,
+            location: locationLabel || undefined,
             specs: [
               ...(listing.jobType ? [{ icon: 'clock' as const, label: jobTypeLabel }] : []),
               ...(listing.workLocation
@@ -222,6 +228,14 @@ export function JobCard({
                 </Typography>
               </Stack>
             </Stack>
+            {locationLabel ? (
+              <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', minWidth: 0 }}>
+                <MapPinIcon size={12} weight="regular" color="var(--mui-palette-primary-main)" />
+                <Typography variant="caption" noWrap color="text.disabled" sx={{ fontSize: '0.68rem' }}>
+                  {locationLabel}
+                </Typography>
+              </Stack>
+            ) : null}
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
@@ -267,7 +281,7 @@ export function JobCard({
                     Pagë e diskutueshme
                   </Typography>
                 )}
-                {listing.cityName ? (
+                {locationLabel ? (
                   <Stack
                     direction="row"
                     spacing={0.5}
@@ -285,7 +299,7 @@ export function JobCard({
                       noWrap
                       sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, textAlign: 'right' }}
                     >
-                      {listing.cityName}
+                      {locationLabel}
                     </Typography>
                   </Stack>
                 ) : null}
@@ -325,7 +339,7 @@ export function JobCard({
 
             <SpecRow specs={specs} />
 
-            {!locationInPriceRow && listing.cityName ? (
+            {!locationInPriceRow && locationLabel ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
                 <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
                 <Typography
@@ -333,7 +347,7 @@ export function JobCard({
                   noWrap
                   sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
                 >
-                  {listing.cityName}
+                  {locationLabel}
                 </Typography>
               </Stack>
             ) : null}

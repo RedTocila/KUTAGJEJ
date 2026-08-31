@@ -2,6 +2,61 @@
 -- Paste into Supabase Dashboard → SQL Editor → Run.
 -- Safe to re-run (IF NOT EXISTS / IF EXISTS guards).
 
+-- Optional candidate preferences for job listings
+alter table public.job_listings
+  add column if not exists preferred_gender text;
+alter table public.job_listings
+  add column if not exists preferred_age_min integer;
+alter table public.job_listings
+  add column if not exists preferred_age_max integer;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.job_listings'::regclass
+      and conname = 'job_listings_preferred_gender_check'
+  ) then
+    alter table public.job_listings
+      add constraint job_listings_preferred_gender_check
+      check (preferred_gender is null or preferred_gender in ('male', 'female', 'both'));
+  end if;
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.job_listings'::regclass
+      and conname = 'job_listings_preferred_age_min_check'
+  ) then
+    alter table public.job_listings
+      add constraint job_listings_preferred_age_min_check
+      check (preferred_age_min is null or preferred_age_min between 18 and 65);
+  end if;
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.job_listings'::regclass
+      and conname = 'job_listings_preferred_age_max_check'
+  ) then
+    alter table public.job_listings
+      add constraint job_listings_preferred_age_max_check
+      check (preferred_age_max is null or preferred_age_max between 18 and 65);
+  end if;
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.job_listings'::regclass
+      and conname = 'job_listings_preferred_age_range_check'
+  ) then
+    alter table public.job_listings
+      add constraint job_listings_preferred_age_range_check
+      check (
+        (preferred_age_min is null and preferred_age_max is null)
+        or (preferred_age_min is not null and preferred_age_max is not null and preferred_age_min <= preferred_age_max)
+      );
+  end if;
+end $$;
+
 -- Premium listing windows
 alter table public.real_estate_listings
   add column if not exists premium_until timestamptz;
@@ -679,4 +734,22 @@ alter table public.ai_usage_prices enable row level security;
 -- Profile privacy (hide seller profile card and hide profile unless in contact)
 alter table public.profiles
   add column if not exists is_private boolean not null default false;
+
+-- Job cover choice: photo or generated hiring mockup
+alter table public.job_listings
+  add column if not exists cover_mode text not null default 'image';
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.job_listings'::regclass
+      and conname = 'job_listings_cover_mode_check'
+  ) then
+    alter table public.job_listings
+      add constraint job_listings_cover_mode_check
+      check (cover_mode in ('image', 'mockup'));
+  end if;
+end $$;
 

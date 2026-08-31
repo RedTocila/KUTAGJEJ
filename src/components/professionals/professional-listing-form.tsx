@@ -122,6 +122,7 @@ export function ProfessionalListingForm({
   const [existingId, setExistingId] = React.useState<string | null>(null);
   const { defaults: knownDefaults, rememberLocation } = useCreateListingDefaults({
     enabled: !existingId,
+    withZone: true,
   });
   const [saveNotice, setSaveNotice] = React.useState<string | null>(null);
   const [createdPending, setCreatedPending] = React.useState(false);
@@ -138,6 +139,7 @@ export function ProfessionalListingForm({
     if (fromAi) return fromAi;
     return knownCreateDefaultsFromStorage().cityId;
   });
+  const [zoneId, setZoneId] = React.useState(() => knownCreateDefaultsFromStorage().zoneId);
   const [mapsUrl, setMapsUrl] = React.useState('');
   const [locationMode, setLocationMode] = React.useState<ListingLocationMode | ''>(() =>
     inferListingLocationMode(
@@ -179,6 +181,7 @@ export function ProfessionalListingForm({
     setDescription(listing.description ?? '');
     setCategory(listing.category ?? '');
     setCityId(listing.cityId ?? '');
+    setZoneId(listing.zoneId ?? '');
     setMapsUrl(listing.mapsUrl ?? '');
     setLocationMode(inferListingLocationMode(listing.cityId, listing.mapsUrl));
     setLocationLat(listing.locationLat ?? null);
@@ -266,7 +269,10 @@ export function ProfessionalListingForm({
     if (knownDefaults.cityId) {
       setCityId((prev) => (prev.trim() ? prev : knownDefaults.cityId));
     }
-  }, [user, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId]);
+    if (knownDefaults.zoneId) {
+      setZoneId((prev) => (prev.trim() ? prev : knownDefaults.zoneId));
+    }
+  }, [user, checkingExisting, existingId, knownDefaults.contactPhone, knownDefaults.cityId, knownDefaults.zoneId]);
 
   const appliedAiRef = React.useRef<Record<string, unknown> | null>(null);
   React.useEffect(() => {
@@ -283,6 +289,8 @@ export function ProfessionalListingForm({
       setCityId(nextCity);
       setLocationMode((prev) => prev || 'city');
     }
+    const nextZone = pickNonEmptyString(aiPrefill.zoneId);
+    if (nextZone) setZoneId(nextZone);
     const nextPhone = pickNonEmptyString(aiPrefill.contactPhone);
     if (nextPhone) setContactPhone(nextPhone);
     const nextServices = pickNonEmptyString(aiPrefill.servicesHighlight);
@@ -301,6 +309,7 @@ export function ProfessionalListingForm({
     description: string;
     category: string;
     cityId: string;
+    zoneId: string;
     mapsUrl: string;
     locationMode: ListingLocationMode | '';
     locationLat: number | null;
@@ -318,6 +327,7 @@ export function ProfessionalListingForm({
     description,
     category,
     cityId,
+    zoneId,
     mapsUrl,
     locationMode,
     locationLat,
@@ -337,6 +347,7 @@ export function ProfessionalListingForm({
     setDescription(next.description);
     setCategory(next.category);
     setCityId(next.cityId);
+    setZoneId(next.zoneId);
     setMapsUrl(next.mapsUrl);
     setLocationMode(next.locationMode);
     setLocationLat(next.locationLat);
@@ -485,12 +496,13 @@ export function ProfessionalListingForm({
     }
 
     const hours = Number.parseInt(responseTimeHours, 10);
-    const loc = exclusiveLocationPayload(locationMode, { cityId, mapsUrl });
+    const loc = exclusiveLocationPayload(locationMode, { cityId, zoneId, mapsUrl });
     const payload = {
       title: title.trim(),
       description: description.trim(),
       category,
       cityId: loc.cityId,
+      zoneId: loc.zoneId,
       mapsUrl: loc.mapsUrl,
       contactPhone: contactPhone.trim(),
       imageUrls,
@@ -530,7 +542,7 @@ export function ProfessionalListingForm({
       return;
     }
     clearDraft();
-    if (loc.cityId) rememberLocation({ cityId: loc.cityId });
+    if (loc.cityId) rememberLocation({ cityId: loc.cityId, zoneId: loc.zoneId });
     if (res.id && (wantsPremium || boostKindRef.current === 'premium')) {
       const boost = await activatePremiumAfterCreate({
         mode: premiumPayRef.current,
@@ -631,7 +643,12 @@ export function ProfessionalListingForm({
             mode={locationMode}
             onModeChange={setLocationMode}
             cityId={cityId}
-            onCityIdChange={setCityId}
+            onCityIdChange={(nextCityId) => {
+              setCityId(nextCityId);
+              setZoneId('');
+            }}
+            zoneId={zoneId}
+            onZoneIdChange={setZoneId}
             cities={cities}
             maps={{ mapsUrl, locationLat, locationLng, locationAddress }}
             onMapsChange={(next) => {
@@ -641,6 +658,7 @@ export function ProfessionalListingForm({
               setLocationAddress(next.locationAddress);
             }}
             disabled={submitting}
+            showZone
           />
           <ListingDescriptionField
             label="Përshkrimi"

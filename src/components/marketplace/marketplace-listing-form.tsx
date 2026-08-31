@@ -79,6 +79,7 @@ type MarketplaceFormState = {
   originalPrice: string;
   currency: '' | 'EUR' | 'LEK';
   cityId: string;
+  zoneId: string;
   locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
@@ -98,6 +99,7 @@ function emptyForm(): MarketplaceFormState {
     originalPrice: '',
     currency: 'EUR',
     cityId: '',
+    zoneId: '',
     locationMode: '',
     mapsUrl: '',
     locationLat: null,
@@ -142,6 +144,7 @@ function formFromListing(l: MarketplaceMineListing): MarketplaceFormState {
     originalPrice: l.originalPrice != null ? String(l.originalPrice) : '',
     currency: l.currency === 'EUR' || l.currency === 'LEK' ? l.currency : hasPrice ? 'EUR' : '',
     cityId: l.cityId ? String(l.cityId) : '',
+    zoneId: l.zoneId ? String(l.zoneId) : '',
     mapsUrl: l.mapsUrl ?? '',
     locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
@@ -160,7 +163,7 @@ export function MarketplaceListingForm({
 }: MarketplaceListingFormProps) {
   const isEdit = Boolean(editListingId);
   const { checkSession } = useUser();
-  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit });
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
@@ -168,7 +171,7 @@ export function MarketplaceListingForm({
 
   const [form, setForm] = React.useState<MarketplaceFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as MarketplaceFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), { withZone: true }) as MarketplaceFormState;
     return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
@@ -218,6 +221,7 @@ export function MarketplaceListingForm({
     const fromAi = applyEmptyKnownDefaults(
       formFromListing(initialListing),
       knownCreateDefaultsFromStorage(),
+      { withZone: true },
     ) as MarketplaceFormState;
     const shaped = {
       ...fromAi,
@@ -302,6 +306,7 @@ export function MarketplaceListingForm({
         originalPrice: form.originalPrice.trim() ? parseFloatStrict(form.originalPrice) : null,
         currency: form.currency === 'LEK' ? 'LEK' : 'EUR',
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
         contactPhone: form.contactPhone.trim(),
         imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_MARKETPLACE_IMAGES),
@@ -313,7 +318,7 @@ export function MarketplaceListingForm({
       if (result.error) { setSubmitError(result.error); return; }
       if (!isEdit) {
         clearDraft();
-        rememberLocation({ cityId: loc.cityId ?? '' });
+        rememberLocation({ cityId: loc.cityId ?? '', zoneId: loc.zoneId ?? '' });
       }
       if (!isEdit && result.id && (wantsPremium || boostKindRef.current === 'premium')) {
         const boost = await activatePremiumAfterCreate({
@@ -437,7 +442,9 @@ export function MarketplaceListingForm({
           mode={form.locationMode}
           onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
           cityId={form.cityId}
-          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId }))}
+          onCityIdChange={(cityId) => setForm((p) => ({ ...p, cityId, zoneId: '' }))}
+          zoneId={form.zoneId}
+          onZoneIdChange={(zoneId) => setForm((p) => ({ ...p, zoneId }))}
           cities={cities}
           maps={{
             mapsUrl: form.mapsUrl,
@@ -456,6 +463,7 @@ export function MarketplaceListingForm({
           }
           loadingCities={loadingCities}
           disabled={submitting}
+          showZone
         />
         <ListingTextField
           label="Numri i telefonit"

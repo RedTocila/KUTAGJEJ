@@ -125,6 +125,7 @@ function formatRealEstateDetail(doc, cityById, seller) {
 
 function formatCar(doc, cityById) {
   const city = cityById.get(doc.cityId);
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: doc.id,
     kind: 'car',
@@ -142,6 +143,7 @@ function formatCar(doc, cityById) {
     currency: doc.currency,
     color: doc.color,
     cityName: city?.name ?? null,
+    zoneName: zone?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
@@ -153,18 +155,24 @@ function formatCar(doc, cityById) {
 
 function formatJob(doc, cityById) {
   const city = cityById.get(doc.cityId);
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   const times = bumpTimeFields(doc);
   return {
     id: doc.id,
     kind: 'job',
     title: doc.title,
     description: snippet(doc.description),
+    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
     industry: doc.industry,
     cityName: city?.name ?? null,
+    zoneName: zone?.name ?? null,
     education: doc.education,
     experience: doc.experience,
     jobType: doc.jobType,
     workLocation: doc.workLocation,
+    preferredGender: doc.preferredGender ?? null,
+    preferredAgeMin: doc.preferredAgeMin ?? null,
+    preferredAgeMax: doc.preferredAgeMax ?? null,
     salary: doc.salary ?? null,
     currency: doc.currency ?? null,
     contactPhone: doc.contactPhone ?? null,
@@ -184,6 +192,7 @@ function formatJob(doc, cityById) {
 
 function formatMarketplace(doc, cityById) {
   const city = cityById.get(doc.cityId);
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: doc.id,
     kind: 'marketplace',
@@ -196,6 +205,7 @@ function formatMarketplace(doc, cityById) {
     originalPrice: comparePriceFromDoc(doc, 'originalPrice', 'original_price'),
     currency: doc.currency ?? null,
     cityName: city?.name ?? null,
+    zoneName: zone?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrl: pickImage(doc),
     imageUrls: coverImageUrls(doc),
@@ -284,17 +294,9 @@ function formatDirectory(doc, cityById, reviewStats) {
     const city = cityById?.get(String(doc.cityId));
     const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
     const lat =
-      typeof doc.locationLat === 'number'
-        ? doc.locationLat
-        : doc.locationLat != null
-          ? Number(doc.locationLat)
-          : null;
+      typeof doc.locationLat === 'number' ? doc.locationLat : doc.locationLat != null ? Number(doc.locationLat) : null;
     const lng =
-      typeof doc.locationLng === 'number'
-        ? doc.locationLng
-        : doc.locationLng != null
-          ? Number(doc.locationLng)
-          : null;
+      typeof doc.locationLng === 'number' ? doc.locationLng : doc.locationLng != null ? Number(doc.locationLng) : null;
     return {
       ...base,
       condition: null,

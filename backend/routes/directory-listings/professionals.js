@@ -9,7 +9,7 @@ const { validateProfessionalPayload } = require('../../lib/directory-professiona
 const { hasUnlimitedDirectoryListings } = require('../../lib/directory-listing-limits');
 const { notifyAdminsListingSubmitted } = require('../../lib/listing-moderation');
 const { isUuid } = require('../../lib/public-listings/query-helpers');
-const { resolveOptionalCityId } = require('../../lib/listing-city');
+const { resolveOptionalCityAndZone } = require('../../lib/listing-city');
 const { requireListingPhotos } = require('../../lib/image-upload');
 const { slugifyTitle } = require('../../lib/real-estate-permalink');
 const { formatMineProfessional, formatMineProfessionalFull, loadMineKind, loadMineListingById } = require('../../lib/mine-listings');
@@ -78,7 +78,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       }
     }
 
-    const city = await resolveOptionalCityId(body.cityId);
+    const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
     if (!city.ok) return res.status(400).json({ message: city.message });
     const cityId = city.cityId;
 
@@ -97,6 +97,7 @@ router.post('/professionals', authMiddleware, requirePortalUser, async (req, res
       description: String(body.description).trim(),
       category: body.category,
       city_id: cityId,
+      zone_id: city.zoneId,
       contact_phone: String(body.contactPhone || '').trim(),
       image_urls: imageUrls,
       condition: v.condition,
@@ -165,9 +166,10 @@ router.put('/professionals/:id', authMiddleware, requirePortalUser, async (req, 
       patch.category = category || null;
     }
     if (body.cityId != null) {
-      const city = await resolveOptionalCityId(body.cityId);
+      const city = await resolveOptionalCityAndZone(body.cityId, body.zoneId);
       if (!city.ok) return res.status(400).json({ message: city.message });
       patch.city_id = city.cityId;
+      patch.zone_id = city.zoneId;
     }
     if (body.contactPhone != null) patch.contact_phone = String(body.contactPhone).trim();
 

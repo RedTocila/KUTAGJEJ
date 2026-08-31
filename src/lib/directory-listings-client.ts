@@ -252,6 +252,7 @@ export interface ProfessionalListingPayload {
   description: string;
   category: string;
   cityId?: string | null;
+  zoneId?: string | null;
   mapsUrl?: string | null;
   contactPhone: string;
   imageUrls: string[];
@@ -272,7 +273,9 @@ export interface ProfessionalMineListing extends ListingMetrics {
   price: number | null;
   currency: string | null;
   cityId: string | null;
+  zoneId?: string | null;
   cityName: string | null;
+  zoneName?: string | null;
   mapsUrl?: string | null;
   locationAddress?: string | null;
   locationLat?: number | null;

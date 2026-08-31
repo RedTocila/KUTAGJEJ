@@ -3,13 +3,10 @@
 import * as React from 'react';
 import {
   Box,
-  Button,
   Checkbox,
   Divider,
-  FormControl,
   FormControlLabel,
   FormGroup,
-  FormLabel,
   InputAdornment,
   Stack,
   Typography,
@@ -121,6 +118,7 @@ type CarFormState = {
   extras: string[];
   contactPhone: string;
   cityId: string;
+  zoneId: string;
   locationMode: ListingLocationMode | '';
   mapsUrl: string;
   locationLat: number | null;
@@ -148,6 +146,7 @@ function emptyForm(): CarFormState {
     extras: [],
     contactPhone: '',
     cityId: '',
+    zoneId: '',
     locationMode: '',
     mapsUrl: '',
     locationLat: null,
@@ -265,6 +264,7 @@ function formFromListing(l: CarMineListing): CarFormState {
     extras: l.extras ?? [],
     contactPhone: l.contactPhone || '',
     cityId: l.cityId ? String(l.cityId) : '',
+    zoneId: l.zoneId ? String(l.zoneId) : '',
     mapsUrl: l.mapsUrl ?? '',
     locationMode: inferListingLocationMode(l.cityId, l.mapsUrl),
     locationLat: l.locationLat ?? null,
@@ -292,7 +292,7 @@ export function CarListingForm({
 }: CarListingFormProps) {
   const isEdit = Boolean(editListingId);
   const { checkSession } = useUser();
-  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit });
+  const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
   const wantsOkazion = searchParams.get('okazion') === '1';
@@ -300,7 +300,7 @@ export function CarListingForm({
 
   const [form, setForm] = React.useState<CarFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
-    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage()) as CarFormState;
+    const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), { withZone: true }) as CarFormState;
     return { ...next, locationMode: next.locationMode || inferListingLocationMode(next.cityId, next.mapsUrl) };
   });
   const okazionPayRef = React.useRef<OkazionBoostMode>('buy-card');
@@ -354,6 +354,7 @@ export function CarListingForm({
     const fromAi = applyEmptyKnownDefaults(
       formFromListing(initialListing),
       knownCreateDefaultsFromStorage(),
+      { withZone: true },
     ) as CarFormState;
     const shaped = {
       ...fromAi,
@@ -504,6 +505,7 @@ export function CarListingForm({
           extras: form.extras,
           contactPhone: form.contactPhone.trim(),
           cityId: loc.cityId,
+        zoneId: loc.zoneId,
           mapsUrl: loc.mapsUrl,
           imageUrls: [...existingImageUrls, ...uploaded].slice(0, MAX_IMAGES),
         });
@@ -605,7 +607,7 @@ export function CarListingForm({
         }
       }
       if (!isEdit) {
-        if (loc.cityId) rememberLocation({ cityId: loc.cityId });
+        if (loc.cityId) rememberLocation({ cityId: loc.cityId, zoneId: loc.zoneId });
       }
       onSuccess?.();
     } finally {
@@ -697,7 +699,12 @@ export function CarListingForm({
             clearFieldError('cityId');
           }}
           cityId={form.cityId}
-          onCityIdChange={(cityId) => setSelectField('cityId', cityId)}
+          onCityIdChange={(cityId) => {
+            setForm((p) => ({ ...p, cityId, zoneId: '' }));
+            clearFieldError('cityId');
+          }}
+          zoneId={form.zoneId}
+          onZoneIdChange={(zoneId) => setForm((p) => ({ ...p, zoneId }))}
           cities={cities}
           maps={{
             mapsUrl: form.mapsUrl,
@@ -718,6 +725,7 @@ export function CarListingForm({
           disabled={submitting}
           cityError={Boolean(fieldErrors.cityId)}
           cityHelperText={fieldErrors.cityId}
+          showZone
           labels={{
             modeLabel: 'Location',
             cityMode: 'City / zone',

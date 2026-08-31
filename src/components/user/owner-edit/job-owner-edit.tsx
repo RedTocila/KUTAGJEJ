@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Checkbox, FormControlLabel, FormGroup, Stack, TextField, Typography } from '@mui/material';
+import { Box, Checkbox, FormControlLabel, FormGroup, Slider, Stack, TextField, Typography } from '@mui/material';
 
 import { paths } from '@/paths';
 import { isPersistableImageUrl } from '@/lib/image-url';
@@ -9,6 +9,7 @@ import {
   JOB_BENEFIT_PRESETS,
   JOB_EDUCATION_OPTIONS,
   JOB_EXPERIENCE_OPTIONS,
+  JOB_GENDER_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
@@ -45,6 +46,7 @@ type Snapshot = {
   description: string;
   industry: string;
   cityId: string | null;
+  zoneId: string | null;
   cityName: string | null;
   mapsUrl: string | null;
   locationAddress: string | null;
@@ -52,6 +54,9 @@ type Snapshot = {
   locationLng: number | null;
   jobType: string;
   workLocation: string;
+  preferredGender: 'male' | 'female' | 'both' | null;
+  preferredAgeMin: number | null;
+  preferredAgeMax: number | null;
   education: string;
   experience: string;
   salary: number | null;
@@ -68,6 +73,7 @@ function snapFrom(d: JobMineListing): Snapshot {
     description: d.description ?? '',
     industry: d.industry,
     cityId: d.cityId ?? null,
+    zoneId: d.zoneId ?? null,
     cityName: d.cityName ?? null,
     mapsUrl: d.mapsUrl ?? null,
     locationAddress: d.locationAddress ?? null,
@@ -75,6 +81,9 @@ function snapFrom(d: JobMineListing): Snapshot {
     locationLng: d.locationLng ?? null,
     jobType: d.jobType,
     workLocation: d.workLocation,
+    preferredGender: d.preferredGender ?? null,
+    preferredAgeMin: d.preferredAgeMin ?? null,
+    preferredAgeMax: d.preferredAgeMax ?? null,
     education: d.education,
     experience: d.experience,
     salary: d.salary,
@@ -211,6 +220,9 @@ export function JobOwnerEdit({
         experience: draft.experience,
         jobType: draft.jobType,
         workLocation: draft.workLocation,
+        preferredGender: draft.preferredGender ?? null,
+        preferredAgeMin: draft.preferredAgeMin ?? null,
+        preferredAgeMax: draft.preferredAgeMax ?? null,
         salary: draft.salary,
         currency: draft.salary != null ? draft.currency || 'EUR' : 'EUR',
         contactPhone: draft.contactPhone ?? '',
@@ -218,6 +230,7 @@ export function JobOwnerEdit({
         requirements: draft.requirements ?? [],
         benefits: draft.benefits ?? [],
         imageUrls,
+        zoneId: loc.zoneId,
       });
       if (res.error) {
         setError(res.error);
@@ -238,6 +251,11 @@ export function JobOwnerEdit({
   const fieldSx = {
     '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)' },
   } as const;
+  const preferredRangeEnabled = draft.preferredAgeMin != null && draft.preferredAgeMax != null;
+  const preferredAgeRange: [number, number] = [
+    draft.preferredAgeMin ?? 18,
+    draft.preferredAgeMax ?? 65,
+  ];
 
   const inlineEditors: Partial<Record<OwnerInlineField, React.ReactNode>> = {
     title: (
@@ -296,7 +314,14 @@ export function JobOwnerEdit({
           cityId={draft.cityId ?? ''}
           onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
-            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+            setDraft((d) => ({ ...d, cityId: v || null, zoneId: null, cityName }));
+          }}
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
+            const zone = cities
+              .find((city) => city.id === (draft.cityId ?? ''))
+              ?.zones.find((item) => item.id === v);
+            setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
           cities={cities}
           maps={{
@@ -314,6 +339,7 @@ export function JobOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
+          showZone
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>
@@ -343,21 +369,75 @@ export function JobOwnerEdit({
           emptyLabel="—"
         />
         <SearchableSelect
-          label="Arsimi"
+          label="Gjinia e preferuar"
+          value={draft.preferredGender ?? ''}
+          onChange={(v) =>
+            setDraft((d) => ({
+              ...d,
+              preferredGender: v === 'male' || v === 'female' || v === 'both' ? v : null,
+            }))
+          }
+          options={JOB_GENDER_OPTIONS}
+          emptyLabel="Pa preferencë"
+          clearable
+        />
+        <Box sx={{ px: 1 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={preferredRangeEnabled}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    preferredAgeMin: e.target.checked ? preferredAgeRange[0] : null,
+                    preferredAgeMax: e.target.checked ? preferredAgeRange[1] : null,
+                  }))
+                }
+                disabled={saving}
+              />
+            }
+            label="Përcakto moshën e preferuar"
+          />
+          <Box sx={{ px: 1, pt: 1, opacity: preferredRangeEnabled ? 1 : 0.5 }}>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, mb: 0.5 }}>
+              {preferredAgeRange[0]} – {preferredAgeRange[1]} vjeç
+            </Typography>
+            <Slider
+              value={preferredAgeRange}
+              onChange={(_, value) => {
+                if (!Array.isArray(value)) return;
+                const [minAge, maxAge] = value;
+                setDraft((d) => ({
+                  ...d,
+                  preferredAgeMin: minAge,
+                  preferredAgeMax: maxAge,
+                }));
+              }}
+              min={18}
+              max={65}
+              step={1}
+              valueLabelDisplay="auto"
+              disabled={saving || !preferredRangeEnabled}
+              aria-label="Mosha e preferuar"
+            />
+          </Box>
+        </Box>
+        <SearchableSelect
+          label="Arsimi (opsionale)"
           value={draft.education}
           onChange={(v) => setDraft((d) => ({ ...d, education: v }))}
           options={JOB_EDUCATION_OPTIONS}
           emptyLabel="Zgjidhni nivelin…"
         />
         <SearchableSelect
-          label="Eksperienca"
+          label="Eksperienca (opsionale)"
           value={draft.experience}
           onChange={(v) => setDraft((d) => ({ ...d, experience: v }))}
           options={JOB_EXPERIENCE_OPTIONS}
           emptyLabel="Zgjidhni eksperiencën…"
         />
         <TextField
-          label="Përgjegjësitë (një për rresht)"
+          label="Përgjegjësitë (opsionale, një për rresht)"
           value={(draft.responsibilities ?? []).join('\n')}
           onChange={(e) => setDraft((d) => ({ ...d, responsibilities: linesToList(e.target.value) }))}
           fullWidth
@@ -366,7 +446,7 @@ export function JobOwnerEdit({
           sx={fieldSx}
         />
         <TextField
-          label="Kërkesat (një për rresht)"
+          label="Kërkesat (opsionale, një për rresht)"
           value={(draft.requirements ?? []).join('\n')}
           onChange={(e) => setDraft((d) => ({ ...d, requirements: linesToList(e.target.value) }))}
           fullWidth

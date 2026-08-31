@@ -34,6 +34,7 @@ import type { ListingSharePayload } from '@/lib/listing-share';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
@@ -92,7 +93,12 @@ function SoftSectionLabel({ title, edit }: { title: string; edit?: { label: stri
   );
 }
 
-const metaIcons = [LocationOnOutlined, WorkOutlineOutlined, ScheduleOutlined] as const;
+function metaIcon(label: string) {
+  if (label === 'Lokacioni') return LocationOnOutlined;
+  if (label === 'Lloji i punës') return WorkOutlineOutlined;
+  if (label === 'Gjinia e preferuar') return GroupsOutlined;
+  return ScheduleOutlined;
+}
 
 export function JobListingDetailView({
   listing,
@@ -140,9 +146,10 @@ export function JobListingDetailView({
     () =>
       businessLocationLine({
         locationAddress: listing.locationAddress,
+        zoneName: listing.zoneName,
         cityName: listing.cityName,
       }),
-    [listing.cityName, listing.locationAddress]
+    [listing.cityName, listing.locationAddress, listing.zoneName]
   );
   const mapLocation = React.useMemo(
     () =>
@@ -246,6 +253,13 @@ export function JobListingDetailView({
             title={listing.title}
             imageUrls={coverImageUrls}
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
+            placeholderContent={
+              <JobListingFallback
+                position={listing.title}
+                salary={salary}
+                location={locationLine || listing.cityName}
+              />
+            }
             browseListHref={ownerPreview ? undefined : paths.public.jobs}
             browseListAriaLabel="Prapa te lista e punës"
             bookmark={ownerPreview ? undefined : { saved, onToggle: () => void toggleSave() }}
@@ -505,11 +519,13 @@ export function JobListingDetailView({
                     gap: 0.85,
                   }}
                 >
-                  {metaRows.map((row, index) => {
-                    const Icon = metaIcons[index] ?? ScheduleOutlined;
+                  {metaRows.map((row) => {
+                    const Icon = metaIcon(row.label);
                     const isLocation = row.label === 'Lokacioni';
                     const isJobType = row.label === 'Lloji i punës';
                     const isExperience = row.label === 'Përvoja';
+                    const isCandidatePreference =
+                      row.label === 'Gjinia e preferuar' || row.label === 'Mosha e preferuar';
                     const locationEditClick = ownerEdit?.onStartInlineEdit
                       ? () => ownerEdit.onStartInlineEdit!('location')
                       : onEditInfo;
@@ -518,7 +534,7 @@ export function JobListingDetailView({
                       : onEditSpecs;
                     const rowClick = isLocation
                       ? locationEditClick
-                      : isJobType || isExperience
+                      : isJobType || isExperience || isCandidatePreference
                         ? specsClick
                         : undefined;
                     const pencilLabel = isLocation
@@ -527,7 +543,9 @@ export function JobListingDetailView({
                         ? 'Ndrysho llojin e punës'
                         : isExperience
                           ? 'Ndrysho eksperiencën'
-                          : '';
+                          : isCandidatePreference
+                            ? 'Ndrysho preferencat e kandidatit'
+                            : '';
                     return (
                       <Box
                         key={row.label}

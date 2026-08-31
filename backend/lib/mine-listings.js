@@ -61,6 +61,7 @@ const MINE_SELECT = {
     'currency',
     'color',
     'city_id',
+    'zone_id',
     'contact_phone',
     'image_urls',
     'status',
@@ -76,12 +77,17 @@ const MINE_SELECT = {
   job_listings: [
     'id',
     'title',
+    'cover_mode',
     'industry',
     'city_id',
+    'zone_id',
     'education',
     'experience',
     'job_type',
     'work_location',
+    'preferred_gender',
+    'preferred_age_min',
+    'preferred_age_max',
     'salary',
     'currency',
     'contact_phone',
@@ -107,6 +113,7 @@ const MINE_SELECT = {
     'original_price',
     'currency',
     'city_id',
+    'zone_id',
     'contact_phone',
     'image_urls',
     'status',
@@ -194,6 +201,7 @@ function formatMineRealEstate(doc, cityById) {
 
 function formatMineCar(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     vehicleType: doc.vehicleType || 'car',
@@ -210,6 +218,8 @@ function formatMineCar(doc, cityById) {
     color: doc.color,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     imageUrls: coverImageUrls(doc),
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
@@ -222,17 +232,24 @@ function formatMineCar(doc, cityById) {
 
 function formatMineJob(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   const jobActive = isJobListingActive(doc);
   return {
     id: listingId(doc),
     title: doc.title,
+    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
     industry: doc.industry,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     education: doc.education,
     experience: doc.experience,
     jobType: doc.jobType,
     workLocation: doc.workLocation,
+    preferredGender: doc.preferredGender ?? null,
+    preferredAgeMin: doc.preferredAgeMin ?? null,
+    preferredAgeMax: doc.preferredAgeMax ?? null,
     salary: doc.salary ?? null,
     currency: doc.currency ?? null,
     imageUrls: coverImageUrls(doc),
@@ -249,6 +266,7 @@ function formatMineJob(doc, cityById) {
 
 function formatMineMarketplace(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     transactionType: doc.transactionType,
@@ -260,6 +278,8 @@ function formatMineMarketplace(doc, cityById) {
     currency: doc.currency ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     imageUrls: coverImageUrls(doc),
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
@@ -306,6 +326,7 @@ function formatMineBusiness(doc, cityById) {
 
 function formatMineProfessional(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     vertical: doc.vertical,
@@ -315,7 +336,9 @@ function formatMineProfessional(doc, cityById) {
     price: doc.price ?? null,
     currency: doc.currency ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
     cityName: city?.name ?? null,
+    zoneName: zone?.name ?? null,
     imageUrls: coverImageUrls(doc),
     servicesHighlight: doc.servicesHighlight ?? null,
     announcementTitle: doc.announcementTitle?.replace(/\s+/g, ' ').trim() || null,
@@ -371,6 +394,7 @@ function formatMineRealEstateFull(doc, cityById) {
 
 function formatMineCarFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     vehicleType: doc.vehicleType || 'car',
@@ -391,6 +415,8 @@ function formatMineCarFull(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
@@ -403,17 +429,24 @@ function formatMineCarFull(doc, cityById) {
 
 function formatMineJobFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     title: doc.title,
+    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
     description: doc.description ?? '',
     industry: doc.industry,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     education: doc.education,
     experience: doc.experience,
     jobType: doc.jobType,
     workLocation: doc.workLocation,
+    preferredGender: doc.preferredGender ?? null,
+    preferredAgeMin: doc.preferredAgeMin ?? null,
+    preferredAgeMax: doc.preferredAgeMax ?? null,
     salary: doc.salary ?? null,
     currency: doc.currency ?? null,
     contactPhone: doc.contactPhone ?? null,
@@ -432,6 +465,7 @@ function formatMineJobFull(doc, cityById) {
 
 function formatMineMarketplaceFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     transactionType: doc.transactionType,
@@ -443,6 +477,8 @@ function formatMineMarketplaceFull(doc, cityById) {
     currency: doc.currency ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
+    zoneName: zone?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     description: doc.description ?? '',
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
@@ -499,6 +535,7 @@ function formatMineBusinessFull(doc, cityById) {
 
 function formatMineProfessionalFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
+  const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
   return {
     id: listingId(doc),
     vertical: doc.vertical,
@@ -509,7 +546,9 @@ function formatMineProfessionalFull(doc, cityById) {
     price: doc.price ?? null,
     currency: doc.currency ?? null,
     cityId: doc.cityId ? String(doc.cityId) : null,
+    zoneId: doc.zoneId ? String(doc.zoneId) : null,
     cityName: city?.name ?? null,
+    zoneName: zone?.name ?? null,
     contactPhone: doc.contactPhone ?? null,
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     responseTimeHours: doc.responseTimeHours ?? null,

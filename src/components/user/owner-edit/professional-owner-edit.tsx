@@ -47,6 +47,7 @@ type Snapshot = {
   description: string;
   category: string;
   cityId: string | null;
+  zoneId: string | null;
   cityName: string | null;
   mapsUrl: string | null;
   locationAddress: string | null;
@@ -63,6 +64,7 @@ function snapFrom(d: ProfessionalMineListing): Snapshot {
     description: d.description ?? '',
     category: d.category,
     cityId: d.cityId ?? null,
+    zoneId: d.zoneId ?? null,
     cityName: d.cityName ?? null,
     mapsUrl: d.mapsUrl ?? null,
     locationAddress: d.locationAddress ?? null,
@@ -303,6 +305,7 @@ export function ProfessionalOwnerEdit({
         description: (draft.description ?? '').trim(),
         category: draft.category,
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
         contactPhone: draft.contactPhone ?? '',
         imageUrls,
@@ -325,6 +328,7 @@ export function ProfessionalOwnerEdit({
         imageUrls,
         portfolioItems,
         cityId: payload.cityId || null,
+        zoneId: payload.zoneId || null,
       };
       setDraft(next);
       setBaseline(JSON.stringify(next));
@@ -416,7 +420,14 @@ export function ProfessionalOwnerEdit({
           cityId={draft.cityId ?? ''}
           onCityIdChange={(v) => {
             const cityName = cities.find((c) => c.id === v)?.name ?? null;
-            setDraft((d) => ({ ...d, cityId: v || null, cityName }));
+            setDraft((d) => ({ ...d, cityId: v || null, zoneId: null, cityName }));
+          }}
+          zoneId={draft.zoneId ?? ''}
+          onZoneIdChange={(v) => {
+            const zone = cities
+              .find((city) => city.id === (draft.cityId ?? ''))
+              ?.zones.find((item) => item.id === v);
+            setDraft((d) => ({ ...d, zoneId: v || null, zoneName: zone?.name ?? null }));
           }}
           cities={cities}
           maps={{
@@ -434,6 +445,7 @@ export function ProfessionalOwnerEdit({
               locationAddress: next.locationAddress,
             }))
           }
+          showZone
         />
         <OwnerInlineEditActions onDone={doneInline} onCancel={cancelInline} />
       </Stack>

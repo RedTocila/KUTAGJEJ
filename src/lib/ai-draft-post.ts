@@ -265,6 +265,12 @@ export async function postAiListingDraft(
           experience: str(f.experience) || '',
           jobType: str(f.jobType) || 'full-time',
           workLocation: str(f.workLocation) || 'onsite',
+          preferredGender:
+            f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
+              ? f.preferredGender
+              : null,
+          preferredAgeMin: num(f.preferredAgeMin),
+          preferredAgeMax: num(f.preferredAgeMax),
           salary: num(f.salary),
           currency: f.currency === 'LEK' || f.currency === 'EUR' ? String(f.currency) : null,
           contactPhone: phone || '000000',

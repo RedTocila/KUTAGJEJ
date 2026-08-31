@@ -1,8 +1,7 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
 
-import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
-import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
+import { paths } from '@/paths';
 import { generateBrowseMetadata } from '@/lib/browse-page-seo';
 import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
 import {
@@ -13,7 +12,8 @@ import {
 } from '@/lib/listing-filters';
 import { fetchBrowseProfessionals, fetchTopViewedListings } from '@/lib/public-listings-client';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
-import { paths } from '@/paths';
+import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
 export const revalidate = 60;
 
@@ -49,7 +49,6 @@ export default async function ProfessionalsBrowsePage({ searchParams }: PageProp
       hasFilters={hasFilters}
       cities={cities}
       topViewed={topViewed}
-      enableInfiniteScroll
       ssrOk={ok}
     >
       <BrowseInfiniteGrid
@@ -57,7 +56,6 @@ export default async function ProfessionalsBrowsePage({ searchParams }: PageProp
         filters={filters}
         initialListings={listings}
         initialPage={currentPage}
-        totalPages={totalPages}
       />
     </CategoryBrowseLayout>
   );

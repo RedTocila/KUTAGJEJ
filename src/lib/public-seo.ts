@@ -1,24 +1,17 @@
-import type { Metadata } from 'next';
 import { cache } from 'react';
+import type { Metadata } from 'next';
 
 import { config as siteConfig } from '@/config';
+import { paths, pathsPublicLocationLanding } from '@/paths';
+import { ALL_VEHICLE_MAKES, type CarMake } from '@/lib/car-constants';
+import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import {
-  ALL_VEHICLE_MAKES,
-  type CarMake,
-} from '@/lib/car-constants';
-import {
+  BROWSE_PAGE_SIZE,
   BUSINESS_FILTER_OPTIONS,
   PROFESSIONAL_FILTER_OPTIONS,
+  type BrowseFilters,
 } from '@/lib/listing-filters';
-import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS } from '@/lib/marketplace-constants';
-import {
-  REAL_ESTATE_PROPERTY_CATEGORIES,
-  TRANSACTION_OPTIONS,
-  propertyCategoryLabel,
-} from '@/lib/real-estate-constants';
-import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
-import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import {
   fetchBrowseBusinesses,
   fetchBrowseCars,
@@ -33,8 +26,13 @@ import {
   type PublicMarketplaceListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
-import type { BrowseFilters } from '@/lib/listing-filters';
-import { paths, pathsPublicLocationLanding } from '@/paths';
+import {
+  propertyCategoryLabel,
+  REAL_ESTATE_PROPERTY_CATEGORIES,
+  TRANSACTION_OPTIONS,
+} from '@/lib/real-estate-constants';
+import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { safeServerJson } from '@/lib/server-fetch';
 
 export type SeoVertical = 'real-estate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals';
@@ -108,7 +106,11 @@ function stripDiacritics(value: string): string {
 }
 
 export function seoSlug(value: string): string {
-  return stripDiacritics(String(value || '').trim().toLowerCase())
+  return stripDiacritics(
+    String(value || '')
+      .trim()
+      .toLowerCase()
+  )
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -119,7 +121,7 @@ export async function fetchPublicSeoIndex(): Promise<PublicSeoIndex | null> {
 
 function findOptionLabel(
   options: ReadonlyArray<{ value: string; label: string }>,
-  segment: string,
+  segment: string
 ): { value: string; label: string } | null {
   const normalized = seoSlug(segment);
   return (
@@ -157,14 +159,15 @@ function pluralRealEstateLabel(value: string): string {
 export function getSeoLandingConfig(
   vertical: SeoVertical,
   segments: string[],
-  cities: RealEstateCityDto[],
+  cities: RealEstateCityDto[]
 ): SeoLandingConfig | null {
   if (segments.length < 1 || segments.length > 3) return null;
   const city = cityForSegment(cities, segments[0]);
   if (!city && segments.length === 1) {
     const base = `${BASE_PATHS[vertical].replace(/\/$/, '')}/${encodeURIComponent(segments[0])}`;
     if (vertical === 'real-estate') {
-      const categorySlug = REAL_ESTATE_PATH_ALIASES[seoSlug(segments[0])] ||
+      const categorySlug =
+        REAL_ESTATE_PATH_ALIASES[seoSlug(segments[0])] ||
         REAL_ESTATE_PROPERTY_CATEGORIES.find((item) => seoSlug(item.slug) === seoSlug(segments[0]))?.slug;
       if (!categorySlug) return null;
       const categoryLabel = pluralRealEstateLabel(categorySlug);
@@ -236,7 +239,8 @@ export function getSeoLandingConfig(
         description: `Shfletoni njoftime të verifikuara për prona në ${city.name}, me çmime dhe detaje të publikuara nga përdoruesit.`,
       };
     }
-    const categorySlug = REAL_ESTATE_PATH_ALIASES[seoSlug(segments[1])] ||
+    const categorySlug =
+      REAL_ESTATE_PATH_ALIASES[seoSlug(segments[1])] ||
       REAL_ESTATE_PROPERTY_CATEGORIES.find((item) => seoSlug(item.slug) === seoSlug(segments[1]))?.slug;
     if (!categorySlug) return null;
     const categoryLabel = pluralRealEstateLabel(categorySlug);
@@ -245,13 +249,18 @@ export function getSeoLandingConfig(
         vertical,
         city,
         filters: { ...cityFilters, cat: categorySlug },
-        path: pathsPublicLocationLanding(BASE_PATHS[vertical], city.slug, REAL_ESTATE_PATH_ALIASES[seoSlug(segments[1])] || categorySlug),
+        path: pathsPublicLocationLanding(
+          BASE_PATHS[vertical],
+          city.slug,
+          REAL_ESTATE_PATH_ALIASES[seoSlug(segments[1])] || categorySlug
+        ),
         heading: `${categoryLabel} në ${city.name}`,
         description: `Gjeni ${categoryLabel.toLowerCase()} në ${city.name} me informacion real për çmimin, sipërfaqen dhe karakteristikat e pronës.`,
         categoryLabel,
       };
     }
-    const transactionSlug = TRANSACTION_PATH_ALIASES[seoSlug(segments[2])] ||
+    const transactionSlug =
+      TRANSACTION_PATH_ALIASES[seoSlug(segments[2])] ||
       TRANSACTION_OPTIONS.find((item) => seoSlug(item.value) === seoSlug(segments[2]))?.value;
     if (!transactionSlug) return null;
     const transactionLabel = transactionSlug === 'rent' ? 'me qira' : 'në shitje';
@@ -263,7 +272,7 @@ export function getSeoLandingConfig(
         BASE_PATHS[vertical],
         city.slug,
         REAL_ESTATE_PATH_ALIASES[seoSlug(segments[1])] || categorySlug,
-        TRANSACTION_PATH_ALIASES[seoSlug(segments[2])] || transactionSlug,
+        TRANSACTION_PATH_ALIASES[seoSlug(segments[2])] || transactionSlug
       ),
       heading: `${categoryLabel} ${transactionLabel} në ${city.name}`,
       description: `Shfletoni ${categoryLabel.toLowerCase()} ${transactionLabel} në ${city.name}. Krahasojini njoftimet sipas çmimit, sipërfaqes dhe detajeve të publikuara.`,
@@ -328,27 +337,24 @@ export function getSeoLandingConfig(
   };
 }
 
-export async function fetchSeoLandingListings(config: SeoLandingConfig): Promise<SeoLandingListings> {
+export async function fetchSeoLandingListings(config: SeoLandingConfig, page = 1): Promise<SeoLandingListings> {
   switch (config.vertical) {
     case 'real-estate':
-      return fetchBrowseRealEstate(24, config.filters, 1);
+      return fetchBrowseRealEstate(BROWSE_PAGE_SIZE, config.filters, page);
     case 'cars':
-      return fetchBrowseCars(24, config.filters, 1);
+      return fetchBrowseCars(BROWSE_PAGE_SIZE, config.filters, page);
     case 'jobs':
-      return fetchBrowseJobs(24, config.filters, 1);
+      return fetchBrowseJobs(BROWSE_PAGE_SIZE, config.filters, page);
     case 'marketplace':
-      return fetchBrowseMarketplace(24, config.filters, 1);
+      return fetchBrowseMarketplace(BROWSE_PAGE_SIZE, config.filters, page);
     case 'businesses':
-      return fetchBrowseBusinesses(24, config.filters, 1);
+      return fetchBrowseBusinesses(BROWSE_PAGE_SIZE, config.filters, page);
     case 'professionals':
-      return fetchBrowseProfessionals(24, config.filters, 1);
+      return fetchBrowseProfessionals(BROWSE_PAGE_SIZE, config.filters, page);
   }
 }
 
-export const loadSeoLandingRoute = cache(async function loadSeoLandingRoute(
-  vertical: SeoVertical,
-  segments: string[],
-) {
+export const loadSeoLandingRoute = cache(async function loadSeoLandingRoute(vertical: SeoVertical, segments: string[]) {
   const cities = await fetchPublicCities();
   const config = getSeoLandingConfig(vertical, segments, cities);
   if (!config) return { config: null, cities, result: null };
@@ -356,11 +362,7 @@ export const loadSeoLandingRoute = cache(async function loadSeoLandingRoute(
   return { config, cities, result };
 });
 
-export function seoLandingMetadata(
-  config: SeoLandingConfig,
-  total: number,
-  indexable: boolean,
-): Metadata {
+export function seoLandingMetadata(config: SeoLandingConfig, total: number, indexable: boolean): Metadata {
   const canonical = config.path;
   return {
     title: config.heading,
@@ -377,4 +379,3 @@ export function seoLandingMetadata(
     other: { 'listing-count': String(total) },
   };
 }
-

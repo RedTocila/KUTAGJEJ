@@ -280,7 +280,6 @@ export function BrowseListingsCountCaption({
   totalPages,
   pageSize,
   hasFilters,
-  enableInfiniteScroll,
   countKind = 'listings',
   emphasized = false,
 }: {
@@ -290,7 +289,6 @@ export function BrowseListingsCountCaption({
   totalPages: number;
   pageSize: number;
   hasFilters: boolean;
-  enableInfiniteScroll: boolean;
   countKind?: 'listings' | 'profiles';
   emphasized?: boolean;
 }) {
@@ -302,7 +300,7 @@ export function BrowseListingsCountCaption({
       ? hasFilters
         ? t.search.profileCount(shownCount)
         : t.browse.profilesCount(total)
-      : totalPages > 1 && !enableInfiniteScroll
+      : totalPages > 1
         ? t.browse.showingRange(rangeStart, rangeEnd, total)
         : hasFilters
           ? t.browse.filteredCount(shownCount, total)

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
+import { Container, Grid, Skeleton, Stack } from '@mui/material';
 
 import { isHomeVerticalId } from '@/lib/home-categories';
 import type { TopViewedListing } from '@/lib/public-listings-client';
@@ -29,8 +29,6 @@ interface CategoryBrowseLayoutProps {
   cities: RealEstateCityDto[];
   /** Featured listings for the category card (most-viewed, or highest-rated for businesses/professionals). */
   topViewed?: TopViewedListing[];
-  /** Append pages on scroll instead of paging the whole route. */
-  enableInfiniteScroll?: boolean;
   /** False when the SSR listing request failed (empty is not trustworthy). */
   ssrOk?: boolean;
   /** Optional SEO landing heading and human-readable introduction. */
@@ -57,7 +55,6 @@ export function CategoryBrowseLayout({
   hasFilters,
   cities,
   topViewed = [],
-  enableInfiniteScroll = false,
   ssrOk = true,
   heading,
   intro,
@@ -133,39 +130,14 @@ export function CategoryBrowseLayout({
                     totalPages={liveTotalPages}
                     pageSize={pageSize}
                     hasFilters={hasFilters}
-                    enableInfiniteScroll={enableInfiniteScroll}
                     countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
                     emphasized={showTopViewed}
                   />
                 )}
                 {children}
-                {enableInfiniteScroll ? (
-                  liveTotalPages > 1 && phase === 'ready' ? (
-                    <Box
-                      component="nav"
-                      aria-label="Pagination"
-                      sx={{
-                        position: 'absolute',
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        margin: -1,
-                        overflow: 'hidden',
-                        clip: 'rect(0, 0, 0, 0)',
-                        whiteSpace: 'nowrap',
-                        border: 0,
-                      }}
-                    >
-                      <React.Suspense fallback={null}>
-                        <BrowsePagination page={livePage} totalPages={liveTotalPages} />
-                      </React.Suspense>
-                    </Box>
-                  ) : null
-                ) : (
-                  <React.Suspense fallback={null}>
-                    <BrowsePagination page={livePage} totalPages={liveTotalPages} />
-                  </React.Suspense>
-                )}
+                <React.Suspense fallback={null}>
+                  <BrowsePagination page={livePage} totalPages={liveTotalPages} />
+                </React.Suspense>
               </Stack>
             </Container>
           )}

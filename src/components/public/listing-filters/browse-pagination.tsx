@@ -4,13 +4,7 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Pagination, PaginationItem } from '@mui/material';
 
-export function BrowsePagination({
-  page,
-  totalPages,
-}: {
-  page: number;
-  totalPages: number;
-}) {
+export function BrowsePagination({ page, totalPages }: { page: number; totalPages: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,16 +17,16 @@ export function BrowsePagination({
       const query = qs.toString();
       return query ? `${pathname}?${query}` : pathname;
     },
-    [pathname, searchParams],
+    [pathname, searchParams]
   );
 
   const goToPage = React.useCallback(
     (targetPage: number) => {
       React.startTransition(() => {
-        router.replace(hrefForPage(targetPage), { scroll: false });
+        router.push(hrefForPage(targetPage));
       });
     },
-    [hrefForPage, router],
+    [hrefForPage, router]
   );
 
   if (totalPages <= 1) return null;
@@ -69,10 +63,7 @@ export function BrowsePagination({
             );
           }
           if (
-            (item.type === 'first' ||
-              item.type === 'last' ||
-              item.type === 'previous' ||
-              item.type === 'next') &&
+            (item.type === 'first' || item.type === 'last' || item.type === 'previous' || item.type === 'next') &&
             item.page != null
           ) {
             return (

@@ -2,18 +2,18 @@ import * as React from 'react';
 import { notFound } from 'next/navigation';
 import { Breadcrumbs, Container, Link as MuiLink, Stack, Typography } from '@mui/material';
 
-import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
-import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { config as siteConfig } from '@/config';
-import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { BROWSE_PAGE_SIZE, hasActiveBrowseFilters, parseBrowsePage } from '@/lib/listing-filters';
 import {
-  fetchSeoLandingListings,
   fetchPublicSeoIndex,
+  fetchSeoLandingListings,
   seoLandingMetadata,
   type PublicSeoIndex,
   type SeoLandingConfig,
 } from '@/lib/public-seo';
-import { BROWSE_PAGE_SIZE, hasActiveBrowseFilters } from '@/lib/listing-filters';
+import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
 export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
   const homeUrl = '/';
@@ -21,7 +21,12 @@ export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
   const verticalPath = `/${config.path.split('/').filter(Boolean).slice(0, 1).join('/')}`;
   const crumbs = [
     { '@type': 'ListItem', position: 1, name: 'Kryefaqja', item: new URL(homeUrl, siteConfig.site.url).toString() },
-    { '@type': 'ListItem', position: 2, name: config.vertical, item: new URL(verticalPath.replace(/^\//, ''), siteConfig.site.url).toString() },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: config.vertical,
+      item: new URL(verticalPath.replace(/^\//, ''), siteConfig.site.url).toString(),
+    },
     { '@type': 'ListItem', position: 3, name: config.heading, item: canonicalUrl },
   ];
   return {
@@ -57,8 +62,10 @@ function listingData(result: Awaited<ReturnType<typeof fetchSeoLandingListings>>
 export async function renderSeoLandingPage(
   config: SeoLandingConfig,
   cities: RealEstateCityDto[],
+  searchParams: Record<string, string | string[] | undefined> = {}
 ): Promise<React.ReactNode> {
-  const [result, index] = await Promise.all([fetchSeoLandingListings(config), fetchPublicSeoIndex()]);
+  const page = parseBrowsePage(searchParams);
+  const [result, index] = await Promise.all([fetchSeoLandingListings(config, page), fetchPublicSeoIndex()]);
   const data = listingData(result);
   if (data.ok && data.total === 0) {
     notFound();
@@ -79,7 +86,6 @@ export async function renderSeoLandingPage(
         pageSize={BROWSE_PAGE_SIZE}
         hasFilters={hasActiveBrowseFilters(config.filters)}
         cities={cities}
-        enableInfiniteScroll
         ssrOk={data.ok}
         heading={config.heading}
         intro={config.description}
@@ -115,7 +121,6 @@ export async function renderSeoLandingPage(
           filters={config.filters}
           initialListings={data.listings}
           initialPage={data.page}
-          totalPages={data.totalPages}
         />
       </CategoryBrowseLayout>
     </>

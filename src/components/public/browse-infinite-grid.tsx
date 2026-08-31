@@ -120,7 +120,7 @@ async function fetchPage(
 }
 
 /**
- * First page comes from SSR; further pages append on scroll (or “Load more”).
+ * The current page comes from SSR and is replaced when pagination changes the URL.
  * Cards are rendered inside this client module (no function props from the server).
  *
  * When SSR painted an untrusted empty list, we refetch on the client and keep a
@@ -131,24 +131,18 @@ export function BrowseInfiniteGrid({
   filters,
   initialListings,
   initialPage,
-  totalPages,
 }: {
   verticalId: BrowseInfiniteVerticalId;
   filters: BrowseFilters | BrowseOkazionFilters;
   initialListings: BrowseListing[];
   initialPage: number;
-  totalPages: number;
 }) {
   const t = useCopy();
   const loadCtx = useBrowseLoadContext();
   const recoverEmpty = Boolean(loadCtx?.recoverEmpty) && initialListings.length === 0;
   const [listings, setListings] = React.useState<BrowseListing[]>(initialListings);
-  const [page, setPage] = React.useState(initialPage);
-  const [pagesTotal, setPagesTotal] = React.useState(totalPages);
   const [loading, setLoading] = React.useState(recoverEmpty);
   const [error, setError] = React.useState(false);
-  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
-  const loadingRef = React.useRef(false);
   const recoveredRef = React.useRef(false);
   const filtersKey = JSON.stringify(filters);
   const routeKey = `${verticalId}:${filtersKey}:${initialPage}`;
@@ -159,8 +153,6 @@ export function BrowseInfiniteGrid({
     (res: BrowseListingsResult<BrowseListing>) => {
       recoveredRef.current = true;
       setListings(res.listings);
-      setPage(res.page);
-      setPagesTotal(res.totalPages);
       reportResolved?.({
         total: res.total,
         shownCount: res.listings.length,
@@ -179,17 +171,14 @@ export function BrowseInfiniteGrid({
     if (!routeChanged && recoveredRef.current) return;
     recoveredRef.current = false;
     setListings(initialListings);
-    setPage(initialPage);
-    setPagesTotal(totalPages);
     setError(false);
     setLoading(initialListings.length === 0 && recoverEmpty);
-  }, [routeKey, initialListings, initialPage, totalPages, recoverEmpty]);
+  }, [routeKey, initialListings, recoverEmpty]);
 
   React.useEffect(() => {
     if (!recoverEmpty || initialListings.length > 0 || recoveredRef.current) return;
     let cancelled = false;
     void (async () => {
-      loadingRef.current = true;
       setLoading(true);
       setError(false);
       try {
@@ -208,7 +197,6 @@ export function BrowseInfiniteGrid({
           });
         }
       } finally {
-        loadingRef.current = false;
         if (!cancelled) setLoading(false);
       }
     })();
@@ -227,36 +215,11 @@ export function BrowseInfiniteGrid({
   ]);
 
   const recovering = recoverEmpty && listings.length === 0 && (loading || error);
-  const hasMore = !recovering && page < pagesTotal;
-
-  const loadMore = React.useCallback(async () => {
-    if (loadingRef.current || !hasMore) return;
-    loadingRef.current = true;
-    setLoading(true);
-    setError(false);
-    try {
-      const nextPage = page + 1;
-      const res = await fetchPage(verticalId, filters, nextPage);
-      setListings((prev) => {
-        const seen = new Set(prev.map(listingKey));
-        const appended = res.listings.filter((l) => !seen.has(listingKey(l)));
-        return [...prev, ...appended];
-      });
-      setPage(nextPage);
-      setPagesTotal(res.totalPages);
-    } catch {
-      setError(true);
-    } finally {
-      loadingRef.current = false;
-      setLoading(false);
-    }
-  }, [filters, hasMore, page, verticalId]);
 
   const retryFirstPage = React.useCallback(() => {
     setError(false);
     setLoading(true);
     void (async () => {
-      loadingRef.current = true;
       try {
         const res = await fetchPage(verticalId, filters, initialPage);
         applyFirstPage(res);
@@ -270,27 +233,10 @@ export function BrowseInfiniteGrid({
           ok: false,
         });
       } finally {
-        loadingRef.current = false;
         setLoading(false);
       }
     })();
   }, [applyFirstPage, filters, initialPage, reportResolved, verticalId]);
-
-  React.useEffect(() => {
-    if (!hasMore) return;
-    const node = sentinelRef.current;
-    if (!node || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          void loadMore();
-        }
-      },
-      { rootMargin: '320px 0px' }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore, listings.length]);
 
   const isTwoColumnMobile = verticalId === 'cars' || verticalId === 'marketplace';
   const itemGridSize = isTwoColumnMobile ? { xs: 6, sm: 6, md: 4, lg: 3 } : { xs: 12, sm: 6, md: 4, lg: 3 };
@@ -318,24 +264,6 @@ export function BrowseInfiniteGrid({
           </Grid>
         ))}
       </Grid>
-
-      {hasMore ? (
-        <Box ref={sentinelRef} sx={{ display: 'flex', justifyContent: 'center', py: 1, minHeight: 48 }}>
-          {loading ? (
-            <Box sx={{ width: '100%' }}>
-              <ListingCardsSkeleton count={4} columns={isTwoColumnMobile ? 2 : 1} />
-            </Box>
-          ) : error ? (
-            <Button variant="outlined" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>
-              {t.browse.retryLoad}
-            </Button>
-          ) : (
-            <Button variant="text" onClick={() => void loadMore()} sx={{ fontWeight: 700 }}>
-              Shfaq më shumë
-            </Button>
-          )}
-        </Box>
-      ) : null}
     </Stack>
   );
 }

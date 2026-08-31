@@ -4,15 +4,15 @@ import { notFound, redirect } from 'next/navigation';
 
 import { config } from '@/config';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
 import { loadPublicCarListingById } from '@/lib/public-listings-client';
+import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { CarListingDetailView } from '@/components/public/car-listing-detail-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
-import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
-import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 60;
 
@@ -34,7 +34,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     return seoLandingMetadata(
       landing.config,
       landing.result?.total ?? 0,
-      Boolean(Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3),
+      Boolean(
+        Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3
+      )
     );
   }
   const { data: listing, unavailable } = await loadPublicCarListingById(id);
@@ -51,7 +53,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     title: `${listing.title}${listing.cityName ? ` në ${listing.cityName}` : ''}`,
     descriptionSnippet:
       descSnippet(
-        `${listing.description} ${listing.make} ${listing.model}${listing.cityName ? ` në ${listing.cityName}` : ''}`,
+        `${listing.description} ${listing.make} ${listing.model}${listing.cityName ? ` në ${listing.cityName}` : ''}`
       ) || listing.title,
     pathHref,
     imageUrls: listing.imageUrls,
@@ -59,13 +61,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   });
 }
 
-export default async function CarListingPage({ params }: PageProps): Promise<React.ReactNode> {
+export default async function CarListingPage({ params, searchParams }: PageProps): Promise<React.ReactNode> {
   const { permalink } = await params;
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) {
     const landing = await loadSeoLandingRoute('cars', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities);
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
   }
 
   const loaded = await loadPublicCarListingById(id);

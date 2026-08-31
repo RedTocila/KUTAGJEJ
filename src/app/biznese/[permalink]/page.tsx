@@ -4,15 +4,15 @@ import { notFound, redirect } from 'next/navigation';
 
 import { config } from '@/config';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
+import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
 import { loadPublicBusinessListingById } from '@/lib/public-listings-client';
+import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { BusinessListingDetailView } from '@/components/public/business-listing-detail-view';
 import { PublicShell } from '@/components/public/public-shell';
-import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
-import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
-import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 0;
 
@@ -34,7 +34,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     return seoLandingMetadata(
       landing.config,
       landing.result?.total ?? 0,
-      Boolean(Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3),
+      Boolean(
+        Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3
+      )
     );
   }
   const { data: listing, unavailable } = await loadPublicBusinessListingById(id);
@@ -58,13 +60,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   });
 }
 
-export default async function BusinessListingPage({ params }: PageProps): Promise<React.ReactNode> {
+export default async function BusinessListingPage({ params, searchParams }: PageProps): Promise<React.ReactNode> {
   const { permalink } = await params;
   const id = mongoIdFromPublicListingSegment(permalink);
   if (!id) {
     const landing = await loadSeoLandingRoute('businesses', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities);
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
   }
 
   const loaded = await loadPublicBusinessListingById(id);

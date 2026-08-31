@@ -34,18 +34,11 @@ export function SearchHitCard({
   children: React.ReactNode;
   variant?: SearchHitVariant;
 }): React.JSX.Element {
-  const scrollTop = () => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    }
-  };
-
   if (variant === 'list') {
     return (
       <Box
         component={Link}
         href={href}
-        onClick={scrollTop}
         sx={{
           display: 'block',
           px: { xs: 2, sm: 3 },
@@ -74,7 +67,6 @@ export function SearchHitCard({
     <Paper
       component={Link}
       href={href}
-      onClick={scrollTop}
       sx={(theme) => ({
         height: '100%',
         borderRadius: 2.5,
@@ -90,8 +82,8 @@ export function SearchHitCard({
         textDecoration: 'none',
         color: 'inherit',
         cursor: 'pointer',
-        boxShadow: (theme) =>
-          theme.palette.mode === 'dark'
+        boxShadow: (paletteTheme) =>
+          paletteTheme.palette.mode === 'dark'
             ? '0 14px 32px rgba(0, 0, 0, 0.42)'
             : 'none',
         transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
@@ -99,8 +91,8 @@ export function SearchHitCard({
           '&:hover': {
             borderColor: 'primary.main',
             transform: 'translateY(-3px)',
-            boxShadow: (theme) =>
-              theme.palette.mode === 'dark'
+            boxShadow: (paletteTheme) =>
+              paletteTheme.palette.mode === 'dark'
                 ? '0 18px 38px rgba(0, 0, 0, 0.5)'
                 : 'none',
           },

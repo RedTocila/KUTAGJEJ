@@ -5,13 +5,13 @@ import { notFound, redirect } from 'next/navigation';
 import { config } from '@/config';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 import { loadPublicRealEstateListingById } from '@/lib/public-listings-client';
+import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 import { buildRealEstateListingMetadata, realEstateListingJsonLd } from '@/lib/real-estate-listing-seo';
 import { mongoIdFromPronaDynamicSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
 import { PublicShell } from '@/components/public/public-shell';
 import { RealEstateListingDetailView } from '@/components/public/real-estate-listing-detail-view';
-import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
-import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
+import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
 export const revalidate = 60;
 
@@ -30,10 +30,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       landing.config,
       landing.result?.total ?? 0,
       Boolean(
-        Object.keys((await searchParams) ?? {}).length === 0 &&
-          landing.result?.ok &&
-          (landing.result?.total ?? 0) >= 3,
-      ),
+        Object.keys((await searchParams) ?? {}).length === 0 && landing.result?.ok && (landing.result?.total ?? 0) >= 3
+      )
     );
   }
 
@@ -48,14 +46,14 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   return buildRealEstateListingMetadata(listing);
 }
 
-export default async function RealEstateListingPage({ params }: PageProps): Promise<React.ReactNode> {
+export default async function RealEstateListingPage({ params, searchParams }: PageProps): Promise<React.ReactNode> {
   const { permalink } = await params;
 
   const id = mongoIdFromPronaDynamicSegment(permalink);
   if (!id) {
     const landing = await loadSeoLandingRoute('real-estate', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities);
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
   }
 
   const loaded = await loadPublicRealEstateListingById(id);

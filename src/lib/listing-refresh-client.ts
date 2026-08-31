@@ -11,10 +11,7 @@ async function authJsonHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-export async function refreshListingBoost(params: {
-  kind: ListingMetricKind;
-  listingId: string;
-}): Promise<{
+export async function refreshListingBoost(params: { kind: ListingMetricKind; listingId: string }): Promise<{
   refreshedAt?: string;
   boostCredits?: number;
   cost?: number;
@@ -55,6 +52,7 @@ export type ListingRefreshCooldown = {
 };
 
 export async function fetchListingAutoRefresh(): Promise<{
+  enabled?: boolean;
   slots?: number;
   used?: number;
   enrolled?: AutoRefreshEnrollment[];
@@ -73,13 +71,13 @@ export async function fetchListingAutoRefresh(): Promise<{
       return { error: typeof data.message === 'string' ? data.message : 'Statusi dështoi.' };
     }
     return {
+      enabled: data.enabled !== false,
       slots: Number(data.slots) || 0,
       used: Number(data.used) || 0,
       enrolled: Array.isArray(data.enrolled) ? (data.enrolled as AutoRefreshEnrollment[]) : [],
       cooldowns: Array.isArray(data.cooldowns) ? (data.cooldowns as ListingRefreshCooldown[]) : [],
       planCode: typeof data.planCode === 'string' ? data.planCode : undefined,
-      refreshEveryHours:
-        typeof data.refreshEveryHours === 'number' ? data.refreshEveryHours : undefined,
+      refreshEveryHours: typeof data.refreshEveryHours === 'number' ? data.refreshEveryHours : undefined,
     };
   } catch {
     return { error: 'Nuk u arrit lidhja me serverin.' };

@@ -7,7 +7,11 @@ const optionalAuth = require('../../middleware/optional-auth');
 const publicCache = require('../../middleware/public-cache');
 
 const { publicNoStore } = publicCache;
-const { loadPosterBrief, loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('../../lib/public-listings/load-poster-brief');
+const {
+  loadPosterBrief,
+  loadVerifiedPosterIdSet,
+  loadTrustBadgePosterIdSet,
+} = require('../../lib/public-listings/load-poster-brief');
 const {
   clampLimit,
   buildCityIndex,
@@ -60,6 +64,7 @@ const { getCached, setCached } = require('../../lib/public-listings-cache');
 const { buildPublicSeoIndex } = require('../../lib/public-seo-index');
 
 const router = express.Router();
+const SEO_INDEX_CACHE_TTL_MS = 10 * 60 * 1000;
 
 /** Home vertical id → ListingEngagement.listingKind */
 const VERTICAL_TO_KIND = {
@@ -88,13 +93,13 @@ async function loadApprovedById(table, id, extraEq = {}) {
 router.use(publicCache(120));
 
 /** GET /api/public/listings/seo-index — canonical active URLs for SEO metadata routes. */
-router.get('/seo-index', async (_req, res) => {
+router.get('/seo-index', publicCache(600), async (_req, res) => {
   try {
     const cacheKey = 'public-seo-index';
     let payload = getCached(cacheKey);
     if (!payload) {
       payload = await buildPublicSeoIndex();
-      setCached(cacheKey, payload);
+      setCached(cacheKey, payload, SEO_INDEX_CACHE_TTL_MS);
     }
     res.json(payload);
   } catch (err) {
@@ -163,7 +168,7 @@ router.get('/recommended', optionalAuth, async (req, res) => {
       await Promise.all(
         Object.keys(out).map(async (key) => {
           out[key] = await enrichListingsSaverState(out[key], saver);
-        }),
+        })
       );
     }
     res.json(out);
@@ -220,7 +225,7 @@ router.get('/latest', optionalAuth, async (req, res) => {
       await Promise.all(
         Object.keys(bundle).map(async (key) => {
           bundle[key] = await enrichListingsSaverState(bundle[key], saver);
-        }),
+        })
       );
       okazion = await enrichListingsSaverState(okazion, saver);
     }
@@ -370,7 +375,11 @@ router.get('/jobs/:id', publicNoStore(), optionalAuth, async (req, res) => {
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, 'jobs', req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(
+      doc.posterId,
+      'jobs',
+      req.user?.id
+    );
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, {
       ...formatJobDetail(doc, cityById, seller),
@@ -443,7 +452,11 @@ router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res)
       res.status(404).json({ message: 'Not found' });
       return;
     }
-    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, 'professionals', req.user?.id);
+    const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(
+      doc.posterId,
+      'professionals',
+      req.user?.id
+    );
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await professionalReviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, {
@@ -464,10 +477,7 @@ router.get('/real-estate', optionalAuth, async (req, res) => {
     const parsed = parseRealEstateFilters(req.query);
     const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countRealEstate(filter),
-      queryRealEstate(limit, filter, sort, skip),
-    ]);
+    let [total, listings] = await Promise.all([countRealEstate(filter), queryRealEstate(limit, filter, sort, skip)]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -483,10 +493,7 @@ router.get('/cars', optionalAuth, async (req, res) => {
     const parsed = parseCarFilters(req.query);
     const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countCars(filter),
-      queryCars(limit, filter, sort, skip),
-    ]);
+    let [total, listings] = await Promise.all([countCars(filter), queryCars(limit, filter, sort, skip)]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -502,10 +509,7 @@ router.get('/jobs', optionalAuth, async (req, res) => {
     const parsed = parseJobFilters(req.query);
     const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countJobs(filter),
-      queryJobs(limit, filter, sort, skip),
-    ]);
+    let [total, listings] = await Promise.all([countJobs(filter), queryJobs(limit, filter, sort, skip)]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));
@@ -521,10 +525,7 @@ router.get('/marketplace', optionalAuth, async (req, res) => {
     const parsed = parseMarketplaceFilters(req.query);
     const filter = await finalizeBrowseFilter(parsed.filter, req.query);
     const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countMarketplace(filter),
-      queryMarketplace(limit, filter, sort, skip),
-    ]);
+    let [total, listings] = await Promise.all([countMarketplace(filter), queryMarketplace(limit, filter, sort, skip)]);
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json(buildPaginatedResponse(listings, total, limit, page));

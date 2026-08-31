@@ -21,6 +21,7 @@ export interface AutoRefreshPackage {
 }
 
 export interface AutoRefreshStatus {
+  enabled: boolean;
   slots: number;
   used: number;
   planCode: string;

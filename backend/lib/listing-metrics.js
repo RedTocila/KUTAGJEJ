@@ -4,14 +4,7 @@ const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
 const { reportedSaveCount } = require('./save-count-utils');
 
-const LISTING_KINDS = new Set([
-  'real-estate',
-  'car',
-  'job',
-  'marketplace',
-  'businesses',
-  'professionals',
-]);
+const LISTING_KINDS = new Set(['real-estate', 'car', 'job', 'marketplace', 'businesses', 'professionals']);
 
 const TABLE_BY_KIND = {
   'real-estate': 'real_estate_listings',
@@ -39,13 +32,7 @@ const HOT_LEAD_SIGNAL_KEYS = [
   'repeatView',
 ];
 
-const HOT_LEAD_HIGH_INTENT_KEYS = new Set([
-  'saved',
-  'shared',
-  'returned',
-  'multiListing',
-  'repeatView',
-]);
+const HOT_LEAD_HIGH_INTENT_KEYS = new Set(['saved', 'shared', 'returned', 'multiListing', 'repeatView']);
 
 function countHotLeadSignals(signals) {
   if (!signals || typeof signals !== 'object') return 0;
@@ -202,10 +189,12 @@ async function incrementEngagementFallback(kind, listingId, event) {
     .select('view_count, share_count')
     .single();
   if (error) throw error;
-  return metricsFromEngagementRow(data) ?? {
-    viewCount: patch.view_count ?? current.viewCount,
-    shareCount: patch.share_count ?? current.shareCount,
-  };
+  return (
+    metricsFromEngagementRow(data) ?? {
+      viewCount: patch.view_count ?? current.viewCount,
+      shareCount: patch.share_count ?? current.shareCount,
+    }
+  );
 }
 
 async function incrementEngagement(kind, listingId, event) {
@@ -265,10 +254,7 @@ async function fetchSaveCounts(sb, orFilter) {
   // Compatibility fallback for databases that have not applied the stored
   // save-count migration yet. One filtered query is much cheaper than
   // repeatedly paging through the same saved-listing relation.
-  const { data, error } = await sb
-    .from('saved_listings')
-    .select('listing_kind, listing_id')
-    .or(orFilter);
+  const { data, error } = await sb.from('saved_listings').select('listing_kind, listing_id').or(orFilter);
   if (error) throw error;
 
   const savesByKey = new Map();
@@ -302,9 +288,7 @@ async function fetchEngagementRows(sb, orFilter) {
 
 async function getSavedSet(saver, refs) {
   if (!saver || refs.length === 0) return new Set();
-  const orFilter = refs
-    .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
-    .join(',');
+  const orFilter = refs.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
   const { data, error } = await getSupabaseAdmin()
     .from('saved_listings')
     .select('listing_kind, listing_id')
@@ -324,9 +308,7 @@ async function fetchMetricsMap(refs, saver = null) {
   if (valid.length === 0) return new Map();
 
   const sb = getSupabaseAdmin();
-  const orFilter = valid
-    .map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`)
-    .join(',');
+  const orFilter = valid.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
 
   const [engagementResult, savedSet] = await Promise.all([
     fetchEngagementRows(sb, orFilter),
@@ -348,7 +330,7 @@ async function fetchMetricsMap(refs, saver = null) {
         viewCount: e.view_count ?? 0,
         shareCount: e.share_count ?? 0,
       },
-    ]),
+    ])
   );
 
   const map = new Map();
@@ -394,7 +376,7 @@ async function attachOwnerMetrics(listings, kind) {
   return enriched.map(({ kind: _k, ...rest }) => rest);
 }
 
-async function recordListingEvent(req, { kind, listingId, event, signals = null }) {
+async function recordListingEvent(req, { kind, listingId, event, signals = null, includeMetrics = true }) {
   if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
@@ -406,8 +388,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
     return {
       ok: false,
       status: 400,
-      message:
-        'Hot lead requires at least 3 engagement signals including 1 high-intent behavior.',
+      message: 'Hot lead requires at least 3 engagement signals including 1 high-intent behavior.',
     };
   }
 
@@ -438,6 +419,12 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
   let engagement = null;
   if (event === 'share' || (incremented && event !== 'hot_lead')) {
     engagement = await incrementEngagement(kind, listingId, event);
+  }
+
+  // Batched views only need to record the event. Avoid rebuilding the full
+  // metrics payload and checking saved_listings once per item in the batch.
+  if (!includeMetrics && event === 'view') {
+    return { ok: true };
   }
 
   if (event === 'share') {
@@ -473,10 +460,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null 
   if (!engagement) {
     engagement = await ensureEngagement(kind, listingId);
   }
-  const counted =
-    typeof engagement.saveCount === 'number'
-      ? engagement.saveCount
-      : await countSaves(kind, listingId);
+  const counted = typeof engagement.saveCount === 'number' ? engagement.saveCount : await countSaves(kind, listingId);
   const saver = saverFromUser(req.user);
   let saved = false;
   if (saver) {
@@ -549,10 +533,7 @@ async function toggleSavedListing(req, { kind, listingId }) {
     }
   }
 
-  const saveCount = reportedSaveCount(
-    storedSaveCount ?? (await countSaves(kind, listingId)),
-    saved,
-  );
+  const saveCount = reportedSaveCount(storedSaveCount ?? (await countSaves(kind, listingId)), saved);
   const engagement = await ensureEngagement(kind, listingId);
   return {
     ok: true,
@@ -568,9 +549,7 @@ async function toggleSavedListing(req, { kind, listingId }) {
 
 async function enrichListingsSaverState(listings, saver) {
   if (!saver || !Array.isArray(listings) || listings.length === 0) return listings;
-  const refs = listings
-    .filter((l) => l?.id && l?.kind)
-    .map((l) => ({ kind: l.kind, listingId: l.id }));
+  const refs = listings.filter((l) => l?.id && l?.kind).map((l) => ({ kind: l.kind, listingId: l.id }));
   const map = await fetchMetricsMap(refs, saver);
   return listings.map((l) => attachMetricsToListing(l, map, saver));
 }

@@ -22,12 +22,7 @@ import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import { ANNOUNCE_COST_BC } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
-import {
-  bumpButtonAriaLabelSq,
-  refreshCostBc,
-  refreshCostButtonLabel,
-  refreshCostTooltipSq,
-} from '@/lib/listing-refresh-cost';
+import { bumpButtonAriaLabelSq, refreshCostBc, refreshCostTooltipSq } from '@/lib/listing-refresh-cost';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
@@ -125,12 +120,13 @@ export function ListingOwnerStats({
 }
 
 /** Compact labeled action chip used on owner listing cards. */
-const ACTION_RADIUS_PX = '12px';
-const ACTION_CONTAINER_RADIUS_PX = '16px';
+const ACTION_RADIUS_PX = '999px';
+const ACTION_CONTAINER_RADIUS_PX = '999px';
+const TOP_ACTION_SIZE_PX = 34;
 
 const labeledBtnSx = {
   minWidth: 0,
-  height: 26,
+  height: 34,
   px: 0.85,
   py: 0,
   borderRadius: ACTION_RADIUS_PX,
@@ -139,20 +135,39 @@ const labeledBtnSx = {
   fontSize: '0.65rem',
   letterSpacing: '0.01em',
   lineHeight: 1,
-  gap: 0.35,
+  gap: 0,
   boxShadow: 'none',
-  border: 'none',
+  border: '1px solid',
   '&:hover': { boxShadow: 'none' },
+  '& .MuiButton-startIcon': { mr: 0, ml: 0 },
+};
+
+const topActionBtnSx = {
+  ...labeledBtnSx,
+  width: TOP_ACTION_SIZE_PX,
+  minWidth: TOP_ACTION_SIZE_PX,
+  px: 0,
+  borderRadius: '50%',
+};
+
+const menuActionBtnSx = {
+  ...labeledBtnSx,
+  minWidth: 72,
+  px: 1.1,
+  fontSize: '0.72rem',
+  gap: 0.35,
   '& .MuiButton-startIcon': { mr: 0.35, ml: 0 },
 };
 
-function fadedToneSx(bg: string, hoverBg: string, color: string): Record<string, unknown> {
+function fadedToneSx(_bg: string, _hoverBg: string, color: string): Record<string, unknown> {
   return {
-    bgcolor: bg,
+    bgcolor: 'transparent',
     color,
+    borderColor: 'divider',
     boxShadow: 'none',
     '&:hover': {
-      bgcolor: hoverBg,
+      bgcolor: 'transparent',
+      borderColor: 'divider',
       boxShadow: 'none',
     },
   };
@@ -183,26 +198,13 @@ function formatCountdown(ms: number): string {
 export function ListingOwnerTopActions({
   listingId,
   kind,
-  canAnnounce = false,
-  announcement = null,
-  onAnnouncementSaved,
   onDeleteRequest,
 }: {
   listingId: string;
   kind: ListingMetricKind;
-  canAnnounce?: boolean;
-  announcement?: BusinessAnnouncement | null;
-  onAnnouncementSaved?: (result: {
-    announcement: BusinessAnnouncement | null;
-    refreshedAt?: string | null;
-    boostCredits?: number;
-  }) => void;
   onDeleteRequest?: (listingId: string, kind: ListingMetricKind) => void;
 }) {
-  const { checkSession } = useUser();
-  const [announceOpen, setAnnounceOpen] = React.useState(false);
   const showMenu = kind === 'businesses';
-  const showAnnounce = kind === 'businesses' || kind === 'professionals';
 
   return (
     <>
@@ -229,35 +231,11 @@ export function ListingOwnerTopActions({
               aria-label="Menu"
               component={RouterLink}
               href={`${paths.user.businessMenu}?id=${encodeURIComponent(listingId)}`}
-              startIcon={<ForkKnifeIcon size={12} weight="bold" />}
-              sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
+              startIcon={<ForkKnifeIcon size={16} weight="bold" />}
+              sx={{ ...menuActionBtnSx, ...fadedPrimarySx }}
             >
               Menu
             </Button>
-          </Tooltip>
-        ) : null}
-        {showAnnounce ? (
-          <Tooltip
-            title={
-              announcement?.title
-                ? 'Ndrysho shpalljen'
-                : `Shto shpallje · ${ANNOUNCE_COST_BC} Boost Coins · njoftimi shkon në krye`
-            }
-          >
-            <span>
-              <Button
-                size="small"
-                variant="contained"
-                color="warning"
-                aria-label="Shpall"
-                disabled={!canAnnounce}
-                onClick={() => setAnnounceOpen(true)}
-                startIcon={<MegaphoneIcon size={12} weight="fill" />}
-                sx={{ ...labeledBtnSx, ...fadedWarningSx }}
-              >
-                Shpall
-              </Button>
-            </span>
           </Tooltip>
         ) : null}
         <Tooltip title="Ndrysho njoftimin">
@@ -268,11 +246,9 @@ export function ListingOwnerTopActions({
             aria-label="Ndrysho"
             component={RouterLink}
             href={editHrefFor(listingId, kind)}
-            startIcon={<EditIcon size={12} weight="bold" />}
-            sx={{ ...labeledBtnSx, ...fadedPrimarySx }}
-          >
-            Ndrysho
-          </Button>
+            startIcon={<EditIcon size={16} weight="bold" />}
+            sx={{ ...topActionBtnSx, ...fadedPrimarySx }}
+          />
         </Tooltip>
         {onDeleteRequest ? (
           <Tooltip title="Fshi njoftimin">
@@ -285,28 +261,17 @@ export function ListingOwnerTopActions({
               sx={{
                 ...labeledBtnSx,
                 ...fadedErrorSx,
-                width: 26,
+                width: TOP_ACTION_SIZE_PX,
                 px: 0,
-                minWidth: 26,
+                minWidth: TOP_ACTION_SIZE_PX,
+                borderRadius: '50%',
               }}
             >
-              <TrashIcon size={12} weight="bold" />
+              <TrashIcon size={16} weight="bold" />
             </Button>
           </Tooltip>
         ) : null}
       </Stack>
-      {showAnnounce ? (
-        <BusinessAnnouncementDialog
-          open={announceOpen}
-          listingId={listingId}
-          initial={announcement}
-          onClose={() => setAnnounceOpen(false)}
-          onSaved={(result) => {
-            onAnnouncementSaved?.(result);
-            void checkSession();
-          }}
-        />
-      ) : null}
     </>
   );
 }
@@ -325,6 +290,8 @@ export function ListingOwnerMetrics({
   okazionUntil = null,
   onOkazionApplied,
   onRefreshed,
+  announcement = null,
+  onAnnouncementSaved,
   lastRefreshedAt,
   refreshEveryHours,
   hideStats = false,
@@ -347,6 +314,12 @@ export function ListingOwnerMetrics({
   okazionUntil?: string | null;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
+  announcement?: BusinessAnnouncement | null;
+  onAnnouncementSaved?: (result: {
+    announcement: BusinessAnnouncement | null;
+    refreshedAt?: string | null;
+    boostCredits?: number;
+  }) => void;
   /** Last manual/auto refresh anchor; uses listing createdAt on initial load. */
   lastRefreshedAt?: string | null;
   /** Cooldown window from active package/subscription. */
@@ -368,6 +341,7 @@ export function ListingOwnerMetrics({
   const [lastRefreshAtLocal, setLastRefreshAtLocal] = React.useState<string | null>(lastRefreshedAt ?? null);
   const [error, setError] = React.useState<string | null>(null);
   const [confirmBoost, setConfirmBoost] = React.useState<'premium' | 'okazion' | null>(null);
+  const [announceOpen, setAnnounceOpen] = React.useState(false);
 
   React.useEffect(() => {
     setPremiumOn(Boolean(isPremium));
@@ -408,9 +382,9 @@ export function ListingOwnerMetrics({
     [okazionSupported, okazionOn, isOkazion, premiumOn, isPremium]
   );
   const refreshCost = refreshCostBc(refreshTierFlags);
-  const bumpButtonLabel = refreshCostButtonLabel(refreshTierFlags);
   const bumpButtonAriaLabel = bumpButtonAriaLabelSq(refreshTierFlags);
   const refreshTooltip = refreshCostTooltipSq(refreshTierFlags);
+  const showAnnounce = Boolean(listingId && canRefresh && (kind === 'businesses' || kind === 'professionals'));
 
   const handleRefresh = async () => {
     if (!listingId || !kind || busy) return;
@@ -536,7 +510,6 @@ export function ListingOwnerMetrics({
 
   const anyBusy = busy || autoBusy || premiumBusy || okazionBusy;
   const refreshButtonDisabled = anyBusy || refreshLocked;
-  const refreshTimer = formatCountdown(remainingRefreshMs);
   const premiumDisabled = anyBusy || premiumOn || okazionOn;
   const okazionDisabled = anyBusy || okazionOn || premiumOn;
 
@@ -557,7 +530,9 @@ export function ListingOwnerMetrics({
               '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
             }}
           >
-            <Tooltip title={refreshTooltip}>
+            <Tooltip
+              title={refreshLocked ? `${refreshTooltip} · ${formatCountdown(remainingRefreshMs)}` : refreshTooltip}
+            >
               <span>
                 <Button
                   size="small"
@@ -569,60 +544,60 @@ export function ListingOwnerMetrics({
                     void handleRefresh();
                   }}
                   startIcon={
-                    busy ? <CircularProgress size={11} color="inherit" /> : <RefreshIcon size={12} weight="bold" />
+                    busy ? <CircularProgress size={14} color="inherit" /> : <RefreshIcon size={16} weight="bold" />
                   }
                   sx={{
                     ...labeledBtnSx,
                     whiteSpace: 'nowrap',
                     ...(refreshLocked
                       ? {
-                          bgcolor: 'action.hover',
+                          bgcolor: 'transparent',
                           color: 'text.disabled',
+                          borderColor: 'divider',
                           boxShadow: 'none',
                           opacity: 1,
                           '&.Mui-disabled': {
-                            bgcolor: 'action.hover',
+                            bgcolor: 'transparent',
                             color: 'text.disabled',
+                            borderColor: 'divider',
                             opacity: 1,
                           },
                         }
                       : fadedPrimarySx),
                   }}
-                >
-                  {refreshLocked ? refreshTimer : bumpButtonLabel}
-                </Button>
+                ></Button>
               </span>
             </Tooltip>
-            <Tooltip
-              title={
-                autoRefreshEnabled
-                  ? 'Hiq nga Auto'
-                  : `Shto në Auto · ngrihet automatikisht në krye pas cooldown · ${refreshCost} BC`
-              }
-            >
-              <span>
-                <Button
-                  size="small"
-                  variant="contained"
-                  color="primary"
-                  aria-label="Auto"
-                  disabled={anyBusy}
-                  onClick={() => {
-                    void handleToggleAuto();
-                  }}
-                  startIcon={
-                    autoBusy ? <CircularProgress size={11} color="inherit" /> : <TimerIcon size={12} weight="bold" />
-                  }
-                  endIcon={!autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={11} weight="fill" /> : undefined}
-                  sx={{
-                    ...labeledBtnSx,
-                    ...(autoRefreshEnabled ? fadedPrimaryStrongSx : fadedPrimarySx),
-                  }}
-                >
-                  Auto
-                </Button>
-              </span>
-            </Tooltip>
+            {refreshEveryHours !== 0 ? (
+              <Tooltip
+                title={
+                  autoRefreshEnabled
+                    ? 'Hiq nga Auto'
+                    : `Shto në Auto · ngrihet automatikisht në krye pas cooldown · ${refreshCost} BC`
+                }
+              >
+                <span>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    aria-label="Auto"
+                    disabled={anyBusy}
+                    onClick={() => {
+                      void handleToggleAuto();
+                    }}
+                    startIcon={
+                      autoBusy ? <CircularProgress size={14} color="inherit" /> : <TimerIcon size={16} weight="bold" />
+                    }
+                    endIcon={!autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={14} weight="fill" /> : undefined}
+                    sx={{
+                      ...labeledBtnSx,
+                      ...(autoRefreshEnabled ? fadedPrimaryStrongSx : fadedPrimarySx),
+                    }}
+                  ></Button>
+                </span>
+              </Tooltip>
+            ) : null}
             <Tooltip
               title={
                 premiumOn
@@ -647,18 +622,16 @@ export function ListingOwnerMetrics({
                   }}
                   startIcon={
                     premiumBusy ? (
-                      <CircularProgress size={11} color="inherit" />
+                      <CircularProgress size={14} color="inherit" />
                     ) : (
-                      <SparkleIcon size={12} weight="bold" />
+                      <SparkleIcon size={16} weight="bold" />
                     )
                   }
                   sx={{
                     ...labeledBtnSx,
                     ...(premiumOn ? fadedWarningStrongSx : fadedWarningSx),
                   }}
-                >
-                  Premium
-                </Button>
+                ></Button>
               </span>
             </Tooltip>
             {okazionSupported ? (
@@ -686,18 +659,38 @@ export function ListingOwnerMetrics({
                     }}
                     startIcon={
                       okazionBusy ? (
-                        <CircularProgress size={11} color="inherit" />
+                        <CircularProgress size={14} color="inherit" />
                       ) : (
-                        <SealPercentIcon size={12} weight="bold" />
+                        <SealPercentIcon size={16} weight="bold" />
                       )
                     }
                     sx={{
                       ...labeledBtnSx,
                       ...(okazionOn ? fadedErrorStrongSx : fadedErrorSx),
                     }}
-                  >
-                    OKAZION
-                  </Button>
+                  />
+                </span>
+              </Tooltip>
+            ) : null}
+            {showAnnounce ? (
+              <Tooltip
+                title={
+                  announcement?.title
+                    ? 'Ndrysho shpalljen'
+                    : `Shto shpallje · ${ANNOUNCE_COST_BC} Boost Coins · njoftimi shkon në krye`
+                }
+              >
+                <span>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="warning"
+                    aria-label="Shpall"
+                    disabled={anyBusy}
+                    onClick={() => setAnnounceOpen(true)}
+                    startIcon={<MegaphoneIcon size={16} weight="fill" />}
+                    sx={{ ...labeledBtnSx, ...fadedWarningSx }}
+                  />
                 </span>
               </Tooltip>
             ) : null}
@@ -710,6 +703,20 @@ export function ListingOwnerMetrics({
         <Typography variant="caption" color="error" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>
           {error}
         </Typography>
+      ) : null}
+
+      {showAnnounce ? (
+        <BusinessAnnouncementDialog
+          open={announceOpen}
+          listingId={listingId!}
+          initial={announcement}
+          onClose={() => setAnnounceOpen(false)}
+          onSaved={(result) => {
+            onAnnouncementSaved?.(result);
+            setAnnounceOpen(false);
+            void checkSession();
+          }}
+        />
       ) : null}
 
       <ProductDialog open={confirmBoost !== null} onClose={closeConfirmBoost} maxWidth="xs" fullWidth>

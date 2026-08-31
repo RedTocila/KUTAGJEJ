@@ -26,13 +26,11 @@ const corsMiddleware = require('./middleware/cors');
 const helmet = require('helmet');
 
 /** How often the local process scans for due Auto-Refresh listings. */
-const AUTO_REFRESH_TICK_MS = Math.max(
-  60_000,
-  Number(process.env.AUTO_REFRESH_TICK_MS) || 5 * 60 * 1000,
-);
+const AUTO_REFRESH_TICK_MS = Math.max(60_000, Number(process.env.AUTO_REFRESH_TICK_MS) || 5 * 60 * 1000);
 // Maintenance backfills should be run deliberately, not on every serverless
 // cold start. Set this only for a one-off repair deployment.
 const RUN_STARTUP_BACKFILLS = process.env.RUN_STARTUP_BACKFILLS === 'true';
+const AUTO_REFRESH_ENABLED = process.env.AUTO_REFRESH_ENABLED === 'true';
 
 let autoRefreshTimer = null;
 let autoRefreshRunning = false;
@@ -44,7 +42,7 @@ async function runAutoRefreshTick() {
     const result = await processDueAutoRefreshes();
     if (result.refreshed > 0 || result.failed > 0) {
       console.log(
-        `[auto-refresh] scanned=${result.scanned} refreshed=${result.refreshed} skipped=${result.skipped} failed=${result.failed}`,
+        `[auto-refresh] scanned=${result.scanned} refreshed=${result.refreshed} skipped=${result.skipped} failed=${result.failed}`
       );
     }
   } catch (err) {
@@ -55,7 +53,7 @@ async function runAutoRefreshTick() {
 }
 
 function startAutoRefreshScheduler() {
-  if (autoRefreshTimer) return;
+  if (!AUTO_REFRESH_ENABLED || autoRefreshTimer) return;
   // Delay first tick so boot/migrations settle.
   const bootDelay = setTimeout(() => {
     void runAutoRefreshTick();
@@ -71,7 +69,7 @@ app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
-  }),
+  })
 );
 app.use(corsMiddleware);
 app.use(
@@ -82,7 +80,7 @@ app.use(
         req.rawBody = buf.toString('utf8');
       }
     },
-  }),
+  })
 );
 app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
@@ -90,9 +88,7 @@ let bootPromise = null;
 
 async function bootstrap() {
   if (!isSupabaseConfigured()) {
-    throw new Error(
-      'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see backend/.env.example).',
-    );
+    throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (see backend/.env.example).');
   }
   getSupabaseAdmin();
   console.log('Connected to Supabase');
@@ -265,8 +261,12 @@ const startServer = async () => {
     const PORT = Number(process.env.PORT) || 5001;
     app.listen(PORT, () => {
       console.log(`KuTaGjej API listening on http://localhost:${PORT}`);
-      startAutoRefreshScheduler();
-      console.log(`[auto-refresh] scheduler started (every ${Math.round(AUTO_REFRESH_TICK_MS / 1000)}s)`);
+      if (AUTO_REFRESH_ENABLED) {
+        startAutoRefreshScheduler();
+        console.log(`[auto-refresh] scheduler started (every ${Math.round(AUTO_REFRESH_TICK_MS / 1000)}s)`);
+      } else {
+        console.log('[auto-refresh] disabled (set AUTO_REFRESH_ENABLED=true to enable)');
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);

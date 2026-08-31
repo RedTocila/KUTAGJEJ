@@ -7,7 +7,7 @@ function xmlEscape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export async function GET(): Promise<Response> {
   const index = await fetchPublicSeoIndex();
@@ -19,11 +19,14 @@ export async function GET(): Promise<Response> {
     '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ...Array.from(
       { length: pageCount },
-      (_, id) => `<sitemap><loc>${xmlEscape(`${base}/sitemap/${id}.xml`)}</loc></sitemap>`,
+      (_, id) => `<sitemap><loc>${xmlEscape(`${base}/sitemap/${id}.xml`)}</loc></sitemap>`
     ),
     '</sitemapindex>',
   ].join('');
   return new Response(body, {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=60',
+      'Content-Type': 'application/xml; charset=utf-8',
+    },
   });
 }

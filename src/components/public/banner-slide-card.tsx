@@ -354,12 +354,12 @@ export function BannerSlideCard({
               maxWidth: showNavigationArrow ? 'calc(100% - 68px)' : 'calc(100% - 20px)',
               px: { xs: 1.25, sm: 1.5 },
               py: { xs: 0.9, sm: 1 },
-              borderRadius: 2,
-              bgcolor: 'rgba(0,0,0,0.72)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.24)',
+              borderRadius: 999,
+              bgcolor: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,255,255,0.22)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
               textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
             }}
           >

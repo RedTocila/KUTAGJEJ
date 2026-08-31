@@ -36,9 +36,7 @@ export async function listCreditPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
-  const cached = readCatalogCache<{ packages?: CreditPackage[]; pokEnv?: PokEnv; error?: string }>(
-    'credit-packages',
-  );
+  const cached = readCatalogCache<{ packages?: CreditPackage[]; pokEnv?: PokEnv; error?: string }>('credit-packages');
   if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/credit-packages'), { cache: 'no-store' });
@@ -61,7 +59,7 @@ export async function listAutoRefreshPackages(): Promise<{
   error?: string;
 }> {
   const cached = readCatalogCache<{ packages?: AutoRefreshPackage[]; pokEnv?: PokEnv; error?: string }>(
-    'auto-refresh-packages',
+    'auto-refresh-packages'
   );
   if (cached) return cached;
   try {
@@ -92,6 +90,7 @@ export async function fetchAutoRefreshStatus(): Promise<{
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Statusi dështoi.' };
     return {
       status: {
+        enabled: data.enabled !== false,
         slots: Number(data.slots) || 0,
         used: Number(data.used) || 0,
         planCode: String(data.planCode || 'free'),
@@ -106,7 +105,7 @@ export async function fetchAutoRefreshStatus(): Promise<{
 
 export async function createSubscriptionOrder(
   contractId: string,
-  months: number,
+  months: number
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl('/payments/subscription/order'), {
@@ -122,9 +121,7 @@ export async function createSubscriptionOrder(
   }
 }
 
-export async function createCreditsOrder(
-  packageId: string,
-): Promise<{ order?: CreatedOrder; error?: string }> {
+export async function createCreditsOrder(packageId: string): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl('/payments/credits/order'), {
       method: 'POST',
@@ -139,9 +136,7 @@ export async function createCreditsOrder(
   }
 }
 
-export async function createAutoRefreshOrder(
-  packageId: string,
-): Promise<{ order?: CreatedOrder; error?: string }> {
+export async function createAutoRefreshOrder(packageId: string): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl('/payments/auto-refresh/order'), {
       method: 'POST',
@@ -191,9 +186,7 @@ export async function listPremiumPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
-  const cached = readCatalogCache<{ packages?: PremiumPackage[]; pokEnv?: PokEnv; error?: string }>(
-    'premium-packages',
-  );
+  const cached = readCatalogCache<{ packages?: PremiumPackage[]; pokEnv?: PokEnv; error?: string }>('premium-packages');
   if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/premium-packages'), { cache: 'no-store' });
@@ -210,9 +203,7 @@ export async function listPremiumPackages(): Promise<{
   }
 }
 
-export async function createPremiumOrder(
-  packageId: string,
-): Promise<{ order?: CreatedOrder; error?: string }> {
+export async function createPremiumOrder(packageId: string): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl('/payments/premium/order'), {
       method: 'POST',
@@ -295,11 +286,7 @@ export async function fetchPremiumPlanQuota(): Promise<{
   }
 }
 
-export async function applyPremiumVoucher(params: {
-  voucherId: string;
-  kind: string;
-  listingId: string;
-}): Promise<{
+export async function applyPremiumVoucher(params: { voucherId: string; kind: string; listingId: string }): Promise<{
   voucher?: PremiumVoucher;
   premiumUntil?: string;
   refreshedAt?: string;
@@ -325,10 +312,7 @@ export async function applyPremiumVoucher(params: {
   }
 }
 
-export async function applyPremiumFromPlan(params: {
-  kind: string;
-  listingId: string;
-}): Promise<{
+export async function applyPremiumFromPlan(params: { kind: string; listingId: string }): Promise<{
   premiumUntil?: string;
   refreshedAt?: string;
   alreadyActive?: boolean;
@@ -368,9 +352,7 @@ export async function listOkazionPackages(): Promise<{
   pokEnv?: PokEnv;
   error?: string;
 }> {
-  const cached = readCatalogCache<{ packages?: OkazionPackage[]; pokEnv?: PokEnv; error?: string }>(
-    'okazion-packages',
-  );
+  const cached = readCatalogCache<{ packages?: OkazionPackage[]; pokEnv?: PokEnv; error?: string }>('okazion-packages');
   if (cached) return cached;
   try {
     const res = await apiFetch(getApiUrl('/payments/okazion-packages'), { cache: 'no-store' });
@@ -389,7 +371,7 @@ export async function listOkazionPackages(): Promise<{
 
 export async function createOkazionOrder(
   packageId: string,
-  quantity = 1,
+  quantity = 1
 ): Promise<{ order?: CreatedOrder; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl('/payments/okazion/order'), {
@@ -407,7 +389,7 @@ export async function createOkazionOrder(
 
 export async function buyOkazionWithCredits(
   packageId: string,
-  quantity = 1,
+  quantity = 1
 ): Promise<{
   voucher?: OkazionVoucher;
   vouchers?: OkazionVoucher[];
@@ -480,11 +462,7 @@ export async function fetchOkazionPlanQuota(): Promise<{
   }
 }
 
-export async function applyOkazionVoucher(params: {
-  voucherId: string;
-  kind: string;
-  listingId: string;
-}): Promise<{
+export async function applyOkazionVoucher(params: { voucherId: string; kind: string; listingId: string }): Promise<{
   voucher?: OkazionVoucher;
   okazionUntil?: string;
   refreshedAt?: string;
@@ -510,10 +488,7 @@ export async function applyOkazionVoucher(params: {
   }
 }
 
-export async function applyOkazionFromPlan(params: {
-  kind: string;
-  listingId: string;
-}): Promise<{
+export async function applyOkazionFromPlan(params: { kind: string; listingId: string }): Promise<{
   okazionUntil?: string;
   refreshedAt?: string;
   alreadyActive?: boolean;
@@ -548,9 +523,7 @@ export async function applyOkazionFromPlan(params: {
   }
 }
 
-export async function verifyPayment(
-  paymentId: string,
-): Promise<{ payment?: Payment; paid?: boolean; error?: string }> {
+export async function verifyPayment(paymentId: string): Promise<{ payment?: Payment; paid?: boolean; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl(`/payments/${encodeURIComponent(paymentId)}/verify`), {
       method: 'POST',
@@ -593,7 +566,7 @@ export async function listMySubscriptions(): Promise<{
 }
 
 export async function cancelMySubscription(
-  subscriptionId: string,
+  subscriptionId: string
 ): Promise<{ subscription?: UserSubscriptionSummary; error?: string }> {
   try {
     const res = await apiFetch(getApiUrl(`/payments/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`), {

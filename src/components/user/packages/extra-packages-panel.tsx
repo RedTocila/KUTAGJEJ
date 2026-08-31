@@ -270,6 +270,7 @@ function AutoRefreshSection() {
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [slots, setSlots] = React.useState(0);
   const [used, setUsed] = React.useState(0);
+  const [enabled, setEnabled] = React.useState(false);
   const [packages, setPackages] = React.useState<AutoRefreshPackage[]>(FALLBACK_AUTO_PACKAGES);
   const [confirmPackage, setConfirmPackage] = React.useState<AutoRefreshPackage | null>(null);
 
@@ -281,6 +282,7 @@ function AutoRefreshSection() {
       if (cancelled) return;
       if (err) setError(err);
       if (status) {
+        setEnabled(status.enabled);
         setSlots(status.slots);
         setUsed(status.used);
         if (status.packages?.length) {
@@ -306,6 +308,8 @@ function AutoRefreshSection() {
   const onBuyCard = (pkg: AutoRefreshPackage) => {
     router.push(checkoutAutoRefreshHref(pkg.id));
   };
+
+  if (!enabled && !loading) return null;
 
   const onBuyBc = async (pkg: AutoRefreshPackage): Promise<boolean> => {
     setBusyId(pkg.id);

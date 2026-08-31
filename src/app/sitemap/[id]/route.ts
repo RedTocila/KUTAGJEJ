@@ -37,12 +37,9 @@ function sitemapEntries(index: Awaited<ReturnType<typeof fetchPublicSeoIndex>>) 
   ];
 }
 
-export const revalidate = 60;
+export const revalidate = 600;
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ id: string }> },
-): Promise<Response> {
+export async function GET(_request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const index = await fetchPublicSeoIndex();
   const page = Number.parseInt((await context.params).id, 10);
   const entries = sitemapEntries(index);
@@ -50,13 +47,17 @@ export async function GET(
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...entries.slice(start, start + SITEMAP_PAGE_SIZE).map(
-      (entry) =>
-        `<url><loc>${xmlEscape(entry.url)}</loc><lastmod>${entry.lastModified.toISOString()}</lastmod></url>`,
-    ),
+    ...entries
+      .slice(start, start + SITEMAP_PAGE_SIZE)
+      .map(
+        (entry) => `<url><loc>${xmlEscape(entry.url)}</loc><lastmod>${entry.lastModified.toISOString()}</lastmod></url>`
+      ),
     '</urlset>',
   ].join('');
   return new Response(body, {
-    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    headers: {
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=60',
+      'Content-Type': 'application/xml; charset=utf-8',
+    },
   });
 }

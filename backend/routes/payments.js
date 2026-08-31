@@ -7,15 +7,8 @@ const authMiddleware = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const pokClient = require('../lib/pok-client');
 const { getFrontendBaseUrl } = require('../lib/site-url');
-const {
-  listActiveCreditPackages,
-  getActiveCreditPackage,
-  totalCredits,
-} = require('../lib/credit-packages');
-const {
-  listAutoRefreshPackages,
-  getAutoRefreshPackage,
-} = require('../lib/auto-refresh-packages');
+const { listActiveCreditPackages, getActiveCreditPackage, totalCredits } = require('../lib/credit-packages');
+const { listAutoRefreshPackages, getAutoRefreshPackage } = require('../lib/auto-refresh-packages');
 const { getAutoRefreshSnapshot, purchaseAutoRefreshWithBoostCoins } = require('../lib/listing-auto-refresh');
 const { listPremiumPackages, getPremiumPackage } = require('../lib/premium-packages');
 const {
@@ -38,6 +31,7 @@ const { isUuid } = require('../lib/public-listings/query-helpers');
 const { priceWithLifetimeDiscount } = require('../lib/lifetime-discount');
 
 const router = express.Router();
+const AUTO_REFRESH_ENABLED = process.env.AUTO_REFRESH_ENABLED === 'true';
 
 const MONTH_TO_PRICE_FIELD = {
   1: 'price_1_month',
@@ -119,7 +113,11 @@ router.get('/credit-packages', async (_req, res) => {
 /** Public: auto-refresh slot packs. */
 router.get('/auto-refresh-packages', async (_req, res) => {
   try {
-    res.json({ packages: listAutoRefreshPackages(), pokEnv: pokClient.getConfig().env });
+    res.json({
+      enabled: AUTO_REFRESH_ENABLED,
+      packages: AUTO_REFRESH_ENABLED ? listAutoRefreshPackages() : [],
+      pokEnv: pokClient.getConfig().env,
+    });
   } catch (error) {
     console.error('GET /payments/auto-refresh-packages:', error?.message || error);
     res.status(500).json({ message: 'Gabim serveri.' });
@@ -155,13 +153,10 @@ router.get('/okazion-packages', async (_req, res) => {
 router.post('/webhook/pok', async (req, res) => {
   try {
     const paymentId =
-      req.query.paymentId ||
-      req.body?.reference ||
-      req.body?.data?.reference ||
-      req.body?.metadata?.reference;
+      req.query.paymentId || req.body?.reference || req.body?.data?.reference || req.body?.metadata?.reference;
     if (paymentId && isUuid(String(paymentId))) {
       await confirmAndApplyPayment(String(paymentId), pokClient).catch((e) =>
-        console.error('POK webhook apply error:', e?.message || e),
+        console.error('POK webhook apply error:', e?.message || e)
       );
     }
   } catch (error) {
@@ -306,13 +301,25 @@ router.post('/subscriptions/:id/cancel', async (req, res) => {
 /** Current auto-refresh capacity, usage, and interval from the active plan. */
 router.get('/auto-refresh/status', async (req, res) => {
   try {
+    if (!AUTO_REFRESH_ENABLED) {
+      return res.json({
+        enabled: false,
+        slots: 0,
+        used: 0,
+        planCode: 'disabled',
+        refreshEveryHours: 0,
+        packages: [],
+        enrolled: [],
+      });
+    }
     const snapshot = await getAutoRefreshSnapshot(req.user.id);
     res.json({
+      enabled: AUTO_REFRESH_ENABLED,
       slots: snapshot.slots,
       used: snapshot.used,
       planCode: snapshot.planCode,
       refreshEveryHours: snapshot.refreshEveryHours,
-      packages: listAutoRefreshPackages(),
+      packages: AUTO_REFRESH_ENABLED ? listAutoRefreshPackages() : [],
       enrolled: snapshot.enrolled,
     });
   } catch (error) {
@@ -337,11 +344,7 @@ router.post('/subscription/order', async (req, res) => {
     }
 
     const sb = getSupabaseAdmin();
-    const { data: contract, error: cErr } = await sb
-      .from('contracts')
-      .select('*')
-      .eq('id', contractId)
-      .maybeSingle();
+    const { data: contract, error: cErr } = await sb.from('contracts').select('*').eq('id', contractId).maybeSingle();
     if (cErr) throw cErr;
     if (!contract) return res.status(404).json({ message: 'Plani nuk u gjet.' });
 
@@ -491,6 +494,9 @@ router.post('/credits/order', async (req, res) => {
 /** Create a POK order for an auto-refresh slot pack. */
 router.post('/auto-refresh/order', async (req, res) => {
   try {
+    if (!AUTO_REFRESH_ENABLED) {
+      return res.status(410).json({ message: 'Auto-Refresh është përkohësisht i çaktivizuar.' });
+    }
     if (!pokClient.isConfigured()) {
       return res.status(503).json({ message: 'Pagesat nuk janë konfiguruar. Provoni më vonë.' });
     }
@@ -565,6 +571,9 @@ router.post('/auto-refresh/order', async (req, res) => {
 /** Buy auto-refresh slot pack with Boost Coins (no card). */
 router.post('/auto-refresh/buy-with-credits', async (req, res) => {
   try {
+    if (!AUTO_REFRESH_ENABLED) {
+      return res.status(410).json({ message: 'Auto-Refresh është përkohësisht i çaktivizuar.' });
+    }
     const { packageId } = req.body || {};
     const result = await purchaseAutoRefreshWithBoostCoins({
       userId: req.user.id,
@@ -783,8 +792,7 @@ router.post('/okazion/order', async (req, res) => {
     const priced = await priceWithLifetimeDiscount(req.user, Number(pkg.priceEur) * qty);
     const amount = priced.amount;
     const amountMinor = priced.amountMinor;
-    const description =
-      qty > 1 ? `OKAZION ×${qty}: ${pkg.labelSq}` : `OKAZION listing: ${pkg.labelSq}`;
+    const description = qty > 1 ? `OKAZION ×${qty}: ${pkg.labelSq}` : `OKAZION listing: ${pkg.labelSq}`;
 
     const sb = getSupabaseAdmin();
     const { data: paymentRow, error: pErr } = await sb

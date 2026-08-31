@@ -133,8 +133,6 @@ function findLabel<T extends { value: string; label: string }>(options: readonly
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
-const chipSx = { fontWeight: 600, height: 20, fontSize: '0.68rem', '& .MuiChip-label': { px: 0.85 } } as const;
-
 function Row({ icon: Icon, children }: { icon: PhosphorIcon; children: React.ReactNode }) {
   return (
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', py: 0.15 }}>
@@ -311,7 +309,8 @@ function CardImageHeader({
 
 function BaseCard({
   title,
-  chips,
+  price,
+  location,
   children,
   createdAt,
   metrics,
@@ -337,8 +336,9 @@ function BaseCard({
   lastRefreshedAt,
 }: {
   title: string;
-  chips?: React.ReactNode;
-  children: React.ReactNode;
+  price?: React.ReactNode;
+  location?: string | null;
+  children?: React.ReactNode;
   createdAt: string;
   metrics?: Partial<ListingMetrics>;
   status?: string | null;
@@ -418,9 +418,6 @@ function BaseCard({
             <ListingOwnerTopActions
               listingId={listingId}
               kind={kind}
-              canAnnounce={isPublic}
-              announcement={announcement}
-              onAnnouncementSaved={onAnnouncementSaved}
               onDeleteRequest={(id, deleteKind) => {
                 selection?.requestDelete([{ kind: deleteKind, id }]);
               }}
@@ -447,7 +444,7 @@ function BaseCard({
               fontSize: '0.95rem',
               lineHeight: 1.3,
               display: '-webkit-box',
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 1,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               minWidth: 0,
@@ -463,20 +460,21 @@ function BaseCard({
             {format(new Date(createdAt), 'd MMM yyyy')}
           </Typography>
         </Stack>
-        {chips ? (
-          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            {chips}
-          </Stack>
-        ) : null}
         {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}
         <Stack
           direction="row"
           spacing={1}
-          sx={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 0 }}
+          sx={{ alignItems: 'flex-start', justifyContent: 'space-between', minWidth: 0 }}
         >
           <Stack spacing={0.15} sx={{ minWidth: 0, flex: 1 }}>
+            {price}
             {children}
           </Stack>
+          {location ? (
+            <Box sx={{ minWidth: 0, maxWidth: '48%', flexShrink: 0, pt: 0.15 }}>
+              <Row icon={MapPinIcon}>{location}</Row>
+            </Box>
+          ) : null}
         </Stack>
         <Box sx={{ flex: 1 }} />
         {metrics && !selectionMode ? (
@@ -494,6 +492,8 @@ function BaseCard({
             onOkazionApplied={onOkazionApplied}
             onPremiumApplied={onPremiumApplied}
             onRefreshed={onRefreshed}
+            announcement={announcement}
+            onAnnouncementSaved={onAnnouncementSaved}
             lastRefreshedAt={lastRefreshedAt}
             refreshEveryHours={refreshEveryHours}
             hideStats
@@ -591,6 +591,12 @@ function RealEstateCard({
   return (
     <BaseCard
       title={l.title}
+      price={
+        <Row icon={TagIcon}>
+          <strong>{formatPrice(l.price, l.currency)}</strong>
+        </Row>
+      }
+      location={location}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -609,26 +615,7 @@ function RealEstateCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={
-        <>
-          {l.transactionType === 'rent' || l.transactionType === 'sale' ? (
-            <Chip
-              size="small"
-              label={l.transactionType === 'rent' ? 'Qera' : 'Shitje'}
-              color={l.transactionType === 'rent' ? 'info' : 'secondary'}
-              variant="outlined"
-              sx={chipSx}
-            />
-          ) : null}
-          {l.propertyCategory ? (
-            <Chip size="small" label={propertyCategoryLabel(l.propertyCategory)} variant="outlined" sx={chipSx} />
-          ) : null}
-        </>
-      }
     >
-      <Row icon={TagIcon}>
-        <strong>{formatPrice(l.price, l.currency)}</strong>
-      </Row>
       {l.surfaceM2 != null && Number(l.surfaceM2) > 0 ? (
         <Row icon={RulerIcon}>
           <strong>{l.surfaceM2}</strong> m²
@@ -639,7 +626,6 @@ function RealEstateCard({
           {l.bedrooms} dhoma · {l.bathrooms ?? 0} banjo
         </Row>
       ) : null}
-      <Row icon={MapPinIcon}>{location}</Row>
     </BaseCard>
   );
 }
@@ -671,6 +657,12 @@ function CarCard({
   return (
     <BaseCard
       title={title}
+      price={
+        <Row icon={TagIcon}>
+          <strong>{formatPrice(l.price, l.currency)}</strong>
+        </Row>
+      }
+      location={l.cityName}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -689,16 +681,7 @@ function CarCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={
-        <>
-          {l.year != null ? <Chip size="small" label={l.year} variant="outlined" sx={chipSx} /> : null}
-          {l.transmission ? <Chip size="small" label={l.transmission} variant="outlined" sx={chipSx} /> : null}
-        </>
-      }
     >
-      <Row icon={TagIcon}>
-        <strong>{formatPrice(l.price, l.currency)}</strong>
-      </Row>
       {l.kilometers != null || l.fuelType ? (
         <Row icon={SpeedometerIcon}>
           {l.kilometers != null ? (
@@ -710,7 +693,6 @@ function CarCard({
           {l.fuelType || null}
         </Row>
       ) : null}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );
 }
@@ -741,14 +723,20 @@ function JobCard({
   const [initialNowMs] = React.useState(() => Date.now());
   const nowMs = useSharedSecondTick();
   const industryLabel = findLabel(JOB_INDUSTRY_OPTIONS, l.industry);
-  const jobTypeLabel = findLabel(JOB_TYPE_OPTIONS, l.jobType);
-  const workLocLabel = findLabel(WORK_LOCATION_OPTIONS, l.workLocation);
   const isExpired =
     normalizeListingModerationStatus(l.status) === 'approved' &&
     !isJobListingActive(l.createdAt, new Date(nowMs || initialNowMs), l.bumpedAt);
   return (
     <BaseCard
       title={l.title}
+      price={
+        l.salary != null ? (
+          <Row icon={TagIcon}>
+            <strong>{formatPrice(l.salary, l.currency)}</strong> / muaj
+          </Row>
+        ) : undefined
+      }
+      location={l.cityName}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -768,20 +756,8 @@ function JobCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={
-        <>
-          <Chip size="small" label={jobTypeLabel} variant="outlined" sx={chipSx} />
-          <Chip size="small" label={workLocLabel} variant="outlined" color="info" sx={chipSx} />
-        </>
-      }
     >
       <Row icon={BriefcaseIcon}>{industryLabel}</Row>
-      {l.salary != null ? (
-        <Row icon={TagIcon}>
-          <strong>{formatPrice(l.salary, l.currency)}</strong> / muaj
-        </Row>
-      ) : null}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
     </BaseCard>
   );
 }
@@ -809,11 +785,19 @@ function MarketplaceCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(MARKETPLACE_CATEGORY_OPTIONS, l.category);
-  const conditionLabel = findLabel(MARKETPLACE_CONDITION_OPTIONS, l.condition);
   return (
     <BaseCard
       title={l.title}
+      price={
+        l.price != null ? (
+          <Row icon={TagIcon}>
+            <strong>{formatPrice(l.price, l.currency)}</strong>
+          </Row>
+        ) : (
+          <Row icon={TagIcon}>Çmimi me marrëveshje</Row>
+        )
+      }
+      location={l.cityName}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -832,24 +816,7 @@ function MarketplaceCard({
       onRefreshed={onRefreshed}
       lastRefreshedAt={lastRefreshedAt}
       refreshEveryHours={refreshEveryHours}
-      chips={
-        <>
-          <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-          {l.condition ? (
-            <Chip size="small" label={conditionLabel} variant="outlined" color="success" sx={chipSx} />
-          ) : null}
-        </>
-      }
-    >
-      {l.price != null ? (
-        <Row icon={TagIcon}>
-          <strong>{formatPrice(l.price, l.currency)}</strong>
-        </Row>
-      ) : (
-        <Row icon={TagIcon}>Çmimi me marrëveshje</Row>
-      )}
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
-    </BaseCard>
+    ></BaseCard>
   );
 }
 
@@ -876,7 +843,6 @@ function BusinessCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(BUSINESS_CATEGORY_OPTIONS, l.category);
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
@@ -889,6 +855,7 @@ function BusinessCard({
   return (
     <BaseCard
       title={l.title}
+      location={l.cityName}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -917,14 +884,7 @@ function BusinessCard({
           />
         ) : undefined
       }
-      chips={
-        <>
-          <Chip size="small" label="Biznes" color="primary" variant="outlined" sx={chipSx} />
-          <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-        </>
-      }
     >
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
       {l.servicesHighlight ? <Row icon={TagIcon}>{l.servicesHighlight}</Row> : null}
     </BaseCard>
   );
@@ -953,7 +913,6 @@ function ProfessionalCard({
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
 }) {
-  const categoryLabel = findLabel(PROFESSIONAL_CATEGORY_OPTIONS, l.category);
   const announcement: BusinessAnnouncement | null = l.announcementTitle?.trim()
     ? {
         title: l.announcementTitle,
@@ -966,6 +925,7 @@ function ProfessionalCard({
   return (
     <BaseCard
       title={l.title}
+      location={l.cityName}
       createdAt={l.createdAt}
       metrics={l}
       status={l.status}
@@ -994,14 +954,7 @@ function ProfessionalCard({
           />
         ) : undefined
       }
-      chips={
-        <>
-          <Chip size="small" label="Profesionist" color="secondary" variant="outlined" sx={chipSx} />
-          <Chip size="small" label={categoryLabel} variant="outlined" sx={chipSx} />
-        </>
-      }
     >
-      {l.cityName ? <Row icon={MapPinIcon}>{l.cityName}</Row> : null}
       {l.servicesHighlight ? <Row icon={TagIcon}>{l.servicesHighlight}</Row> : null}
     </BaseCard>
   );
@@ -1308,7 +1261,9 @@ export default function UserMyListingsPage() {
         cooldownMap[refreshCooldownKey(cooldown.kind, cooldown.listingId)] = cooldown.lastRefreshedAt;
       }
       setRefreshCooldownByKey(cooldownMap);
-      setRefreshEveryHours(Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48);
+      setRefreshEveryHours(
+        auto.refreshEveryHours === 0 ? 0 : Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48
+      );
     });
 
     return () => {

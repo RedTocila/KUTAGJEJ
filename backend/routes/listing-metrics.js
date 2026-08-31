@@ -38,6 +38,38 @@ router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
   }
 });
 
+/** POST /api/listing-metrics/events — batch anonymous listing views. */
+router.post('/events', metricsRateLimit, optionalAuth, async (req, res) => {
+  try {
+    const events = Array.isArray(req.body?.events) ? req.body.events.slice(0, 50) : [];
+    if (events.length === 0) return res.json({ metrics: {} });
+
+    // sendBeacon cannot set custom headers, so accept the same visitor id in
+    // the body when the browser flushes its queue during page shutdown.
+    if (!req.headers['x-visitor-id']) {
+      const visitorId = String(req.body?.visitorId ?? '').trim();
+      if (visitorId) req.headers['x-visitor-id'] = visitorId;
+    }
+
+    let recorded = 0;
+    for (const item of events) {
+      const kind = String(item?.listingKind ?? '').trim();
+      const listingId = String(item?.listingId ?? '').trim();
+      const result = await recordListingEvent(req, {
+        kind,
+        listingId,
+        event: 'view',
+        includeMetrics: false,
+      });
+      if (result.ok) recorded += 1;
+    }
+    res.json({ metrics: {}, recorded });
+  } catch (err) {
+    console.error('POST /listing-metrics/events:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 /** GET /api/listing-metrics/saved/keys — all bookmark keys for the signed-in portal user. */
 router.get('/saved/keys', authMiddleware, requirePortalUser, async (req, res) => {
   try {

@@ -4,13 +4,7 @@ import { authHeaders, clientFetch } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 
-export type ListingMetricKind =
-  | 'real-estate'
-  | 'car'
-  | 'job'
-  | 'marketplace'
-  | 'businesses'
-  | 'professionals';
+export type ListingMetricKind = 'real-estate' | 'car' | 'job' | 'marketplace' | 'businesses' | 'professionals';
 
 export interface ListingMetrics {
   viewCount: number;
@@ -74,9 +68,7 @@ function releaseViewMetric(key: string, claim: string): void {
   }
 }
 
-export function metricsFromListing(
-  listing: Partial<ListingMetrics> | null | undefined,
-): ListingMetrics {
+export function metricsFromListing(listing: Partial<ListingMetrics> | null | undefined): ListingMetrics {
   return {
     viewCount: listing?.viewCount ?? 0,
     shareCount: listing?.shareCount ?? 0,
@@ -152,10 +144,7 @@ function readSavedListSession(userId: string): SavedListingsCache | null {
 
 function writeSavedListSession(userId: string, payload: SavedListingsCache): void {
   try {
-    sessionStorage.setItem(
-      `${SAVED_LIST_CACHE_PREFIX}${userId}`,
-      JSON.stringify({ at: Date.now(), payload }),
-    );
+    sessionStorage.setItem(`${SAVED_LIST_CACHE_PREFIX}${userId}`, JSON.stringify({ at: Date.now(), payload }));
   } catch {
     /* quota / private mode */
   }
@@ -195,7 +184,7 @@ export async function fetchSavedListingKeys(): Promise<{ keys?: string[]; error?
 
 export async function fetchSavedListings(
   page = 1,
-  limit = 24,
+  limit = 24
 ): Promise<{
   items?: SavedListingItem[];
   keys?: string[];
@@ -263,7 +252,7 @@ export async function fetchListingSavers(
   listingKind: ListingMetricKind,
   listingId: string,
   page = 1,
-  limit = 30,
+  limit = 30
 ): Promise<{
   savers?: ListingSaverLead[];
   total?: number;
@@ -321,7 +310,7 @@ export function nextViewCount(current: number, metrics: ListingMetrics | null | 
  */
 export function nextSaveCount(
   current: number,
-  result: { saved?: boolean; saveCount?: number; stale?: boolean } | null | undefined,
+  result: { saved?: boolean; saveCount?: number; stale?: boolean } | null | undefined
 ): number {
   if (!result || result.stale) return current;
   if (result.saved) {
@@ -337,11 +326,7 @@ export function nextSaveCount(
  * Bookmark keys survive page changes; listing payloads often still have the old saveCount
  * until a later refetch — `cached` is the toggle we already confirmed this session.
  */
-export function resolveVisibleSaveCount(input: {
-  initial: number;
-  saved: boolean;
-  cached?: number | null;
-}): number {
+export function resolveVisibleSaveCount(input: { initial: number; saved: boolean; cached?: number | null }): number {
   const base = Number.isFinite(input.initial) ? Math.max(0, input.initial) : 0;
   const held = typeof input.cached === 'number' && Number.isFinite(input.cached) ? Math.max(0, input.cached) : null;
   if (held != null) {
@@ -358,6 +343,109 @@ function beaconListingMetric(url: string, body: string): void {
   } catch {
     /* ignore */
   }
+}
+
+type PendingViewMetric = {
+  listingKind: ListingMetricKind;
+  listingId: string;
+  claim: string;
+  resolve: (metrics: ListingMetrics | null) => void;
+};
+
+const pendingViewMetrics = new Map<string, PendingViewMetric>();
+let viewFlushTimer: ReturnType<typeof setTimeout> | null = null;
+let viewFlushRunning = false;
+const VIEW_BATCH_SIZE = 10;
+const VIEW_BATCH_DELAY_MS = 2_000;
+
+function scheduleViewMetricFlush(): void {
+  if (viewFlushTimer || viewFlushRunning || pendingViewMetrics.size === 0) return;
+  viewFlushTimer = setTimeout(() => {
+    viewFlushTimer = null;
+    void flushViewMetrics();
+  }, VIEW_BATCH_DELAY_MS);
+}
+
+async function flushViewMetrics(useBeacon = false): Promise<void> {
+  if (viewFlushRunning || pendingViewMetrics.size === 0) return;
+  viewFlushRunning = true;
+  const batch = Array.from(pendingViewMetrics.values());
+  pendingViewMetrics.clear();
+  const body = JSON.stringify({
+    visitorId: getVisitorId(),
+    events: batch.map(({ listingKind, listingId }) => ({ listingKind, listingId })),
+  });
+
+  if (useBeacon) {
+    const url = getApiUrl('/listing-metrics/events');
+    const sent =
+      typeof navigator !== 'undefined' && navigator.sendBeacon
+        ? navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
+        : false;
+    for (const item of batch) {
+      if (!sent) {
+        releaseViewMetric(listingMetricsKey(item.listingKind, item.listingId), item.claim);
+      }
+      item.resolve(null);
+    }
+    viewFlushRunning = false;
+    scheduleViewMetricFlush();
+    return;
+  }
+
+  try {
+    const res = await fetch(getApiUrl('/listing-metrics/events'), {
+      method: 'POST',
+      headers: metricHeaders(),
+      body,
+    });
+    const data = res.ok
+      ? ((await res.json().catch(() => ({}))) as {
+          metrics?: Record<string, ListingMetrics>;
+        })
+      : null;
+    for (const item of batch) {
+      if (!res.ok) {
+        releaseViewMetric(listingMetricsKey(item.listingKind, item.listingId), item.claim);
+      }
+      const key = listingMetricsKey(item.listingKind, item.listingId);
+      item.resolve(data?.metrics?.[key] ? metricsFromListing(data.metrics[key]) : null);
+    }
+  } catch {
+    for (const item of batch) {
+      releaseViewMetric(listingMetricsKey(item.listingKind, item.listingId), item.claim);
+      item.resolve(null);
+    }
+  } finally {
+    viewFlushRunning = false;
+    if (pendingViewMetrics.size >= VIEW_BATCH_SIZE) {
+      void flushViewMetrics();
+    } else {
+      scheduleViewMetricFlush();
+    }
+  }
+}
+
+function enqueueViewMetric(listingKind: ListingMetricKind, listingId: string): Promise<ListingMetrics | null> {
+  const key = listingMetricsKey(listingKind, listingId);
+  const claim = claimViewMetric(key);
+  if (!claim) return Promise.resolve(null);
+
+  const promise = new Promise<ListingMetrics | null>((resolve) => {
+    pendingViewMetrics.set(key, { listingKind, listingId, claim, resolve });
+  });
+  if (pendingViewMetrics.size >= VIEW_BATCH_SIZE) {
+    void flushViewMetrics();
+  } else {
+    scheduleViewMetricFlush();
+  }
+  return promise;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    void flushViewMetrics(true);
+  });
 }
 
 /** Opens the native share sheet or copies the URL, then records a share only on success. */
@@ -388,15 +476,15 @@ export async function shareListing(opts: {
 export async function recordListingMetricEvent(
   listingKind: ListingMetricKind,
   listingId: string,
-  event: 'view' | 'share',
+  event: 'view' | 'share'
 ): Promise<ListingMetrics | null> {
+  if (event === 'view') {
+    return enqueueViewMetric(listingKind, listingId);
+  }
+
   const url = getApiUrl('/listing-metrics/event');
   const body = JSON.stringify({ listingKind, listingId, event });
-  const viewKey = event === 'view' ? listingMetricsKey(listingKind, listingId) : null;
-  const viewClaim = viewKey ? claimViewMetric(viewKey) : null;
-  if (event === 'view' && !viewClaim) return Promise.resolve(null);
-  const pageHidden =
-    event === 'share' && typeof document !== 'undefined' && document.visibilityState === 'hidden';
+  const pageHidden = event === 'share' && typeof document !== 'undefined' && document.visibilityState === 'hidden';
 
   // Instagram / Messages background Safari. A regular fetch is killed; keepalive JSON
   // POSTs are dropped on iOS. Beacon while hidden, fetch while the tab is visible.
@@ -412,7 +500,6 @@ export async function recordListingMetricEvent(
       body,
     });
     if (!res.ok) {
-      if (viewKey && viewClaim) releaseViewMetric(viewKey, viewClaim);
       return null;
     }
     try {
@@ -423,7 +510,6 @@ export async function recordListingMetricEvent(
       return null;
     }
   } catch {
-    if (viewKey && viewClaim) releaseViewMetric(viewKey, viewClaim);
     if (event === 'share') beaconListingMetric(url, body);
     return null;
   }
@@ -431,7 +517,7 @@ export async function recordListingMetricEvent(
 
 export async function toggleListingSave(
   listingKind: ListingMetricKind,
-  listingId: string,
+  listingId: string
 ): Promise<(ListingMetrics & { saved: boolean }) | null> {
   try {
     const res = await fetch(getApiUrl('/listing-metrics/save'), {

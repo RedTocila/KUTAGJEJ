@@ -69,13 +69,21 @@ function OkazionCard({ listing, imagePriority = false }: { listing: PublicOkazio
 function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseListing, imagePriority = false) {
   switch (verticalId) {
     case 'real-estate':
-      return <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} />;
+      return (
+        <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} locationInPriceRow />
+      );
     case 'cars':
       return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} variant="compact" />;
     case 'jobs':
-      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} />;
+      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} locationInPriceRow />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing as PublicMarketplaceListing} imagePriority={imagePriority} variant="compact" />;
+      return (
+        <MarketplaceCard
+          listing={listing as PublicMarketplaceListing}
+          imagePriority={imagePriority}
+          variant="compact"
+        />
+      );
     case 'businesses':
     case 'professionals':
       return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
@@ -285,9 +293,7 @@ export function BrowseInfiniteGrid({
   }, [hasMore, loadMore, listings.length]);
 
   const isTwoColumnMobile = verticalId === 'cars' || verticalId === 'marketplace';
-  const itemGridSize = isTwoColumnMobile
-    ? { xs: 6, sm: 6, md: 4, lg: 3 }
-    : { xs: 12, sm: 6, md: 4, lg: 3 };
+  const itemGridSize = isTwoColumnMobile ? { xs: 6, sm: 6, md: 4, lg: 3 } : { xs: 12, sm: 6, md: 4, lg: 3 };
 
   if (recovering && error && !loading) {
     return (

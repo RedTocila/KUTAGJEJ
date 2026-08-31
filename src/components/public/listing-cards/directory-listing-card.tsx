@@ -14,18 +14,13 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
-import { ListingCardLink } from '@/components/public/listing-card-link';
 import { BusinessOpenStatusLine } from '@/components/public/business-open-status-line';
+import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { BusinessPromoBanner } from './business-promo-banner';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
-import {
-  findOptionLabel,
-  formatBusinessOpeningHoursForCard,
-  listingCardRelativeDate,
-  listingPriceAccentColor,
-} from './format-helpers';
+import { findOptionLabel, formatBusinessOpeningHoursForCard, listingPriceAccentColor } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
@@ -50,6 +45,7 @@ function BusinessVenueCardBody({
 }) {
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(listing, sellerRating);
+  const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
 
   const openingHoursLabel =
     listing.openStatusLine?.trim() ||
@@ -201,25 +197,23 @@ function BusinessVenueCardBody({
               </Stack>
             ) : null}
 
-            {listing.cityName ? (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" />
-                <Typography
-                  variant="caption"
-                  noWrap
-                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
-                >
-                  {listing.cityName}
-                </Typography>
-              </Stack>
-            ) : null}
-
             <Box sx={{ flex: 1 }} />
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
-              </Typography>
+              {location ? (
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                >
+                  <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                  <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
+                    {location}
+                  </Typography>
+                </Stack>
+              ) : (
+                <Box />
+              )}
               <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
                 <EyeIcon size={14} weight="regular" />
                 <Typography variant="caption" color="text.disabled">
@@ -247,6 +241,7 @@ function ProfessionalListingCardBody({
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(listing, sellerRating);
+  const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
 
   const serviceTags = React.useMemo(() => {
     const raw = String(listing.servicesHighlight ?? '').trim();
@@ -421,25 +416,23 @@ function ProfessionalListingCardBody({
             </Stack>
             <SpecRow specs={specs} />
 
-            {listing.cityName ? (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" />
-                <Typography
-                  variant="caption"
-                  noWrap
-                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
-                >
-                  {listing.cityName}
-                </Typography>
-              </Stack>
-            ) : null}
-
             <Box sx={{ flex: 1 }} />
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
-              </Typography>
+              {location ? (
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
+                >
+                  <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                  <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
+                    {location}
+                  </Typography>
+                </Stack>
+              ) : (
+                <Box />
+              )}
               <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
                 <EyeIcon size={14} weight="regular" />
                 <Typography variant="caption" color="text.disabled">

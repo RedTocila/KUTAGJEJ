@@ -72,12 +72,14 @@ export function JobCard({
   sellerRating = null,
   imagePriority = false,
   variant = 'default',
+  locationInPriceRow = false,
 }: {
   listing: PublicJobListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
   /** `'cover'` is the square crop used on the jobs browse page. Homepage stays `'default'`. */
   variant?: 'default' | 'cover' | 'compact';
+  locationInPriceRow?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
@@ -227,7 +229,68 @@ export function JobCard({
             {cardRating ? (
               <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
             ) : null}
-            {listing.salary != null ? (
+            {locationInPriceRow ? (
+              <Stack
+                direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}
+              >
+                {listing.salary != null ? (
+                  <ListingPrice
+                    price={listing.salary}
+                    currency={listing.currency}
+                    isPremium={listing.isPremium}
+                    isOkazion={listing.isOkazion}
+                    fontSize="1rem"
+                    suffix={
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ ml: 0.5, fontWeight: 500 }}
+                      >
+                        / muaj
+                      </Typography>
+                    }
+                    sx={{ minWidth: 0, flex: '1 1 auto' }}
+                  />
+                ) : (
+                  <Typography
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: '1rem',
+                      color: 'primary.main',
+                      lineHeight: 1.2,
+                      minWidth: 0,
+                      flex: '1 1 auto',
+                    }}
+                  >
+                    Pagë e diskutueshme
+                  </Typography>
+                )}
+                {listing.cityName ? (
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      alignItems: 'center',
+                      color: 'text.secondary',
+                      minWidth: 0,
+                      maxWidth: '50%',
+                      flexShrink: 1,
+                    }}
+                  >
+                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                    <Typography
+                      variant="caption"
+                      noWrap
+                      sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, textAlign: 'right' }}
+                    >
+                      {listing.cityName}
+                    </Typography>
+                  </Stack>
+                ) : null}
+              </Stack>
+            ) : listing.salary != null ? (
               <ListingPrice
                 price={listing.salary}
                 currency={listing.currency}
@@ -246,36 +309,29 @@ export function JobCard({
                 }
               />
             ) : (
-              <Stack direction="row" sx={{ alignItems: 'center' }}>
-                <Typography
-                  sx={{
-                    fontWeight: 800,
-                    fontSize: '1rem',
-                    color: 'primary.main',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  Pagë e diskutueshme
-                </Typography>
-              </Stack>
+              <Typography
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '1rem',
+                  color: 'primary.main',
+                  lineHeight: 1.2,
+                }}
+              >
+                Pagë e diskutueshme
+              </Typography>
             )}
 
             <CardDescription text={listing.description} />
 
             <SpecRow specs={specs} />
 
-            {listing.cityName ? (
+            {!locationInPriceRow && listing.cityName ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" />
+                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
                 <Typography
                   variant="caption"
                   noWrap
-                  sx={{
-                    color: 'text.secondary',
-                    fontWeight: 500,
-                    minWidth: 0,
-                    flex: 1,
-                  }}
+                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
                 >
                   {listing.cityName}
                 </Typography>

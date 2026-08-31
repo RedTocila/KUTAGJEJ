@@ -165,7 +165,7 @@ export function MarketplaceCard({
 
             {listing.cityName ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" />
+                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
                 <Typography
                   variant="caption"
                   noWrap

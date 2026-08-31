@@ -34,11 +34,13 @@ export function RealEstateCard({
   sellerRating = null,
   imagePriority = false,
   variant = 'default',
+  locationInPriceRow = false,
 }: {
   listing: PublicRealEstateListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
   variant?: 'default' | 'compact';
+  locationInPriceRow?: boolean;
 }) {
   const t = useCopy();
   const { language } = useLanguage();
@@ -204,33 +206,83 @@ export function RealEstateCard({
             {cardRating ? (
               <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
             ) : null}
-            <ListingPrice
-              price={listing.price}
-              originalPrice={listing.originalPrice}
-              currency={listing.currency}
-              isPremium={listing.isPremium}
-              isOkazion={listing.isOkazion}
-              suffix={
-                listing.transactionType === 'rent' ? (
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ ml: 0.5, fontWeight: 500 }}
+            {locationInPriceRow ? (
+              <Stack
+                direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}
+              >
+                <ListingPrice
+                  price={listing.price}
+                  originalPrice={listing.originalPrice}
+                  currency={listing.currency}
+                  isPremium={listing.isPremium}
+                  isOkazion={listing.isOkazion}
+                  suffix={
+                    listing.transactionType === 'rent' ? (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ ml: 0.5, fontWeight: 500 }}
+                      >
+                        {t.browse.perMonth}
+                      </Typography>
+                    ) : null
+                  }
+                  sx={{ minWidth: 0, flex: '1 1 auto' }}
+                />
+                {location ? (
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      alignItems: 'center',
+                      color: 'text.secondary',
+                      minWidth: 0,
+                      maxWidth: '50%',
+                      flexShrink: 1,
+                    }}
                   >
-                    {t.browse.perMonth}
-                  </Typography>
-                ) : null
-              }
-            />
+                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                    <Typography
+                      variant="caption"
+                      noWrap
+                      sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, textAlign: 'right' }}
+                    >
+                      {location}
+                    </Typography>
+                  </Stack>
+                ) : null}
+              </Stack>
+            ) : (
+              <ListingPrice
+                price={listing.price}
+                originalPrice={listing.originalPrice}
+                currency={listing.currency}
+                isPremium={listing.isPremium}
+                isOkazion={listing.isOkazion}
+                suffix={
+                  listing.transactionType === 'rent' ? (
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ ml: 0.5, fontWeight: 500 }}
+                    >
+                      {t.browse.perMonth}
+                    </Typography>
+                  ) : null
+                }
+              />
+            )}
 
             <CardDescription text={listing.description} />
 
             <SpecRow specs={specs} />
 
-            {location ? (
+            {!locationInPriceRow && location ? (
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" />
+                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
                 <Typography
                   variant="caption"
                   noWrap

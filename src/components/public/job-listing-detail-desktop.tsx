@@ -696,7 +696,8 @@ export function JobListingDetailDesktop({
                     contactPhone={listing.contactPhone ?? listing.seller?.phone}
                     listingTitle={listing.title}
                     listingUrl={canonicalUrl}
-                    label="Kontakto"
+                    label="CONTACT"
+                    hideIcon
                     variant="contained"
                     size="large"
                     disableElevation

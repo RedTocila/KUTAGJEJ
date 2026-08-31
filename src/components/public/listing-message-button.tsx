@@ -5,22 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Button, CircularProgress, Typography, type ButtonProps } from '@mui/material';
 import { ChatCircle as ChatCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatCircle';
 
-import { GuestListingContactDialog } from '@/components/public/guest-listing-contact-dialog';
-import { useUser } from '@/hooks/use-user';
-import {
-  type ConversationListingKind,
-  setPendingListingChat,
-  startConversation,
-} from '@/lib/conversations-client';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
 import { hasStoredAccessToken } from '@/lib/auth/storage';
+import { setPendingListingChat, startConversation, type ConversationListingKind } from '@/lib/conversations-client';
+import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
+import { useUser } from '@/hooks/use-user';
+import { GuestListingContactDialog } from '@/components/public/guest-listing-contact-dialog';
 
 export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> {
   listingKind: ConversationListingKind;
   listingId: string;
   label?: string;
   children?: React.ReactNode;
+  hideIcon?: boolean;
   /** Seller phone — used in the guest contact popup (call / WhatsApp). */
   contactPhone?: string | null;
   listingTitle?: string | null;
@@ -37,6 +34,7 @@ export function ListingMessageButton({
   listingId,
   label = 'Dërgo mesazh',
   disabled,
+  hideIcon = false,
   startIcon,
   children,
   contactPhone,
@@ -104,8 +102,8 @@ export function ListingMessageButton({
         startIcon={
           loading ? (
             <CircularProgress size={18} color="inherit" />
-          ) : (
-            startIcon ?? (children ? undefined : <ChatCircleIcon weight="bold" size={20} />)
+          ) : hideIcon ? undefined : (
+            (startIcon ?? (children ? undefined : <ChatCircleIcon weight="bold" size={20} />))
           )
         }
         data-listing-contact=""

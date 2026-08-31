@@ -252,7 +252,7 @@ function formFromListing(l: JobMineListing): JobFormState {
     locationLng: l.locationLng ?? null,
     locationAddress: l.locationAddress ?? null,
     education: l.education || '',
-    experience: l.experience || '',
+    experience: JOB_EXPERIENCE_OPTIONS.some((option) => option.value === l.experience) ? l.experience : '',
     jobType: l.jobType || '',
     workLocation: l.workLocation || '',
     preferredGender: l.preferredGender || '',

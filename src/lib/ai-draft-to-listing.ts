@@ -1,5 +1,11 @@
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
 import { normalizeFuelType } from '@/lib/car-constants';
+import {
+  JOB_EDUCATION_OPTIONS,
+  JOB_EXPERIENCE_OPTIONS,
+  JOB_TYPE_OPTIONS,
+  WORK_LOCATION_OPTIONS,
+} from '@/lib/job-constants';
 import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import {
   isValidVehicleMake,
@@ -17,6 +23,11 @@ function num(value: unknown): number | null {
 
 function str(value: unknown): string {
   return value == null ? '' : String(value);
+}
+
+function knownOption(value: unknown, options: readonly { value: string }[]): string {
+  const candidate = str(value).trim();
+  return options.some((option) => option.value === candidate) ? candidate : '';
 }
 
 function withKnownDefaults(record: Record<string, unknown>, withZone = false): Record<string, unknown> {
@@ -128,10 +139,10 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         cityName: draft.cityName || null,
         zoneId: str(f.zoneId) || null,
         zoneName: draft.zoneName || str(f.zoneName) || null,
-        education: str(f.education),
-        experience: str(f.experience),
-        jobType: str(f.jobType),
-        workLocation: str(f.workLocation),
+        education: knownOption(f.education, JOB_EDUCATION_OPTIONS),
+        experience: knownOption(f.experience, JOB_EXPERIENCE_OPTIONS),
+        jobType: knownOption(f.jobType, JOB_TYPE_OPTIONS),
+        workLocation: knownOption(f.workLocation, WORK_LOCATION_OPTIONS),
         preferredGender:
           f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
             ? f.preferredGender

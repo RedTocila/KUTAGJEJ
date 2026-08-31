@@ -34,6 +34,7 @@ import {
   isAiContentRestricted,
   isAiDailyLimitError,
   isAiRateLimitError,
+  jobPromptRequestsCoverImage,
   mergeAttachedImageUrls,
   toAiListingDraft,
   type AiImportDraftResult,
@@ -646,18 +647,25 @@ export default function AiImportListingsPage() {
   }, [user]);
 
   const decorateImportedDraft = React.useCallback(
-    (draft: AiImportDraftResult, prompt: string, uploadedUrls: string[]): AiImportDraftResult => ({
-      ...draft,
-      sourcePrompt: draft.sourcePrompt || prompt,
-      imageUrls: uploadedUrls.length
-        ? mergeAttachedImageUrls({
-            remoteUrls: draft.imageUrls ?? [],
-            uploadedUrls,
-            roles: draft.imageRoles,
-            max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
-          })
-        : draft.imageUrls,
-    }),
+    (draft: AiImportDraftResult, prompt: string, uploadedUrls: string[]): AiImportDraftResult => {
+      const isJobDraft = draft.category === 'job-listings' || draft.detectedCategory === 'job-listings';
+      const keepJobCoverImage = !isJobDraft || jobPromptRequestsCoverImage(prompt);
+      return {
+        ...draft,
+        sourcePrompt: draft.sourcePrompt || prompt,
+        imageUrls:
+          keepJobCoverImage && uploadedUrls.length
+            ? mergeAttachedImageUrls({
+                remoteUrls: draft.imageUrls ?? [],
+                uploadedUrls,
+                roles: draft.imageRoles,
+                max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
+              })
+            : keepJobCoverImage
+              ? draft.imageUrls
+              : [],
+      };
+    },
     []
   );
 

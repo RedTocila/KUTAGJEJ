@@ -486,6 +486,8 @@ export function JobListingDetailView({
                   contactPhone={listing.contactPhone ?? listing.seller?.phone}
                   listingTitle={listing.title}
                   listingUrl={canonicalUrl}
+                  label="CONTACT"
+                  hideIcon
                 />
               )}
             </Stack>

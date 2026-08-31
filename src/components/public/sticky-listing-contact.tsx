@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { createPortal } from 'react-dom';
 import { Box, type SxProps, type Theme } from '@mui/material';
+import { createPortal } from 'react-dom';
 
-import { ListingMessageButton } from '@/components/public/listing-message-button';
 import { type ConversationListingKind } from '@/lib/conversations-client';
 import { MOBILE_BOTTOM_NAV_FLOAT_INSET_PX, MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { ListingMessageButton } from '@/components/public/listing-message-button';
 
 /** Shared “Kontakto” CTA — full width across listing detail surfaces. */
 export const listingContactCtaSx: SxProps<Theme> = {
@@ -88,7 +88,7 @@ export function StickyListingCtaSlot({
         if (!entry) return;
         setStuck(!entry.isIntersecting && entry.boundingClientRect.top < 0);
       },
-      { threshold: 0, rootMargin: '0px' },
+      { threshold: 0, rootMargin: '0px' }
     );
 
     observer.observe(el);
@@ -174,7 +174,7 @@ export function StickyListingCtaSlot({
               {children}
             </Box>
           </Box>,
-          host,
+          host
         )
       : null;
 
@@ -205,6 +205,7 @@ export interface StickyListingContactProps {
   listingId: string;
   /** Defaults to “Kontakto”. */
   label?: string;
+  hideIcon?: boolean;
   /**
    * When true, also show on `md+`.
    * Default: mobile only.
@@ -222,6 +223,7 @@ export function StickyListingContact({
   listingKind,
   listingId,
   label = 'Kontakto',
+  hideIcon = false,
   showOnDesktop = false,
   contactPhone,
   listingTitle,
@@ -235,6 +237,7 @@ export function StickyListingContact({
       listingTitle={listingTitle}
       listingUrl={listingUrl}
       label={label}
+      hideIcon={hideIcon}
       variant="contained"
       disableElevation
       size="large"

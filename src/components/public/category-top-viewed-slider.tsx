@@ -221,20 +221,22 @@ export function CategoryTopViewedSlider({
                   title={slide.title}
                   topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
                   bottomLeftLabel={
-                    byRating && slide.subtitle?.endsWith('★') ? (
-                      <>
-                        <Box component="span" sx={{ color: 'common.white' }}>
-                          {slide.subtitle.replace(/\s*★$/, '')}
-                        </Box>
-                        <Box component="span" sx={{ color: 'warning.main', ml: 0.35 }}>
-                          ★
-                        </Box>
-                      </>
-                    ) : (
-                      slide.subtitle
-                    )
+                    verticalId === 'jobs' && !slide.imageUrl
+                      ? null
+                      : byRating && slide.subtitle?.endsWith('★')
+                        ? (
+                            <>
+                              <Box component="span" sx={{ color: 'common.white' }}>
+                                {slide.subtitle.replace(/\s*★$/, '')}
+                              </Box>
+                              <Box component="span" sx={{ color: 'warning.main', ml: 0.35 }}>
+                                ★
+                              </Box>
+                            </>
+                          )
+                        : slide.subtitle
                   }
-                  bottomRightLabel={slide.bottomRightLabel}
+                  bottomRightLabel={verticalId === 'jobs' ? null : slide.bottomRightLabel}
                   showNavigationArrow={false}
                   contentPlacement="below"
                   hideTitleBelowImage

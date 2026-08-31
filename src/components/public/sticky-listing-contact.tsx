@@ -8,7 +8,7 @@ import { type ConversationListingKind } from '@/lib/conversations-client';
 import { MOBILE_BOTTOM_NAV_FLOAT_INSET_PX, MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 
-/** Shared “Kontakto” CTA — full width across listing detail surfaces. */
+/** Shared “CONTACT” CTA — full width across listing detail surfaces. */
 export const listingContactCtaSx: SxProps<Theme> = {
   height: 52,
   minWidth: 0,
@@ -203,7 +203,7 @@ export function StickyListingCtaSlot({
 export interface StickyListingContactProps {
   listingKind: ConversationListingKind;
   listingId: string;
-  /** Defaults to “Kontakto”. */
+  /** Defaults to “CONTACT”. */
   label?: string;
   hideIcon?: boolean;
   /**
@@ -217,13 +217,13 @@ export interface StickyListingContactProps {
 }
 
 /**
- * “Kontakto” CTA that floats at the bottom of the screen on mobile.
+ * “CONTACT” CTA that floats at the bottom of the screen on mobile.
  */
 export function StickyListingContact({
   listingKind,
   listingId,
-  label = 'Kontakto',
-  hideIcon = false,
+  label = 'CONTACT',
+  hideIcon = true,
   showOnDesktop = false,
   contactPhone,
   listingTitle,

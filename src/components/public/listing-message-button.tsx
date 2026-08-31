@@ -32,9 +32,9 @@ function hasStoredSession(): boolean {
 export function ListingMessageButton({
   listingKind,
   listingId,
-  label = 'Dërgo mesazh',
+  label = 'CONTACT',
   disabled,
-  hideIcon = false,
+  hideIcon = true,
   startIcon,
   children,
   contactPhone,

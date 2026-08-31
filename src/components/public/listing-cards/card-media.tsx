@@ -307,7 +307,7 @@ export function CardMedia({
             left: 0,
             right: 0,
             bottom: showBottomRight ? 44 : 0,
-            zIndex: 2,
+            zIndex: 4,
             pointerEvents: 'none',
             '& > *': { pointerEvents: 'auto' },
           }}

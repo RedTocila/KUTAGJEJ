@@ -320,7 +320,6 @@ export function ProfessionalListingDetailDesktop({
                           contactPhone={listing.contactPhone ?? listing.seller?.phone}
                           listingTitle={displayName || listing.title}
                           listingUrl={canonicalUrl}
-                          label="Kontakto"
                           variant="contained"
                           disableElevation
                           size="large"

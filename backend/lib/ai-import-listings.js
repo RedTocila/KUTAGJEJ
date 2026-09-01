@@ -3217,6 +3217,40 @@ async function interpretListing({
   });
 }
 
+function normalizePromptForCoverMatch(prompt) {
+  return String(prompt || '')
+    .toLocaleLowerCase('sq-AL')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function jobPromptRequestsCoverImage(prompt) {
+  const normalized = normalizePromptForCoverMatch(prompt);
+  const mentionsImage = /\b(image|photo|picture|foto|fotografi|imazh)\w*\b/.test(normalized);
+  const mentionsCover = /\b(cover|kopertin\w*)\b/.test(normalized);
+  const requestsUse = /\b(use|perdor|vendos|set|choose|zgjidh|si|as|for|per)\b/.test(normalized);
+  const rejectsCoverUse =
+    /\b(didnt|did not|don't|do not|not|without|pa|mos|nuk)\b.{0,60}\b(use|perdor|vendos|set|choose|zgjidh)\b.{0,60}\b(image|photo|picture|foto|fotografi|imazh|cover|kopertin\w*)\b.{0,60}\b(image|photo|picture|foto|fotografi|imazh|cover|kopertin\w*)\b/.test(
+      normalized
+    );
+  if (rejectsCoverUse) return false;
+  return mentionsImage && mentionsCover && requestsUse;
+}
+
+function applyJobAiCoverToDraft({ category, sourcePrompt, imageUrls, form }) {
+  if (category !== 'job-listings') {
+    return { imageUrls, form };
+  }
+  const urls = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
+  const nextForm = { ...(form || {}) };
+  if (jobPromptRequestsCoverImage(sourcePrompt) && urls.length > 0) {
+    nextForm.coverMode = 'image';
+    return { imageUrls: urls, form: nextForm };
+  }
+  nextForm.coverMode = 'mockup';
+  return { imageUrls: [], form: nextForm };
+}
+
 async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt, snapshot }) {
   const hasCaption = Boolean(String(snapshot?.caption || snapshot?.description || '').trim());
   const socialSource = Boolean(snapshot?.social) || isInstagramUrl(sourceUrl);
@@ -3248,6 +3282,14 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     if (snapshot?.social && snapshot?.isCarousel === false) {
       imageUrls = imageUrls.slice(0, 1);
     }
+    const jobCover = applyJobAiCoverToDraft({
+      category: detected,
+      sourcePrompt,
+      imageUrls,
+      form,
+    });
+    imageUrls = jobCover.imageUrls;
+    form = jobCover.form;
 
     return {
       id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -3354,7 +3396,15 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   const imageCap = maxImagesForCategory(category);
   const imageUrls = Array.isArray(interpreted.imageUrls) ? interpreted.imageUrls.slice(0, imageCap) : [];
   // Single-frame Instagram posts: never keep more than one photo.
-  const cappedImages = snapshot?.social && snapshot?.isCarousel === false ? imageUrls.slice(0, 1) : imageUrls;
+  let cappedImages = snapshot?.social && snapshot?.isCarousel === false ? imageUrls.slice(0, 1) : imageUrls;
+  const jobCover = applyJobAiCoverToDraft({
+    category,
+    sourcePrompt,
+    imageUrls: cappedImages,
+    form,
+  });
+  cappedImages = jobCover.imageUrls;
+  form = jobCover.form;
 
   return {
     id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

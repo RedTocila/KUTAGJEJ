@@ -6,7 +6,6 @@ import {
   Checkbox,
   Divider,
   FormControlLabel,
-  FormGroup,
   InputAdornment,
   Stack,
   Typography,
@@ -28,6 +27,7 @@ import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
+import { CheckboxSelectDropdown } from '@/components/core/checkbox-select-dropdown';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { VehicleTypePicker } from '@/components/cars/vehicle-type-picker';
 import {
@@ -434,16 +434,6 @@ export function CarListingForm({
 
   const makeOptions = makesForVehicleType(form.vehicleType);
   const modelOptions = modelsForMake(form.vehicleType, form.make);
-
-  const toggleExtra = (extra: string) => {
-    setForm((prev) => {
-      const has = prev.extras.includes(extra);
-      return {
-        ...prev,
-        extras: has ? prev.extras.filter((e) => e !== extra) : [...prev.extras, extra],
-      };
-    });
-  };
 
   const selectColor = (value: string) => {
     setForm((prev) => ({ ...prev, color: prev.color === value ? '' : value }));
@@ -856,118 +846,89 @@ export function CarListingForm({
       <Divider />
 
       {/* ── Exterior colour ──────────────────────────────────────────────── */}
-      <Stack spacing={1.5}>
-        {fieldErrors.color ? (
-          <Typography variant="caption" color="error">
-            {fieldErrors.color}
-          </Typography>
-        ) : null}
-
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' },
-            gap: 0.25,
-          }}
-        >
-          {CAR_COLOUR_OPTIONS.map(({ value, label, hex }) => (
+      <CheckboxSelectDropdown
+        label="Colour"
+        value={form.color}
+        onChange={selectColor}
+        options={CAR_COLOUR_OPTIONS}
+        emptyLabel="Select colour…"
+        clearable
+        columns={2}
+        error={Boolean(fieldErrors.color)}
+        helperText={fieldErrors.color}
+        displayValue={(() => {
+          const colourLabel = CAR_COLOUR_OPTIONS.find((o) => o.value === form.color)?.label;
+          const finish = [form.isMatte && 'Matte', form.isMetallic && 'Metallic'].filter(Boolean);
+          if (colourLabel && finish.length) return `${colourLabel} · ${finish.join(', ')}`;
+          if (colourLabel) return colourLabel;
+          if (finish.length) return finish.join(', ');
+          return undefined;
+        })()}
+        renderOptionLabel={({ value, label }, selected) => {
+          const hex = CAR_COLOUR_OPTIONS.find((o) => o.value === value)?.hex ?? '#888';
+          return (
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  bgcolor: hex,
+                  border: '1.5px solid',
+                  borderColor: value === 'white' ? 'divider' : 'transparent',
+                  flexShrink: 0,
+                }}
+              />
+              <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 400 }}>
+                {label}
+              </Typography>
+            </Stack>
+          );
+        }}
+        panelFooter={
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
             <FormControlLabel
-              key={value}
               control={
                 <Checkbox
                   size="small"
-                  checked={form.color === value}
-                  onChange={() => {
-                    selectColor(value);
+                  checked={form.isMatte}
+                  onChange={(e) => {
+                    setForm((p) => ({ ...p, isMatte: e.target.checked }));
                   }}
                 />
               }
-              label={
-                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      bgcolor: hex,
-                      border: '1.5px solid',
-                      borderColor: value === 'white' ? 'divider' : 'transparent',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <Typography variant="body2">{label}</Typography>
-                </Stack>
-              }
+              label={<Typography variant="body2">Matte</Typography>}
               sx={{ mx: 0 }}
             />
-          ))}
-        </Box>
-
-        <Stack direction="row" spacing={1} sx={{ pt: 0.5 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={form.isMatte}
-                onChange={(e) => {
-                  setForm((p) => ({ ...p, isMatte: e.target.checked }));
-                }}
-              />
-            }
-            label="Matte"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                checked={form.isMetallic}
-                onChange={(e) => {
-                  setForm((p) => ({ ...p, isMetallic: e.target.checked }));
-                }}
-              />
-            }
-            label="Metallic"
-          />
-        </Stack>
-      </Stack>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={form.isMetallic}
+                  onChange={(e) => {
+                    setForm((p) => ({ ...p, isMetallic: e.target.checked }));
+                  }}
+                />
+              }
+              label={<Typography variant="body2">Metallic</Typography>}
+              sx={{ mx: 0 }}
+            />
+          </Stack>
+        }
+      />
 
       <Divider />
 
       {/* ── Extras ───────────────────────────────────────────────────────── */}
-      <Stack spacing={1.5}>
-        {form.extras.length > 0 ? (
-          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
-            {form.extras.length} selected
-          </Typography>
-        ) : null}
-
-        <FormGroup>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-              gap: 0,
-            }}
-          >
-            {CAR_EXTRAS.map((extra) => (
-              <FormControlLabel
-                key={extra}
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={form.extras.includes(extra)}
-                    onChange={() => {
-                      toggleExtra(extra);
-                    }}
-                  />
-                }
-                label={<Typography variant="body2">{extra}</Typography>}
-                sx={{ mx: 0 }}
-              />
-            ))}
-          </Box>
-        </FormGroup>
-      </Stack>
+      <CheckboxSelectDropdown
+        label="Features"
+        multiple
+        value={form.extras}
+        onChange={(extras) => setForm((p) => ({ ...p, extras }))}
+        options={CAR_EXTRAS.map((extra) => ({ value: extra, label: extra }))}
+        emptyLabel="Select features…"
+        searchable
+      />
 
       <Stack spacing={1.25}>
         <ListingFormActionError error={submitError} />

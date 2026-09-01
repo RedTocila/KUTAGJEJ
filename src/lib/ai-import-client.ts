@@ -278,6 +278,15 @@ export async function importListingsFromLinks(input: {
 
 export function toAiListingDraft(draft: AiImportDraftResult): AiListingDraft | null {
   if (!draft.category || draft.error) return null;
+  const sourcePrompt = draft.sourcePrompt ?? null;
+  const isJob = draft.category === 'job-listings';
+  const jobCover = isJob
+    ? resolveJobAiCover({ prompt: sourcePrompt, imageUrls: draft.imageUrls ?? [] })
+    : null;
+  const form = { ...(draft.form ?? {}) };
+  if (jobCover) {
+    form.coverMode = jobCover.coverMode;
+  }
   return {
     id: draft.id,
     sourceUrl: draft.sourceUrl,
@@ -286,10 +295,12 @@ export function toAiListingDraft(draft: AiImportDraftResult): AiListingDraft | n
     summary: draft.summary,
     cityName: draft.cityName,
     zoneName: draft.zoneName,
-    imageUrls: draft.imageUrls ?? [],
+    imageUrls: jobCover ? jobCover.imageUrls : (draft.imageUrls ?? []),
     imageRoles: draft.imageRoles,
-    form: draft.form ?? {},
+    form,
     warning: draft.warning,
+    sourcePrompt,
+    coverMode: jobCover?.coverMode,
   };
 }
 
@@ -424,4 +435,16 @@ export function jobPromptRequestsCoverImage(prompt: string): boolean {
     );
   if (rejectsCoverUse) return false;
   return mentionsImage && mentionsCover && requestsUse;
+}
+
+/** AI Build jobs use the hiring mockup unless the user explicitly asks for a cover photo. */
+export function resolveJobAiCover(opts: {
+  prompt?: string | null;
+  imageUrls?: string[] | null;
+}): { coverMode: 'image' | 'mockup'; imageUrls: string[] } {
+  const imageUrls = (opts.imageUrls ?? []).filter(Boolean);
+  if (jobPromptRequestsCoverImage(opts.prompt ?? '') && imageUrls.length > 0) {
+    return { coverMode: 'image', imageUrls };
+  }
+  return { coverMode: 'mockup', imageUrls: [] };
 }

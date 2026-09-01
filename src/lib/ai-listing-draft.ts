@@ -16,6 +16,8 @@ export interface AiListingDraft {
   form: Record<string, unknown>;
   warning?: string | null;
   error?: string | null;
+  sourcePrompt?: string | null;
+  coverMode?: 'image' | 'mockup';
 }
 
 function isCategory(value: unknown): value is ListingCategoryKey {

@@ -1,4 +1,5 @@
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { resolveJobAiCover } from '@/lib/ai-import-client';
 import { normalizeFuelType } from '@/lib/car-constants';
 import {
   JOB_EDUCATION_OPTIONS,
@@ -133,11 +134,16 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
       const locationAddress = str(f.locationAddress) || null;
       const mapsUrl = str(f.mapsUrl) || null;
       const hasMapLocation = Boolean(locationAddress || mapsUrl);
+      const jobCover = resolveJobAiCover({
+        prompt: draft.sourcePrompt,
+        imageUrls,
+      });
       return withKnownDefaults(
         {
           id: draft.id,
           title: str(f.title) || draft.title,
           description: str(f.description),
+          coverMode: draft.coverMode === 'image' || draft.coverMode === 'mockup' ? draft.coverMode : jobCover.coverMode,
           industry: str(f.industry),
           cityId: hasMapLocation ? null : str(f.cityId) || null,
           cityName: draft.cityName || str(f.cityName) || null,
@@ -164,7 +170,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
           responsibilities: Array.isArray(f.responsibilities) ? f.responsibilities.map(String) : [],
           requirements: Array.isArray(f.requirements) ? f.requirements.map(String) : [],
           benefitIds: [],
-          imageUrls,
+          imageUrls: jobCover.imageUrls,
         },
         !hasMapLocation
       );

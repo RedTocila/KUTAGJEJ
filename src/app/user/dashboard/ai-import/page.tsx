@@ -34,8 +34,8 @@ import {
   isAiContentRestricted,
   isAiDailyLimitError,
   isAiRateLimitError,
-  jobPromptRequestsCoverImage,
   mergeAttachedImageUrls,
+  resolveJobAiCover,
   toAiListingDraft,
   type AiImportDraftResult,
 } from '@/lib/ai-import-client';
@@ -648,22 +648,38 @@ export default function AiImportListingsPage() {
 
   const decorateImportedDraft = React.useCallback(
     (draft: AiImportDraftResult, prompt: string, uploadedUrls: string[]): AiImportDraftResult => {
+      const sourcePrompt = draft.sourcePrompt || prompt;
       const isJobDraft = draft.category === 'job-listings' || draft.detectedCategory === 'job-listings';
-      const keepJobCoverImage = !isJobDraft || jobPromptRequestsCoverImage(prompt);
-      return {
-        ...draft,
-        sourcePrompt: draft.sourcePrompt || prompt,
-        imageUrls:
-          keepJobCoverImage && uploadedUrls.length
+      if (isJobDraft) {
+        const merged =
+          uploadedUrls.length > 0
             ? mergeAttachedImageUrls({
                 remoteUrls: draft.imageUrls ?? [],
                 uploadedUrls,
                 roles: draft.imageRoles,
                 max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
               })
-            : keepJobCoverImage
-              ? draft.imageUrls
-              : [],
+            : (draft.imageUrls ?? []);
+        const jobCover = resolveJobAiCover({ prompt: sourcePrompt, imageUrls: merged });
+        return {
+          ...draft,
+          sourcePrompt,
+          imageUrls: jobCover.imageUrls,
+          form: { ...(draft.form ?? {}), coverMode: jobCover.coverMode },
+        };
+      }
+      return {
+        ...draft,
+        sourcePrompt,
+        imageUrls:
+          uploadedUrls.length > 0
+            ? mergeAttachedImageUrls({
+                remoteUrls: draft.imageUrls ?? [],
+                uploadedUrls,
+                roles: draft.imageRoles,
+                max: draft.category === 'professionals' || draft.detectedCategory === 'professionals' ? 2 : 8,
+              })
+            : (draft.imageUrls ?? []),
       };
     },
     []

@@ -1,6 +1,7 @@
 'use client';
 
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { resolveJobAiCover } from '@/lib/ai-import-client';
 import { defaultWeeklyHours, type WeeklyHourRow } from '@/lib/business-constants';
 import { normalizeFuelType } from '@/lib/car-constants';
 import {
@@ -152,17 +153,25 @@ export async function postAiListingDraft(
       businesses: 'businesses',
       professionals: 'professionals',
     };
-    const hosted = await hostAiDraftImages(
-      rawImageUrls,
-      folderByCategory[draft.category] || 'listings',
-    );
-    if (hosted.error && rawImageUrls.length > 0 && !hosted.urls.length) {
+    const folder = folderByCategory[draft.category] || 'listings';
+    const isJob = draft.category === 'job-listings';
+    const jobCover = isJob
+      ? resolveJobAiCover({
+          prompt: draft.sourcePrompt ?? str(f.sourcePrompt),
+          imageUrls: rawImageUrls,
+        })
+      : null;
+    const urlsToHost = jobCover?.coverMode === 'mockup' ? [] : rawImageUrls;
+    const hosted = await hostAiDraftImages(urlsToHost, folder);
+    if (hosted.error && urlsToHost.length > 0 && !hosted.urls.length) {
       return { draftId: draft.id, ok: false, error: hosted.error };
     }
     const imageUrls = hosted.urls;
-    if (imageUrls.length < 1) {
+    if (!isJob && imageUrls.length < 1) {
       return { draftId: draft.id, ok: false, error: 'Shtoni të paktën një foto.' };
     }
+    const jobCoverMode = jobCover?.coverMode ?? 'mockup';
+    const jobImageUrls = jobCoverMode === 'image' ? imageUrls : [];
 
     let result: ListingCreateResult;
 
@@ -259,6 +268,7 @@ export async function postAiListingDraft(
         result = await createJobListing({
           title: str(f.title) || draft.title || 'Punë',
           description: str(f.description) || draft.summary || draft.title || '',
+          coverMode: jobCoverMode,
           industry: str(f.industry) || 'other',
           cityId,
           education: str(f.education) || '',
@@ -281,7 +291,7 @@ export async function postAiListingDraft(
             ? f.requirements.map(String).filter(Boolean)
             : [],
           benefits: [],
-          imageUrls,
+          imageUrls: jobImageUrls,
         });
         break;
       }

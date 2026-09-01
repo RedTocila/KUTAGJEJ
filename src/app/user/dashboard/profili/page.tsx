@@ -10,7 +10,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Fade,
   IconButton,
   Stack,
   Switch,
@@ -100,7 +99,6 @@ export default function UserProfilePage() {
   const [isPrivate, setIsPrivate] = React.useState(Boolean(user?.isPrivate));
   const [privacyBusy, setPrivacyBusy] = React.useState(false);
   const [privacyMsg, setPrivacyMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const privacyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cities, setCities] = React.useState<RealEstateCityDto[]>([]);
   const [citiesLoading, setCitiesLoading] = React.useState(false);
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -160,23 +158,10 @@ export default function UserProfilePage() {
     user?.isPrivate,
   ]);
 
-  React.useEffect(() => {
-    return () => {
-      if (privacyTimerRef.current) {
-        clearTimeout(privacyTimerRef.current);
-      }
-    };
-  }, []);
-
   const onTogglePrivacy = async (checked: boolean) => {
     if (!user || privacyBusy) return;
     setIsPrivate(checked);
     setPrivacyBusy(true);
-    let succeeded = false;
-    if (privacyTimerRef.current) {
-      clearTimeout(privacyTimerRef.current);
-      privacyTimerRef.current = null;
-    }
     setPrivacyMsg(null);
     try {
       const { error } = await authClient.updatePortalProfile({ isPrivate: checked });
@@ -190,7 +175,6 @@ export default function UserProfilePage() {
             ? 'Profili u vendos privat (kartela fshihet nga njoftimet për publikun).'
             : 'Profili u vendos publik.',
         });
-        succeeded = true;
         await checkSession();
       }
     } catch {
@@ -198,74 +182,12 @@ export default function UserProfilePage() {
       setPrivacyMsg({ type: 'error', text: 'Nuk u arrit përditësimi i privatësisë.' });
     } finally {
       setPrivacyBusy(false);
-      if (succeeded) {
-        privacyTimerRef.current = setTimeout(() => {
-          setPrivacyMsg(null);
-          privacyTimerRef.current = null;
-        }, 4000);
-      }
     }
   };
 
   useOwnerEditHeaderActions(
     () => (
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          alignItems: 'center',
-          position: 'relative',
-        }}
-      >
-        <Fade in={Boolean(privacyMsg)} unmountOnExit>
-          <Box
-            sx={{
-              position: { xs: 'absolute', sm: 'static' },
-              top: { xs: 'calc(100% + 8px)', sm: 'auto' },
-              right: { xs: 0, sm: 'auto' },
-              zIndex: 1200,
-              maxWidth: { xs: 'calc(100vw - 32px)', sm: 380, md: 440 },
-              minWidth: { sm: 260 },
-            }}
-          >
-            <Alert
-              severity={privacyMsg?.type || 'success'}
-              onClose={() => {
-                if (privacyTimerRef.current) {
-                  clearTimeout(privacyTimerRef.current);
-                  privacyTimerRef.current = null;
-                }
-                setPrivacyMsg(null);
-              }}
-              sx={{
-                py: 0.25,
-                px: 1.25,
-                borderRadius: 2,
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                alignItems: 'center',
-                boxShadow: (t) =>
-                  t.palette.mode === 'dark' ? '0 4px 16px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.1)',
-                '& .MuiAlert-icon': {
-                  fontSize: 18,
-                  mr: 1,
-                  py: 0,
-                },
-                '& .MuiAlert-message': {
-                  py: 0.25,
-                },
-                '& .MuiAlert-action': {
-                  p: 0,
-                  mr: -0.5,
-                  alignItems: 'center',
-                },
-              }}
-            >
-              {privacyMsg?.text}
-            </Alert>
-          </Box>
-        </Fade>
-
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <Tooltip
           title={
             isPrivate
@@ -324,7 +246,7 @@ export default function UserProfilePage() {
         </Tooltip>
       </Stack>
     ),
-    [isPrivate, privacyBusy, user?.id, privacyMsg]
+    [isPrivate, privacyBusy, user?.id]
   );
 
   React.useEffect(() => {
@@ -545,17 +467,24 @@ export default function UserProfilePage() {
   const businessCategoryLabel = isBusiness ? String(user.businessCategory || '').trim() : '';
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        maxWidth: 640,
-        mx: 'auto',
-        width: '100%',
-        // Match SearchableSelect (“Ku jeni bazuar”) rounded corners
-        '& .MuiOutlinedInput-root': { borderRadius: 2.5 },
-      }}
-    >
-      {/* Identity preview — same public profile visitors see */}
+    <>
+      {privacyMsg?.type === 'success' ? (
+        <TransientSuccessAlert message={privacyMsg.text} onDismiss={() => setPrivacyMsg(null)} />
+      ) : privacyMsg ? (
+        <TransientNotification severity="error" message={privacyMsg.text} onDismiss={() => setPrivacyMsg(null)} />
+      ) : null}
+
+      <Stack
+        spacing={2}
+        sx={{
+          maxWidth: 640,
+          mx: 'auto',
+          width: '100%',
+          // Match SearchableSelect (“Ku jeni bazuar”) rounded corners
+          '& .MuiOutlinedInput-root': { borderRadius: 2.5 },
+        }}
+      >
+        {/* Identity preview — same public profile visitors see */}
       <PortalSurface>
         <Stack
           spacing={1.75}
@@ -1104,6 +1033,7 @@ export default function UserProfilePage() {
           </Stack>
         </Box>
       </PortalSectionCard>
-    </Stack>
+      </Stack>
+    </>
   );
 }

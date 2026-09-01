@@ -542,6 +542,7 @@ export function JobListingForm({
               }}
             >
               <JobListingFallback
+                title={form.title}
                 industry={form.industry}
                 cityName={previewCity?.name}
                 zoneName={previewZone?.name}

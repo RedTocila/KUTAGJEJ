@@ -137,10 +137,6 @@ async function resolveShortMapsUrl(urlString, { timeoutMs = 8000 } = {}) {
   }
 }
 
-/**
- * Reverse-geocode lat/lng → street or neighbourhood (OpenStreetMap Nominatim).
- * @returns {Promise<string|null>}
- */
 async function reverseGeocodeStreet(lat, lng, { timeoutMs = 7000 } = {}) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -181,6 +177,52 @@ async function reverseGeocodeStreet(lat, lng, { timeoutMs = 7000 } = {}) {
       a.neighbourhood || a.suburb || a.quarter || a.city_district || a.borough || a.hamlet || null;
     if (area) return String(area).replace(/\s+/g, ' ').trim().slice(0, 160) || null;
     return null;
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
+ * Forward-geocode a free-text address (OpenStreetMap Nominatim).
+ * @returns {Promise<{ lat: number, lng: number, displayName: string|null, city: string|null, suburb: string|null } | null>}
+ */
+async function forwardGeocodeQuery(query, { timeoutMs = 7000 } = {}) {
+  const q = String(query || '').trim();
+  if (!q || q.length > 240) return null;
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const url =
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1` +
+      `&countrycodes=al&q=${encodeURIComponent(q)}&addressdetails=1`;
+    const res = await fetch(url, {
+      method: 'GET',
+      signal: controller?.signal,
+      headers: {
+        'User-Agent': 'KuTaGjej/1.0 (listing-import; contact@kutagjej.al)',
+        Accept: 'application/json',
+        'Accept-Language': 'sq,en',
+      },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json().catch(() => null);
+    const hit = Array.isArray(rows) ? rows[0] : null;
+    if (!hit) return null;
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const a = hit.address && typeof hit.address === 'object' ? hit.address : {};
+    const city = a.city || a.town || a.municipality || a.county || a.state || null;
+    const suburb = a.neighbourhood || a.suburb || a.quarter || a.city_district || a.borough || null;
+    return {
+      lat,
+      lng,
+      displayName: typeof hit.display_name === 'string' ? hit.display_name.trim().slice(0, 240) : null,
+      city: city ? String(city).trim() : null,
+      suburb: suburb ? String(suburb).trim() : null,
+    };
   } catch {
     return null;
   } finally {
@@ -256,6 +298,7 @@ module.exports = {
   extractPlaceQueryFromMapsUrl,
   looksLikeStreetLabel,
   reverseGeocodeStreet,
+  forwardGeocodeQuery,
   parseGoogleMapsLocation,
   isUuid,
 };

@@ -25,6 +25,7 @@ import { UsersThree as UsersThreeIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
 import type { JobIndustryValue } from '@/lib/job-constants';
+import { matchJobCoverRoleFromTitle, type JobCoverRole } from '@/lib/job-cover-role';
 
 const JOB_INDUSTRY_ICON_MAP: Record<JobIndustryValue, PhosphorIcon> = {
   'biznes-menaxhim': BriefcaseIcon,
@@ -55,7 +56,41 @@ const JOB_INDUSTRY_ICON_MAP: Record<JobIndustryValue, PhosphorIcon> = {
   pastrim: BroomIcon,
 };
 
+/** Title-derived role → Phosphor icon (subset of icons already used for industries). */
+const JOB_COVER_ROLE_ICON_MAP: Record<JobCoverRole, PhosphorIcon> = {
+  waiter: ForkKnifeIcon,
+  chef: ForkKnifeIcon,
+  driver: TruckIcon,
+  nurse: HospitalIcon,
+  doctor: HospitalIcon,
+  electrician: WrenchIcon,
+  plumber: ToolboxIcon,
+  construction: HammerIcon,
+  developer: CodeIcon,
+  cleaner: BroomIcon,
+  security: ShieldCheckIcon,
+  manager: BriefcaseIcon,
+  sales: StorefrontIcon,
+  teacher: UserCircleIcon,
+  accountant: CalculatorIcon,
+  logistics: PackageIcon,
+  legal: GavelIcon,
+  designer: PaletteIcon,
+  'customer-service': HeadphonesIcon,
+  hospitality: ForkKnifeIcon,
+  worker: BriefcaseIcon,
+};
+
 export function jobIndustryIcon(industry?: string | null): PhosphorIcon {
   const key = String(industry ?? '').trim() as JobIndustryValue;
   return JOB_INDUSTRY_ICON_MAP[key] ?? BriefcaseIcon;
+}
+
+/** Title keywords first; industry icon is the fallback. */
+export function resolveJobCoverIcon(title?: string | null, industry?: string | null): PhosphorIcon {
+  const roleFromTitle = matchJobCoverRoleFromTitle(title);
+  if (roleFromTitle) {
+    return JOB_COVER_ROLE_ICON_MAP[roleFromTitle];
+  }
+  return jobIndustryIcon(industry);
 }

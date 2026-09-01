@@ -762,6 +762,7 @@ function JobCard({
       fallbackContent={
         showMockup ? (
           <JobListingFallback
+            title={l.title}
             industry={l.industry}
             cityName={l.cityName}
             zoneName={l.zoneName}

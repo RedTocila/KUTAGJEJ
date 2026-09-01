@@ -255,6 +255,7 @@ export function JobListingDetailView({
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             placeholderContent={
               <JobListingFallback
+                title={listing.title}
                 industry={listing.industry}
                 cityName={listing.cityName}
                 zoneName={listing.zoneName}

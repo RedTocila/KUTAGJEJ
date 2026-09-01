@@ -9,8 +9,7 @@ import { findOptionLabel } from '@/lib/find-option-label';
 import { businessMapLocation } from '@/lib/google-maps-location';
 import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
-import { jobIndustryCoverTheme, type JobCoverTheme } from '@/lib/job-industry-themes';
-import { jobIndustryIcon } from '@/lib/job-industry-icons';
+import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
 
 export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 
@@ -29,9 +28,8 @@ const GOOGLE_NIGHT_LAND = '#242f3e';
 const GOOGLE_NIGHT_FILTER =
   'invert(1) hue-rotate(180deg) saturate(0.62) brightness(1.28) contrast(0.98)';
 
-type CoverTheme = JobCoverTheme;
-
 export type JobListingFallbackProps = {
+  title?: string | null;
   industry?: string | null;
   cityName?: string | null;
   zoneName?: string | null;
@@ -41,42 +39,52 @@ export type JobListingFallbackProps = {
   locationLng?: number | null;
 };
 
-function JobCoverThemeOverlay({ theme }: { theme: CoverTheme }) {
+function JobCoverThemeOverlay() {
   return (
     <>
       <Box
         aria-hidden
-        sx={{
+        sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: `linear-gradient(in oklab, ${theme.colorFrom} 0%, ${theme.colorMid} 28%, ${theme.colorMid} 52%)`,
+          background: `linear-gradient(in oklab, ${muiTheme.palette.primary.dark} 0%, ${muiTheme.palette.primary.main} 28%, ${muiTheme.palette.primary.main} 52%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-        }}
+          ...muiTheme.applyStyles('dark', {
+            background: `linear-gradient(in oklab, ${muiTheme.palette.common.black} 0%, ${muiTheme.palette.neutral[900]} 28%, ${muiTheme.palette.neutral[800]} 52%)`,
+          }),
+        })}
       />
       <Box
         aria-hidden
-        sx={{
+        sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: `linear-gradient(in oklab, ${theme.colorFrom} 0%, ${theme.colorMid} 100%)`,
+          background: `linear-gradient(in oklab, ${muiTheme.palette.primary.dark} 0%, ${muiTheme.palette.primary.main} 100%)`,
           opacity: 0.5,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-        }}
+          ...muiTheme.applyStyles('dark', {
+            background: `linear-gradient(in oklab, ${muiTheme.palette.common.black} 0%, ${muiTheme.palette.neutral[800]} 100%)`,
+            opacity: 0.72,
+          }),
+        })}
       />
       <Box
         aria-hidden
-        sx={{
+        sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 72%)`,
+          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 72%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-        }}
+          ...muiTheme.applyStyles('dark', {
+            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 72%)`,
+          }),
+        })}
       />
     </>
   );
@@ -149,6 +157,7 @@ function JobCoverMapPreview({
  * Photo-free job cover: full-bleed map, smooth theme fade on the left, large profession icon.
  */
 export function JobListingFallback({
+  title,
   industry,
   cityName,
   zoneName,
@@ -157,9 +166,9 @@ export function JobListingFallback({
   locationLat,
   locationLng,
 }: JobListingFallbackProps) {
-  const theme = jobIndustryCoverTheme(industry);
-  const IndustryIcon = jobIndustryIcon(industry);
+  const CoverIcon = resolveJobCoverIcon(title, industry);
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, industry) || 'Punë';
+  const roleLabel = String(title || '').trim() || industryLabel;
   const locationParts = [zoneName, cityName].filter(Boolean);
   const locationLabel = locationAddress?.trim() || locationParts.join(', ') || 'Shqipëri';
 
@@ -176,16 +185,19 @@ export function JobListingFallback({
   return (
     <Box
       role="img"
-      aria-label={`${industryLabel}, ${locationLabel}`}
-      sx={{
+      aria-label={`${roleLabel}, ${locationLabel}`}
+      sx={(muiTheme) => ({
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        bgcolor: theme.background,
-      }}
+        bgcolor: muiTheme.palette.primary.dark,
+        ...muiTheme.applyStyles('dark', {
+          bgcolor: muiTheme.palette.neutral[950],
+        }),
+      })}
     >
       <JobCoverMapPreview query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
-      <JobCoverThemeOverlay theme={theme} />
+      <JobCoverThemeOverlay />
 
       <Box
         aria-hidden
@@ -199,7 +211,7 @@ export function JobListingFallback({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: theme.iconColor,
+          color: '#fff',
           pointerEvents: 'none',
           filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
           '& svg': {
@@ -210,7 +222,7 @@ export function JobListingFallback({
           },
         }}
       >
-        <IndustryIcon weight="duotone" />
+        <CoverIcon weight="duotone" />
       </Box>
 
       {!locationParts.length && !locationAddress?.trim() && !mapsUrl?.trim() && locationLat == null ? (

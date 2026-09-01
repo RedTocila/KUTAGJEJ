@@ -2,6 +2,7 @@
 
 const { getSupabaseAdmin } = require('./supabase');
 const { compressImageBuffer } = require('./compress-image');
+const { forwardGeocodeQuery } = require('./google-maps-location');
 const { VEHICLE_TYPE_VALUES, makesForVehicleType, modelsForMake, isValidVehicleMake } = require('./vehicle-catalog');
 const { normalizeFuelType } = require('./car-field-rules');
 
@@ -1244,23 +1245,195 @@ function parseSurfaceM2(value) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-async function applyResolvedLocation(form, interpreted, profile) {
+const ADDRESS_BULLET_RE =
+  /(?:^|\n)\s*[•\-\*]?\s*(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?=\n|$)/i;
+const ADDRESS_INLINE_RE = /(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?:\.|$)/i;
+
+const CITY_NAME_ALIASES = [
+  { re: /\btiran[aëe]\b/i, name: 'Tiranë' },
+  { re: /\bdurr[eë]s\b/i, name: 'Durrës' },
+  { re: /\bvl[oö]r[eë]\b/i, name: 'Vlorë' },
+  { re: /\bshkod[eë]r\b/i, name: 'Shkodër' },
+  { re: /\belbasan\b/i, name: 'Elbasan' },
+  { re: /\bfier\b/i, name: 'Fier' },
+  { re: /\bkor[cç][eë]\b/i, name: 'Korçë' },
+  { re: /\bberat\b/i, name: 'Berat' },
+  { re: /\bgjirokast[eë]r\b/i, name: 'Gjirokastër' },
+  { re: /\bsarand[eë]\b/i, name: 'Sarandë' },
+  { re: /\bkam[eë]z\b/i, name: 'Kamëz' },
+  { re: /\bkavaj[aë]\b/i, name: 'Kavajë' },
+];
+
+function cleanExtractedAddress(raw) {
+  return String(raw || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[•\-\*]\s*/, '')
+    .trim()
+    .replace(/[.;,\s]+$/, '')
+    .slice(0, 160);
+}
+
+function extractLocationAddressFromSources(...sources) {
+  for (const source of sources) {
+    const text = String(source || '');
+    if (!text.trim()) continue;
+    const bullet = text.match(ADDRESS_BULLET_RE);
+    if (bullet?.[1]) {
+      const cleaned = cleanExtractedAddress(bullet[1]);
+      if (cleaned.length >= 4) return cleaned;
+    }
+    const inline = text.match(ADDRESS_INLINE_RE);
+    if (inline?.[1]) {
+      const cleaned = cleanExtractedAddress(inline[1]);
+      if (cleaned.length >= 4) return cleaned;
+    }
+  }
+  return null;
+}
+
+function inferCityNameFromAddress(address) {
+  const text = String(address || '');
+  if (!text.trim()) return null;
+  for (const { re, name } of CITY_NAME_ALIASES) {
+    if (re.test(text)) return name;
+  }
+  return null;
+}
+
+function listingHasLocationEvidence(form, interpreted) {
+  if (!form || typeof form !== 'object') return false;
+  if (String(form.locationAddress || '').trim()) return true;
+  if (String(form.mapsUrl || '').trim()) return true;
+  if (String(interpreted?.cityName || form.cityName || '').trim()) return true;
+  if (String(interpreted?.zoneName || form.zoneName || '').trim()) return true;
+  return Boolean(extractLocationAddressFromSources(form.description));
+}
+
+async function applyGeocodedMapLocation(form, interpreted) {
+  const address = String(form.locationAddress || '').trim();
+  if (!address) return;
+  const query = /\bshqip|albania\b/i.test(address) ? address : `${address}, Albania`;
+  const hit = await forwardGeocodeQuery(query);
+  if (hit) {
+    form.locationLat = hit.lat;
+    form.locationLng = hit.lng;
+    form.mapsUrl = `https://www.google.com/maps?q=${encodeURIComponent(String(hit.lat))},${encodeURIComponent(String(hit.lng))}`;
+    if (hit.city && !interpreted.cityName && !form.cityName) {
+      interpreted.cityName = hit.city;
+      form.cityName = hit.city;
+    }
+    if (hit.suburb && !interpreted.zoneName && !form.zoneName) {
+      interpreted.zoneName = hit.suburb;
+      form.zoneName = hit.suburb;
+    }
+  } else {
+    form.mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  }
+  form.locationMode = 'map';
+  form.cityId = '';
+  form.zoneId = '';
+}
+
+function enrichJobListingFromContent(form, interpreted, snapshot) {
   if (!form || typeof form !== 'object') return;
+  const blob = [
+    form.title,
+    form.description,
+    interpreted?.title,
+    snapshot?.caption,
+    snapshot?.description,
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase();
+
+  if (!form.workLocation && (form.locationAddress || form.mapsUrl)) {
+    form.workLocation = 'onsite';
+  }
+
+  if (!form.industry) {
+    if (/\b(bar|kafe|restorant|restaurant|brunch|piceri|pizzeria|horeka|kamarier|banakier|waiter)\b/i.test(blob)) {
+      form.industry = 'horeka';
+    } else if (/\b(ndertim|ndërtim|murator|elektricist|hidraulik|teknik)\b/i.test(blob)) {
+      form.industry = 'ndertim-industri';
+    } else if (/\b(it|software|program|developer|kod)\b/i.test(blob)) {
+      form.industry = 'teknologji-informacioni';
+    }
+  }
+
+  if (!form.jobType) {
+    if (/\b(afatgjat[eë]|full[\s-]?time|kohe te plote|kohë të plotë)\b/i.test(blob)) {
+      form.jobType = 'full-time';
+    } else if (/\b(part[\s-]?time|kohe te pjesshme|kohë të pjesshme|turn|turni)\b/i.test(blob)) {
+      form.jobType = 'part-time';
+    }
+  }
+
+  if (!form.experience && /\b(me\s+)?eksperienc[eë]\b/i.test(blob)) {
+    form.experience = '1-2';
+  }
+
+  if (!form.education) {
+    form.education = 'no-requirement';
+  }
+}
+
+async function applyResolvedLocation(form, interpreted, profile, { category = null } = {}) {
+  if (!form || typeof form !== 'object') return;
+  if (!interpreted || typeof interpreted !== 'object') interpreted = {};
+
+  if (!String(form.locationAddress || '').trim()) {
+    const extracted = extractLocationAddressFromSources(
+      form.locationAddress,
+      form.description,
+      interpreted.summary
+    );
+    if (extracted) form.locationAddress = extracted;
+  }
+
+  if (String(form.locationAddress || '').trim()) {
+    if (!interpreted.cityName && !form.cityName) {
+      const inferredCity = inferCityNameFromAddress(form.locationAddress);
+      if (inferredCity) {
+        interpreted.cityName = inferredCity;
+        form.cityName = inferredCity;
+      }
+    }
+  }
+
+  const hasLocationEvidence = listingHasLocationEvidence(form, interpreted);
   const cities = await loadCitiesWithZones();
-  const cityName = interpreted?.cityName || form.cityName || profile?.preferredCityName;
-  let city = await resolveCityRowByName(cityName);
-  if (!city) {
+  const cityName = hasLocationEvidence
+    ? interpreted?.cityName || form.cityName || null
+    : interpreted?.cityName || form.cityName || profile?.preferredCityName;
+  let city = cityName ? await resolveCityRowByName(cityName) : null;
+  if (!city && !hasLocationEvidence) {
     const id = form.cityId || profile?.preferredCityId;
     if (id) city = cities.find((c) => String(c.id) === String(id)) || null;
   }
-  if (city) {
+  if (city && !form.mapsUrl && !String(form.locationAddress || '').trim()) {
+    form.cityId = city.id;
+    if (!interpreted.cityName) interpreted.cityName = city.name;
+    if (!form.cityName) form.cityName = city.name;
+  } else if (city && hasLocationEvidence && !form.mapsUrl) {
     form.cityId = city.id;
     if (!interpreted.cityName) interpreted.cityName = city.name;
     if (!form.cityName) form.cityName = city.name;
   }
+
   const zoneName = interpreted?.zoneName || form.zoneName;
   if (zoneName && !form.zoneName) form.zoneName = zoneName;
-  if (city && zoneName) {
+  if (city && zoneName && !form.mapsUrl && !String(form.locationAddress || '').trim()) {
+    const zoneId = resolveZoneIdByName(city, zoneName);
+    if (zoneId) {
+      form.zoneId = zoneId;
+      const zone = (city.zones || []).find((z) => String(z.id) === String(zoneId));
+      if (zone?.name) {
+        form.zoneName = zone.name;
+        interpreted.zoneName = zone.name;
+      }
+    }
+  } else if (city && zoneName && hasLocationEvidence && !form.zoneId) {
     const zoneId = resolveZoneIdByName(city, zoneName);
     if (zoneId) {
       form.zoneId = zoneId;
@@ -1271,6 +1444,15 @@ async function applyResolvedLocation(form, interpreted, profile) {
       }
     }
   }
+
+  if (String(form.locationAddress || '').trim() && (category === 'job-listings' || category === 'businesses')) {
+    await applyGeocodedMapLocation(form, interpreted);
+    if (city && form.locationMode === 'map') {
+      form.cityId = '';
+      form.zoneId = '';
+    }
+  }
+
   const surface = parseSurfaceM2(form.surfaceM2);
   form.surfaceM2 = surface != null ? String(surface) : '';
 }
@@ -1375,9 +1557,10 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
   - Scooter / maxi-scooter / TMAX → motorcycle.
   - Do NOT classify a vehicle as motorcycle from the word "motor" alone; "motor boat" / "motorboat" is a boat, and car engine text (e.g. "motor 2.0") is not a vehicle type.
-job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, responsibilities (string[]), requirements (string[])
-  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address + landmark → description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from street/neighborhood when obvious (Rruga e Kavajës → Tiranë).
-  - ALWAYS extract cityName and zoneName/neighborhood when they appear in the prompt, caption, or image. Return them separately so the form can select the matching city and zone; leave them empty when not supported by evidence.
+job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, responsibilities (string[]), requirements (string[]), locationAddress (full street/venue address), cityName, zoneName
+  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address → form.locationAddress AND description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from address when obvious ("Rruga Pjeter Bogdani, Tirane" → cityName "Tiranë", locationAddress "Rruga Pjeter Bogdani, Tirane").
+  - ALWAYS extract locationAddress, cityName, and zoneName/neighborhood when they appear in the prompt, caption, or image. Put the full readable address in locationAddress — not only in description. Leave zoneName empty when unknown — never default to a random neighborhood like Astir.
+  - When a street address is present, set workLocation to onsite unless the post clearly says remote/hybrid.
   - SEO JOB DESCRIPTION: when enough information is available, write a substantial, keyword-rich description (roughly 500–1100 characters) using the exact role, role synonyms, employer, city/zone, work arrangement, salary, responsibilities, requirements, shifts, and benefits. Use natural Albanian search phrases and structured bullets; never invent missing facts just to make it longer.
   - JOB COVER IMAGE RULE: attached images are reference material for OCR and job information by default, not the listing cover. Set imageUrls to [] and imageRoles to [] unless the user explicitly asks to use the attached image as the cover (for example, "use this image as cover" / "përdor foton si kopertinë"). If explicitly requested, set the first attached image role to "cover".
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
@@ -1441,7 +1624,7 @@ General rules:
 - Leave truly unknown fields empty string / empty array / null — but always fill title + description when you can see or read enough.
 - contactPhone MUST come from the listing (caption / prompt / photos) when a number is present. Use profile.phone ONLY if no phone appears in the listing content.
 - Use profile.businessName / full name for title ONLY for businesses/professionals AND ONLY when the caption does not describe a specific offer (generic "about the shop/pro" posts). Never reuse the same profile name for every Instagram post.
-- Use profile.preferredCityId / preferredCityName for city when the content does not mention a city.
+- Use profile.preferredCityId / preferredCityName for city ONLY when the listing content does not mention a city, address, or neighborhood.
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
 - zoneName should be the neighborhood/lagje when mentioned (e.g. Blloku, Komuna e Parisit). Leave empty if unknown — never invent a zone.
 - surfaceM2 for real-estate when size is stated. Leave empty if unknown — never invent m².
@@ -1651,7 +1834,7 @@ function sanitizeProfile(raw) {
   };
 }
 
-function applyProfileDefaultsToForm(form, profile, { allowProfileTitle = true } = {}) {
+function applyProfileDefaultsToForm(form, profile, { allowProfileTitle = true, skipLocationDefaults = false } = {}) {
   if (!profile || !form || typeof form !== 'object') return form;
   if (!form.contactPhone && profile.phone) {
     form.contactPhone = profile.phone;
@@ -1664,11 +1847,13 @@ function applyProfileDefaultsToForm(form, profile, { allowProfileTitle = true } 
       form.title = profile.fullName;
     }
   }
-  if (!form.cityId && profile.preferredCityId) {
-    form.cityId = profile.preferredCityId;
-  }
-  if (!form.cityName && profile.preferredCityName) {
-    form.cityName = profile.preferredCityName;
+  if (!skipLocationDefaults) {
+    if (!form.cityId && profile.preferredCityId) {
+      form.cityId = profile.preferredCityId;
+    }
+    if (!form.cityName && profile.preferredCityName) {
+      form.cityName = profile.preferredCityName;
+    }
   }
   return form;
 }
@@ -2464,11 +2649,16 @@ function normalizeModelFormFields(parsed, categoryOverride = null) {
       'salary',
       'responsibilities',
       'requirements',
+      'locationAddress',
+      'mapsUrl',
+      'locationLat',
+      'locationLng',
     ].forEach(copyTopLevel);
     copyAlias('jobType', ['employmentType']);
     copyAlias('workLocation', ['locationType']);
     copyAlias('responsibilities', ['duties']);
     copyAlias('requirements', ['qualifications']);
+    copyAlias('locationAddress', ['address', 'streetAddress', 'street', 'venueAddress']);
   }
 
   return parsed;
@@ -2962,9 +3152,13 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     if (detected === 'cars') {
       form = normalizeCarFormFields(form, snapshot, interpreted);
     }
-    await applyResolvedLocation(form, interpreted, profile);
+    await applyResolvedLocation(form, interpreted, profile, { category: detected });
+    if (detected === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
     applyListingContactPhone(form, snapshot, sourcePrompt);
-    applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
+    applyProfileDefaultsToForm(form, profile, {
+      allowProfileTitle,
+      skipLocationDefaults: listingHasLocationEvidence(form, interpreted),
+    });
 
     const imageCap = maxImagesForCategory(detected);
     let imageUrls = Array.isArray(interpreted.imageUrls) ? interpreted.imageUrls.slice(0, imageCap) : [];
@@ -3048,9 +3242,13 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       caption: String(snapshot?.caption || snapshot?.description || '').trim(),
     });
   }
-  await applyResolvedLocation(form, interpreted, profile);
+  await applyResolvedLocation(form, interpreted, profile, { category });
+  if (category === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
   applyListingContactPhone(form, snapshot, sourcePrompt);
-  applyProfileDefaultsToForm(form, profile, { allowProfileTitle });
+  applyProfileDefaultsToForm(form, profile, {
+    allowProfileTitle,
+    skipLocationDefaults: listingHasLocationEvidence(form, interpreted),
+  });
 
   // If profile defaults still left a profile-like title, prefer caption again.
   if (

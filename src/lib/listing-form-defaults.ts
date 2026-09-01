@@ -204,17 +204,19 @@ export function applyEmptyKnownDefaults<T extends Record<string, unknown>>(
   opts?: { withZone?: boolean },
 ): T {
   const next = { ...form };
+  const hasMapLocation =
+    Boolean(String(next.locationAddress ?? '').trim()) || Boolean(String(next.mapsUrl ?? '').trim());
   const phone = String(next.contactPhone ?? '').trim();
   if (!phone && defaults.contactPhone) {
     (next as Record<string, unknown>).contactPhone = defaults.contactPhone;
   }
 
   const cityId = String(next.cityId ?? '').trim();
-  if (!cityId && defaults.cityId) {
+  if (!cityId && defaults.cityId && !hasMapLocation) {
     (next as Record<string, unknown>).cityId = defaults.cityId;
   }
 
-  if (opts?.withZone) {
+  if (opts?.withZone && !hasMapLocation) {
     const resolvedCity = String(next.cityId ?? '').trim();
     const zoneId = String(next.zoneId ?? '').trim();
     if (!zoneId && defaults.zoneId && resolvedCity && resolvedCity === defaults.cityId) {
@@ -223,7 +225,7 @@ export function applyEmptyKnownDefaults<T extends Record<string, unknown>>(
   }
 
   const cityName = String(next.cityName ?? '').trim();
-  if (!cityName && defaults.cityName) {
+  if (!cityName && defaults.cityName && !hasMapLocation) {
     (next as Record<string, unknown>).cityName = defaults.cityName;
   }
 

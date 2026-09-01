@@ -129,34 +129,46 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
       });
     }
 
-    case 'job-listings':
-      return withKnownDefaults({
-        id: draft.id,
-        title: str(f.title) || draft.title,
-        description: str(f.description),
-        industry: str(f.industry),
-        cityId: str(f.cityId) || null,
-        cityName: draft.cityName || null,
-        zoneId: str(f.zoneId) || null,
-        zoneName: draft.zoneName || str(f.zoneName) || null,
-        education: knownOption(f.education, JOB_EDUCATION_OPTIONS),
-        experience: knownOption(f.experience, JOB_EXPERIENCE_OPTIONS),
-        jobType: knownOption(f.jobType, JOB_TYPE_OPTIONS),
-        workLocation: knownOption(f.workLocation, WORK_LOCATION_OPTIONS),
-        preferredGender:
-          f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
-            ? f.preferredGender
-            : '',
-        preferredAgeMin: num(f.preferredAgeMin),
-        preferredAgeMax: num(f.preferredAgeMax),
-        salary: num(f.salary),
-        currency: f.currency === 'LEK' ? 'LEK' : f.currency === 'EUR' ? 'EUR' : null,
-        contactPhone: str(f.contactPhone),
-        responsibilities: Array.isArray(f.responsibilities) ? f.responsibilities.map(String) : [],
-        requirements: Array.isArray(f.requirements) ? f.requirements.map(String) : [],
-        benefitIds: [],
-        imageUrls,
-      });
+    case 'job-listings': {
+      const locationAddress = str(f.locationAddress) || null;
+      const mapsUrl = str(f.mapsUrl) || null;
+      const hasMapLocation = Boolean(locationAddress || mapsUrl);
+      return withKnownDefaults(
+        {
+          id: draft.id,
+          title: str(f.title) || draft.title,
+          description: str(f.description),
+          industry: str(f.industry),
+          cityId: hasMapLocation ? null : str(f.cityId) || null,
+          cityName: draft.cityName || str(f.cityName) || null,
+          zoneId: hasMapLocation ? null : str(f.zoneId) || null,
+          zoneName: draft.zoneName || str(f.zoneName) || null,
+          locationAddress,
+          locationLat: num(f.locationLat),
+          locationLng: num(f.locationLng),
+          mapsUrl,
+          locationMode: hasMapLocation ? 'map' : '',
+          education: knownOption(f.education, JOB_EDUCATION_OPTIONS),
+          experience: knownOption(f.experience, JOB_EXPERIENCE_OPTIONS),
+          jobType: knownOption(f.jobType, JOB_TYPE_OPTIONS),
+          workLocation: knownOption(f.workLocation, WORK_LOCATION_OPTIONS),
+          preferredGender:
+            f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
+              ? f.preferredGender
+              : '',
+          preferredAgeMin: num(f.preferredAgeMin),
+          preferredAgeMax: num(f.preferredAgeMax),
+          salary: num(f.salary),
+          currency: f.currency === 'LEK' ? 'LEK' : f.currency === 'EUR' ? 'EUR' : null,
+          contactPhone: str(f.contactPhone),
+          responsibilities: Array.isArray(f.responsibilities) ? f.responsibilities.map(String) : [],
+          requirements: Array.isArray(f.requirements) ? f.requirements.map(String) : [],
+          benefitIds: [],
+          imageUrls,
+        },
+        !hasMapLocation
+      );
+    }
 
     case 'marketplace':
       return withKnownDefaults({

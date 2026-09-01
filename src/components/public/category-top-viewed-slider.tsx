@@ -221,6 +221,7 @@ export function CategoryTopViewedSlider({
                   fallbackContent={
                     verticalId === 'jobs' ? (
                       <JobListingFallback
+                        title={slide.title}
                         industry={slide.fallbackIndustry}
                         cityName={slide.fallbackCityName}
                         zoneName={slide.fallbackZoneName}

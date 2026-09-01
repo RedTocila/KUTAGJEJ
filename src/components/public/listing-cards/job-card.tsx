@@ -136,6 +136,7 @@ export function JobCard({
           fallbackContent={
             usesMockupCover ? (
               <JobListingFallback
+                title={listing.title}
                 industry={listing.industry}
                 cityName={listing.cityName}
                 zoneName={listing.zoneName}

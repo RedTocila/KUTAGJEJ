@@ -1304,22 +1304,10 @@ function parseSurfaceM2(value) {
 
 const ADDRESS_BULLET_RE =
   /(?:^|\n)\s*[•\-\*]?\s*(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?=\n|$)/i;
-const ADDRESS_INLINE_RE = /(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?:\.|$)/i;
-
-const CITY_NAME_ALIASES = [
-  { re: /\btiran[aëe]\b/i, name: 'Tiranë' },
-  { re: /\bdurr[eë]s\b/i, name: 'Durrës' },
-  { re: /\bvl[oö]r[eë]\b/i, name: 'Vlorë' },
-  { re: /\bshkod[eë]r\b/i, name: 'Shkodër' },
-  { re: /\belbasan\b/i, name: 'Elbasan' },
-  { re: /\bfier\b/i, name: 'Fier' },
-  { re: /\bkor[cç][eë]\b/i, name: 'Korçë' },
-  { re: /\bberat\b/i, name: 'Berat' },
-  { re: /\bgjirokast[eë]r\b/i, name: 'Gjirokastër' },
-  { re: /\bsarand[eë]\b/i, name: 'Sarandë' },
-  { re: /\bkam[eë]z\b/i, name: 'Kamëz' },
-  { re: /\bkavaj[aë]\b/i, name: 'Kavajë' },
-];
+const ADDRESS_INLINE_RE =
+  /(?:^|[\n•\-\*]\s*)(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?:\.(?:\s|$)|$)/i;
+const STREET_LINE_RE =
+  /\b(Rruga(?:\s+e)?\s+[^\n]{8,140}|Rr\.?\s+[^\n]{8,140}|Sheshi\s+[^\n]{8,100}|Bulevardi\s+[^\n]{8,100})(?=\.|$|\n)/i;
 
 function cleanExtractedAddress(raw) {
   return String(raw || '')
@@ -1344,16 +1332,29 @@ function extractLocationAddressFromSources(...sources) {
       const cleaned = cleanExtractedAddress(inline[1]);
       if (cleaned.length >= 4) return cleaned;
     }
-    const loose = text.match(
-      /\b(Rruga(?:\s+e)?\s+[^\n.,;]{4,90}|Rr\.?\s+[^\n.,;]{4,90}|Sheshi\s+[^\n.,;]{4,70})/i
-    );
-    if (loose?.[1]) {
-      const cleaned = cleanExtractedAddress(loose[1]);
+    const street = text.match(STREET_LINE_RE);
+    if (street?.[1]) {
+      const cleaned = cleanExtractedAddress(street[1]);
       if (cleaned.length >= 8) return cleaned;
     }
   }
   return null;
 }
+
+const CITY_NAME_ALIASES = [
+  { re: /\btiran[aëe]\b/i, name: 'Tiranë' },
+  { re: /\bdurr[eë]s\b/i, name: 'Durrës' },
+  { re: /\bvl[oö]r[eë]\b/i, name: 'Vlorë' },
+  { re: /\bshkod[eë]r\b/i, name: 'Shkodër' },
+  { re: /\belbasan\b/i, name: 'Elbasan' },
+  { re: /\bfier\b/i, name: 'Fier' },
+  { re: /\bkor[cç][eë]\b/i, name: 'Korçë' },
+  { re: /\bberat\b/i, name: 'Berat' },
+  { re: /\bgjirokast[eë]r\b/i, name: 'Gjirokastër' },
+  { re: /\bsarand[eë]\b/i, name: 'Sarandë' },
+  { re: /\bkam[eë]z\b/i, name: 'Kamëz' },
+  { re: /\bkavaj[aë]\b/i, name: 'Kavajë' },
+];
 
 function extractJobHoursFromText(text) {
   const src = String(text || '');
@@ -1448,8 +1449,24 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
   }
 
   if (!String(form.locationAddress || '').trim()) {
-    const address = extractLocationAddressFromSources(blobOriginal, form.description, interpreted?.summary);
+    const address = extractLocationAddressFromSources(
+      blobOriginal,
+      form.description,
+      interpreted?.summary,
+      snapshot?.caption,
+      snapshot?.description,
+      snapshot?.text
+    );
     if (address) form.locationAddress = address;
+  }
+
+  if (String(form.locationAddress || '').trim()) {
+    form.locationMode = 'map';
+    form.workLocation = form.workLocation || 'onsite';
+  } else if (!form.workLocation && (form.locationAddress || form.mapsUrl)) {
+    form.workLocation = 'onsite';
+  } else if (!form.workLocation && /\b(n[eë]\s+zyr[eë]|onsite|n[ëe]\s+detyr[eë])\b/i.test(blob)) {
+    form.workLocation = 'onsite';
   }
 
   if (!interpreted?.cityName && !form.cityName && String(form.locationAddress || '').trim()) {
@@ -1458,12 +1475,6 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
       form.cityName = inferredCity;
       if (interpreted) interpreted.cityName = inferredCity;
     }
-  }
-
-  if (!form.workLocation && (form.locationAddress || form.mapsUrl)) {
-    form.workLocation = 'onsite';
-  } else if (!form.workLocation && /\b(n[eë]\s+zyr[eë]|onsite|n[ëe]\s+detyr[eë])\b/i.test(blob)) {
-    form.workLocation = 'onsite';
   }
 
   if (!form.industry) {
@@ -1527,6 +1538,21 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
   } else if (desc) {
     form.description = ensureListedSeoDescription(desc, seoMeta);
   }
+
+  if (!String(form.locationAddress || '').trim()) {
+    const fromDescription = extractLocationAddressFromSources(form.description, blobOriginal);
+    if (fromDescription) {
+      form.locationAddress = fromDescription;
+      form.locationMode = 'map';
+      if (!interpreted?.cityName && !form.cityName) {
+        const inferredCity = inferCityNameFromAddress(fromDescription);
+        if (inferredCity) {
+          form.cityName = inferredCity;
+          if (interpreted) interpreted.cityName = inferredCity;
+        }
+      }
+    }
+  }
 }
 
 function applyGoogleMapsPlaceToForm(form, interpreted, snapshot) {
@@ -1576,7 +1602,7 @@ function applyGoogleMapsPlaceToForm(form, interpreted, snapshot) {
   }
 }
 
-async function applyResolvedLocation(form, interpreted, profile, { category = null } = {}) {
+async function applyResolvedLocation(form, interpreted, profile, { category = null, snapshot = null } = {}) {
   if (!form || typeof form !== 'object') return;
   if (!interpreted || typeof interpreted !== 'object') interpreted = {};
 
@@ -1584,7 +1610,10 @@ async function applyResolvedLocation(form, interpreted, profile, { category = nu
     const extracted = extractLocationAddressFromSources(
       form.locationAddress,
       form.description,
-      interpreted.summary
+      interpreted.summary,
+      snapshot?.caption,
+      snapshot?.description,
+      snapshot?.text
     );
     if (extracted) form.locationAddress = extracted;
   }
@@ -1644,10 +1673,9 @@ async function applyResolvedLocation(form, interpreted, profile, { category = nu
   }
 
   if (String(form.locationAddress || '').trim() && (category === 'job-listings' || category === 'businesses')) {
+    form.locationMode = 'map';
     if (!String(form.mapsUrl || '').trim()) {
       await applyGeocodedMapLocation(form, interpreted);
-    } else {
-      form.locationMode = 'map';
     }
     if (city && form.locationMode === 'map') {
       form.cityId = '';
@@ -3444,9 +3472,9 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     if (detected === 'cars') {
       form = normalizeCarFormFields(form, snapshot, interpreted);
     }
-    await applyResolvedLocation(form, interpreted, profile, { category: detected });
-    applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
     if (detected === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
+    await applyResolvedLocation(form, interpreted, profile, { category: detected, snapshot });
+    applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
     applyListingContactPhone(form, snapshot, sourcePrompt);
     applyProfileDefaultsToForm(form, profile, {
       allowProfileTitle,
@@ -3544,9 +3572,9 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       caption: String(snapshot?.caption || snapshot?.description || '').trim(),
     });
   }
-  await applyResolvedLocation(form, interpreted, profile, { category });
-  applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
   if (category === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
+  await applyResolvedLocation(form, interpreted, profile, { category, snapshot });
+  applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
   applyListingContactPhone(form, snapshot, sourcePrompt);
   applyProfileDefaultsToForm(form, profile, {
     allowProfileTitle,

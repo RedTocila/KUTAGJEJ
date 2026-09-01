@@ -35,6 +35,29 @@ function withKnownDefaults(record: Record<string, unknown>, withZone = false): R
   return applyEmptyKnownDefaults(record, knownCreateDefaultsFromStorage(), { withZone });
 }
 
+/** Salvage street address from AI description/caption when form.locationAddress was left empty. */
+function extractJobAddressFromText(...chunks: (unknown)[]): string | null {
+  const addressInlineRe =
+    /(?:^|[\n•\-\*]\s*)(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?:\.(?:\s|$)|$)/i;
+  const streetLineRe =
+    /\b(Rruga(?:\s+e)?\s+[^\n]{8,140}|Rr\.?\s+[^\n]{8,140}|Sheshi\s+[^\n]{8,100}|Bulevardi\s+[^\n]{8,100})(?=\.|$|\n)/i;
+  for (const chunk of chunks) {
+    const text = str(chunk);
+    if (!text.trim()) continue;
+    const inline = text.match(addressInlineRe);
+    if (inline?.[1]) {
+      const cleaned = inline[1].trim().replace(/[.;,\s]+$/, '').slice(0, 160);
+      if (cleaned.length >= 4) return cleaned;
+    }
+    const street = text.match(streetLineRe);
+    if (street?.[1]) {
+      const cleaned = street[1].trim().replace(/[.;,\s]+$/, '').slice(0, 160);
+      if (cleaned.length >= 8) return cleaned;
+    }
+  }
+  return null;
+}
+
 /** Shape AI draft fields into the mine-listing objects forms already understand. */
 export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, unknown> {
   const f = draft.form || {};
@@ -131,7 +154,8 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
     }
 
     case 'job-listings': {
-      const locationAddress = str(f.locationAddress) || null;
+      const description = str(f.description);
+      let locationAddress = str(f.locationAddress) || extractJobAddressFromText(description, draft.summary) || null;
       const mapsUrl = str(f.mapsUrl) || null;
       const hasMapLocation = Boolean(locationAddress || mapsUrl);
       const jobCover = resolveJobAiCover({
@@ -142,7 +166,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         {
           id: draft.id,
           title: str(f.title) || draft.title,
-          description: str(f.description),
+          description,
           coverMode: draft.coverMode === 'image' || draft.coverMode === 'mockup' ? draft.coverMode : jobCover.coverMode,
           industry: str(f.industry),
           cityId: hasMapLocation ? null : str(f.cityId) || null,

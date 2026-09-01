@@ -212,6 +212,7 @@ export function CategoryTopViewedSlider({
               const dist = Math.abs(i - idx);
               const wrapDist = Math.min(dist, slides.length - dist);
               const eager = wrapDist <= 1;
+              const isJobMockupSlide = verticalId === 'jobs' && !slide.imageUrl;
               return (
                 <BannerSlideCard
                   key={slide.id}
@@ -219,7 +220,7 @@ export function CategoryTopViewedSlider({
                   suppressNavRef={suppressNavRef}
                   imageUrl={slide.imageUrl}
                   fallbackContent={
-                    verticalId === 'jobs' ? (
+                    isJobMockupSlide ? (
                       <JobListingFallback
                         title={slide.title}
                         industry={slide.fallbackIndustry}
@@ -236,13 +237,7 @@ export function CategoryTopViewedSlider({
                   eager={eager}
                   title={slide.title}
                   topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
-                  bottomLeftLabel={
-                    verticalId === 'jobs' && !slide.imageUrl
-                      ? null
-                      : byRating
-                        ? null
-                        : slide.subtitle
-                  }
+                  bottomLeftLabel={isJobMockupSlide ? slide.title : byRating ? null : slide.subtitle}
                   bottomRightLabel={
                     verticalId === 'jobs'
                       ? null

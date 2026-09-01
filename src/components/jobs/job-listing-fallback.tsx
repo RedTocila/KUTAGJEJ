@@ -10,18 +10,27 @@ import { businessMapLocation } from '@/lib/google-maps-location';
 import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
+import { logoGreen, neutralInk } from '@/styles/theme/colors';
 
 export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 
-/** Theme wash fades out by 54%; map pin centered in the right 62% zone. */
-const GRADIENT_END = '54%';
+/** Theme wash fades out softly into the map; map pin centered in the right 62% zone. */
 const LEFT_PANEL_WIDTH = '38%';
 /** 38% left + half of 62% right = 69% */
 const MAP_CENTER_X = '69%';
 
 const MAP_TOP_CLIP_PX = 48;
 const MAP_BOTTOM_CLIP_PX = 72;
-const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 18%, rgba(0, 0, 0, 0) ${GRADIENT_END})`;
+/** Soft horizontal fade — wider than before for a blurrier blend into the map. */
+const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 12%, rgba(0, 0, 0, 0.72) 28%, rgba(0, 0, 0, 0.28) 44%, rgba(0, 0, 0, 0) 62%)`;
+
+/** Cover palette — literal hex so masked gradients stay dark (no CSS var / oklab wash-out). */
+const LIGHT_COVER_SOLID = logoGreen[800];
+const LIGHT_COVER_FADE = logoGreen[700];
+const LIGHT_COVER_MID = logoGreen[600];
+const DARK_COVER_SOLID = neutralInk[950];
+const DARK_COVER_FADE = neutralInk[900];
+const DARK_COVER_MID = neutralInk[800];
 
 /** Google Maps night land — matches LocationMapEmbed dark styling. */
 const GOOGLE_NIGHT_LAND = '#242f3e';
@@ -47,12 +56,13 @@ function JobCoverThemeOverlay() {
         sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
+          zIndex: 1,
           pointerEvents: 'none',
-          background: `linear-gradient(in oklab, ${muiTheme.palette.primary.dark} 0%, ${muiTheme.palette.primary.main} 28%, ${muiTheme.palette.primary.main} 52%)`,
+          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 28%, ${LIGHT_COVER_MID} 52%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(in oklab, ${muiTheme.palette.common.black} 0%, ${muiTheme.palette.neutral[900]} 28%, ${muiTheme.palette.neutral[800]} 52%)`,
+            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_FADE} 28%, ${DARK_COVER_MID} 52%)`,
           }),
         })}
       />
@@ -61,14 +71,15 @@ function JobCoverThemeOverlay() {
         sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
+          zIndex: 1,
           pointerEvents: 'none',
-          background: `linear-gradient(in oklab, ${muiTheme.palette.primary.dark} 0%, ${muiTheme.palette.primary.main} 100%)`,
-          opacity: 0.5,
+          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 100%)`,
+          opacity: 0.38,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(in oklab, ${muiTheme.palette.common.black} 0%, ${muiTheme.palette.neutral[800]} 100%)`,
-            opacity: 0.72,
+            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_MID} 100%)`,
+            opacity: 0.48,
           }),
         })}
       />
@@ -77,12 +88,13 @@ function JobCoverThemeOverlay() {
         sx={(muiTheme) => ({
           position: 'absolute',
           inset: 0,
+          zIndex: 1,
           pointerEvents: 'none',
-          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 72%)`,
+          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 72%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
-            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 72%)`,
+            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0) 72%)`,
           }),
         })}
       />
@@ -190,10 +202,8 @@ export function JobListingFallback({
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        bgcolor: muiTheme.palette.primary.dark,
-        ...muiTheme.applyStyles('dark', {
-          bgcolor: muiTheme.palette.neutral[950],
-        }),
+        bgcolor: LIGHT_COVER_SOLID,
+        ...muiTheme.applyStyles('dark', { bgcolor: DARK_COVER_SOLID }),
       })}
     >
       <JobCoverMapPreview query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />

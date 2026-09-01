@@ -1,7 +1,7 @@
 'use client';
 
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
-import { defaultWeeklyHours } from '@/lib/business-constants';
+import { defaultWeeklyHours, type WeeklyHourRow } from '@/lib/business-constants';
 import { normalizeFuelType } from '@/lib/car-constants';
 import {
   createBusinessListing,
@@ -309,14 +309,23 @@ export async function postAiListingDraft(
         if (phone.length < 6) {
           return { draftId: draft.id, ok: false, error: 'Phone number is required.' };
         }
+        const locationAddress = str(f.locationAddress) || null;
+        const mapsUrl = str(f.mapsUrl) || null;
+        const hasMapLocation = Boolean(locationAddress || mapsUrl);
+        const weeklyHours: WeeklyHourRow[] =
+          Array.isArray(f.weeklyHours) && f.weeklyHours.length
+            ? (f.weeklyHours as WeeklyHourRow[])
+            : defaultWeeklyHours();
         result = await createBusinessListing({
           title: str(f.title) || draft.title || 'Biznes',
           description: str(f.description) || draft.summary || draft.title || '',
           category: str(f.category) || 'restorant',
-          cityId,
+          cityId: hasMapLocation ? null : cityId,
+          zoneId: hasMapLocation ? null : zoneId || null,
+          mapsUrl,
           contactPhone: phone,
           imageUrls,
-          weeklyHours: defaultWeeklyHours(),
+          weeklyHours,
           reservationsEnabled: false,
           reservationUrl: null,
           reservationTimeSlots: [],

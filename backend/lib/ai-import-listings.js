@@ -3,6 +3,7 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { compressImageBuffer } = require('./compress-image');
 const { forwardGeocodeQuery } = require('./google-maps-location');
+const { isGoogleMapsUrl, fetchGoogleMapsPlaceSnapshot } = require('./google-maps-place');
 const { VEHICLE_TYPE_VALUES, makesForVehicleType, modelsForMake, isValidVehicleMake } = require('./vehicle-catalog');
 const { normalizeFuelType } = require('./car-field-rules');
 
@@ -1083,6 +1084,29 @@ async function fetchPageSnapshot(url, parentSignal) {
   const social = isSocialMediaUrl(url);
   const instagram = isInstagramUrl(url);
 
+  if (isGoogleMapsUrl(url)) {
+    try {
+      return await fetchGoogleMapsPlaceSnapshot(url, parentSignal);
+    } catch (err) {
+      if (parentSignal?.aborted) throw err;
+      return {
+        ok: false,
+        status: 0,
+        finalUrl: url,
+        title: null,
+        description: null,
+        caption: null,
+        authorName: null,
+        text: '',
+        imageUrls: [],
+        social: false,
+        isGoogleMaps: true,
+        mapsPlace: null,
+        fetchError: err?.message || 'Failed to fetch Google Maps place',
+      };
+    }
+  }
+
   if (instagram) {
     try {
       return await enrichInstagramSnapshot(url, parentSignal);
@@ -1378,6 +1402,53 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
   }
 }
 
+function applyGoogleMapsPlaceToForm(form, interpreted, snapshot) {
+  if (!form || typeof form !== 'object' || !snapshot?.isGoogleMaps) return;
+  const place = snapshot.mapsPlace;
+  if (!place || typeof place !== 'object') return;
+  if (!interpreted || typeof interpreted !== 'object') interpreted = {};
+
+  if (place.name) {
+    if (!String(form.title || '').trim()) form.title = place.name;
+    if (!String(interpreted.title || '').trim()) interpreted.title = place.name;
+  }
+  if (place.phone && !String(form.contactPhone || '').trim()) form.contactPhone = place.phone;
+  if (place.formattedAddress) {
+    if (!String(form.locationAddress || '').trim()) form.locationAddress = place.formattedAddress;
+  }
+  if (place.mapsUrl) form.mapsUrl = place.mapsUrl;
+  if (Number.isFinite(place.lat)) form.locationLat = place.lat;
+  if (Number.isFinite(place.lng)) form.locationLng = place.lng;
+  if (place.mapsUrl || Number.isFinite(place.lat)) form.locationMode = 'map';
+
+  if (place.cityName) {
+    if (!interpreted.cityName) interpreted.cityName = place.cityName;
+    if (!form.cityName) form.cityName = place.cityName;
+  }
+  if (place.zoneName) {
+    if (!interpreted.zoneName) interpreted.zoneName = place.zoneName;
+    if (!form.zoneName) form.zoneName = place.zoneName;
+  }
+
+  if (Array.isArray(place.weeklyHours) && place.weeklyHours.some((d) => d && !d.closed)) {
+    const hasHours =
+      Array.isArray(form.weeklyHours) && form.weeklyHours.some((d) => d && !d.closed);
+    if (!hasHours) form.weeklyHours = place.weeklyHours;
+  }
+
+  if (place.businessCategory && !String(form.category || '').trim()) {
+    form.category = place.businessCategory;
+  }
+
+  if (place.editorialSummary && !String(form.servicesHighlight || '').trim()) {
+    form.servicesHighlight = place.editorialSummary.slice(0, 240);
+  }
+
+  if (!String(form.description || '').trim() && snapshot.description) {
+    form.description = snapshot.description;
+  }
+}
+
 async function applyResolvedLocation(form, interpreted, profile, { category = null } = {}) {
   if (!form || typeof form !== 'object') return;
   if (!interpreted || typeof interpreted !== 'object') interpreted = {};
@@ -1446,7 +1517,11 @@ async function applyResolvedLocation(form, interpreted, profile, { category = nu
   }
 
   if (String(form.locationAddress || '').trim() && (category === 'job-listings' || category === 'businesses')) {
-    await applyGeocodedMapLocation(form, interpreted);
+    if (!String(form.mapsUrl || '').trim()) {
+      await applyGeocodedMapLocation(form, interpreted);
+    } else {
+      form.locationMode = 'map';
+    }
     if (city && form.locationMode === 'map') {
       form.cityId = '';
       form.zoneId = '';
@@ -1564,7 +1639,8 @@ job-listings: title, description, industry, education, experience, jobType (full
   - SEO JOB DESCRIPTION: when enough information is available, write a substantial, keyword-rich description (roughly 500–1100 characters) using the exact role, role synonyms, employer, city/zone, work arrangement, salary, responsibilities, requirements, shifts, and benefits. Use natural Albanian search phrases and structured bullets; never invent missing facts just to make it longer.
   - JOB COVER IMAGE RULE: attached images are reference material for OCR and job information by default, not the listing cover. Set imageUrls to [] and imageRoles to [] unless the user explicitly asks to use the attached image as the cover (for example, "use this image as cover" / "përdor foton si kopertinë"). If explicitly requested, set the first attached image role to "cover".
 marketplace: transactionType (always "shes"), title, description, category (elektronike|mobilje-shtepi|veshje-aksesore|libra-shkolla|sport-hobi|lodra|automjete-pjese|ushqime-bujqesi|sherbime|te-tjera), condition (i-ri|si-i-ri|shume-mire|mire|me-defekte), price, currency, contactPhone
-businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight
+businesses: title, description, category (restorant|bar|kafe|brunch|piceri-fast-food|pasticeri), contactPhone, servicesHighlight, locationAddress, cityName, zoneName, mapsUrl, weeklyHours (array of {dayOfWeek:0-6 Mon-Sun, closed:boolean, open:"HH:MM", close:"HH:MM"})
+  - Google Maps links: treat as a local business/venue. Use googleMapsPlace / snapshot text for name, phone, address, hours, website, rating, types, and photos. Map phone → contactPhone, address → locationAddress, hours → weeklyHours AND description "• Orari: …". Infer category from place types when obvious (restaurant→restorant, cafe→kafe, bar→bar, bakery→pasticeri, pizza/fast food→piceri-fast-food). Set mapsUrl + lat/lng when provided.
 professionals: title, description, category (konsulent|freelance|sherbim|kurse|dizajn-it|marketing|mjekesi|arsim), servicesHighlight, price, currency, contactPhone, responseTimeHours
   - fitness trainers / personal training / gym coaching / workout courses → category "kurse"
   - apps, digital products, subscriptions sold as products → marketplace (category "sherbime" or "sport-hobi") is OK when the post is mainly selling a product/app
@@ -1614,6 +1690,7 @@ Link / caption rules (when a URL snapshot is present and few/no attached photos)
 - Prefer caption, page description, og:description, and the user's prompt for what is offered.
 - Keep snapshotImageUrls as listing photos — only the post's own photos (carousel frames). Never invent extra images.
 - Do NOT invent a profession from the username alone.
+- Google Maps links (sourceType google_maps): the snapshot contains structured place data (name, address, phone, hours, website, rating, types, photos). Default detectedCategory to "businesses" unless the user prompt clearly asks for another category. Build a complete business listing from googleMapsPlace — do NOT leave title, description, contactPhone, locationAddress, or hours empty when the snapshot provides them. Use place photos as imageUrls when available.
 - Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
 - Description: ANALYZE the FULL caption — do NOT paste it verbatim. Rewrite in DESCRIPTION STYLE (listed bullets + keywords). Extract price, city, street address, make/model, phone into form fields / description. Preserve transport/shipping, inclusions, warranty, delivery time, and other buyer facts from the caption (including parenthetical notes on the price line).
 - payload.title is only a caption hint (or null) — never treat authorName as the title.
@@ -3116,6 +3193,8 @@ async function interpretListing({
       imageUrls: snapshot?.imageUrls || [],
       isCarousel: Boolean(snapshot?.isCarousel),
       text: snapshot?.text || null,
+      sourceType: snapshot?.isGoogleMaps ? 'google_maps' : url ? 'link' : 'prompt',
+      googleMapsPlace: snapshot?.mapsPlace || null,
       vehicleCatalogHints:
         preferredCategory === 'cars' || !preferredCategory
           ? {
@@ -3131,7 +3210,9 @@ async function interpretListing({
       })),
       instruction: visionImages.length
         ? 'Photos are primary: OCR every readable word on flyers/posters/labels (roles, business name, street address, landmark, neighborhood/zone, m², phone, price, hours/shifts) AND identify the product/vehicle/property/job from images. Write a concrete title and a listed SEO-friendly form.description (short opener + • keyword bullets including Adresa/Orari/Kompania when visible + CTA — never one paragraph or raw hashtags). Auto-fill every form field you can (title, cityName, zoneName, surfaceM2, contactPhone, enums, salary/price). Phone in caption/photos MUST become form.contactPhone (never substitute profile.phone when a listing number is present). Weave in EVERY useful detail from prompt/caption — especially transport/shipping/RoRo, delivery days, what price includes, warranty, financing, condition notes, parenthetical price notes, and shift/schedule notes. Do not invent unseen specs (including fake m² or zones). Never use authorName / Instagram profile name as title. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.'
-        : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address, phone when present). form.contactPhone must be the caption/prompt/photo number when one exists — profile.phone is only a fallback. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
+        : snapshot?.isGoogleMaps
+          ? 'This is a Google Maps business/place link. Use googleMapsPlace + snapshot text as primary source. Build a complete businesses listing: title=place name, contactPhone, locationAddress, mapsUrl, weeklyHours when hours exist, category from place types, SEO description with • Adresa • Orari • Telefon bullets. Use snapshotImageUrls for listing photos. Default category to businesses unless user prompt clearly overrides. Apply CONTENT POLICY GUARD only for truly prohibited content.'
+          : 'Build the listing from caption/description/text/prompt. Title must come from the post caption (what is offered), never from authorName or profile.businessName when caption exists. Rewrite caption into a listed SEO-friendly form.description (short opener + • keyword bullets + CTA — do not paste raw caption or write one wall of text). Extract structured fields AND preserve buyer-critical caption facts (transport/RoRo/shipping days, inclusions, warranty, financing, condition, street address, phone when present). form.contactPhone must be the caption/prompt/photo number when one exists — profile.phone is only a fallback. Do not invent professions or offers missing from the text. Apply CONTENT POLICY GUARD only for truly prohibited content; wrong preferredCategory must use CATEGORY GUARD (categoryMatch false), never contentAllowed false.',
     },
   });
 }
@@ -3145,6 +3226,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   // Prefer category mismatch so the UI can offer a category switch instead of a hard block.
   if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
     applyCaptionFallbacks(interpreted, snapshot, profile);
+    applyGoogleMapsPlaceToForm(interpreted.form, interpreted, snapshot);
     const errorMessage =
       interpreted.errorMessage || categoryMismatchMessage(interpreted.preferredCategory, interpreted.detectedCategory);
     let form = stringifyFormValues(interpreted.form);
@@ -3153,6 +3235,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
       form = normalizeCarFormFields(form, snapshot, interpreted);
     }
     await applyResolvedLocation(form, interpreted, profile, { category: detected });
+    applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
     if (detected === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
     applyListingContactPhone(form, snapshot, sourcePrompt);
     applyProfileDefaultsToForm(form, profile, {
@@ -3210,6 +3293,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
   }
 
   applyCaptionFallbacks(interpreted, snapshot, profile);
+  applyGoogleMapsPlaceToForm(interpreted.form, interpreted, snapshot);
   let form = stringifyFormValues(interpreted.form);
   const category = interpreted.category;
   if (category === 'cars') {
@@ -3243,6 +3327,7 @@ async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourceP
     });
   }
   await applyResolvedLocation(form, interpreted, profile, { category });
+  applyGoogleMapsPlaceToForm(form, interpreted, snapshot);
   if (category === 'job-listings') enrichJobListingFromContent(form, interpreted, snapshot);
   applyListingContactPhone(form, snapshot, sourcePrompt);
   applyProfileDefaultsToForm(form, profile, {
@@ -3303,6 +3388,16 @@ function stringifyFormValues(form) {
       continue;
     }
     if (Array.isArray(value)) {
+      if (
+        key === 'weeklyHours' &&
+        value.length &&
+        typeof value[0] === 'object' &&
+        value[0] != null &&
+        !Array.isArray(value[0])
+      ) {
+        out[key] = value;
+        continue;
+      }
       out[key] = value.map((v) => String(v ?? '').trim()).filter(Boolean);
       continue;
     }
@@ -3333,6 +3428,8 @@ async function importListingsFromLinks({
   const mode = rawMode === 'edit' ? 'edit' : 'create';
   const currentListing = mode === 'edit' ? sanitizeCurrentListing(rawCurrent) : null;
   const preferredCategory = CATEGORIES.includes(category) ? category : null;
+  const mapsOnly = urls.length > 0 && urls.every((u) => isGoogleMapsUrl(u));
+  const effectivePreferredCategory = preferredCategory || (mapsOnly ? 'businesses' : null);
 
   if (!urls.length && !prompt && !attachedImages.length) {
     const err = new Error('Paste a link, describe the listing, or attach images');
@@ -3354,7 +3451,7 @@ async function importListingsFromLinks({
       const interpreted = await interpretListing({
         url: null,
         snapshot: null,
-        preferredCategory,
+        preferredCategory: effectivePreferredCategory,
         profile,
         attachedImages,
         mode,
@@ -3401,7 +3498,7 @@ async function importListingsFromLinks({
       const interpreted = await interpretListing({
         url,
         snapshot,
-        preferredCategory,
+        preferredCategory: effectivePreferredCategory,
         profile,
         attachedImages,
         mode,

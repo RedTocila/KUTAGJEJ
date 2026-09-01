@@ -186,16 +186,31 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
         imageUrls,
       });
 
-    case 'businesses':
-      return withKnownDefaults({
-        title: str(f.title) || draft.title,
-        description: str(f.description),
-        category: str(f.category),
-        cityId: str(f.cityId) || '',
-        contactPhone: str(f.contactPhone),
-        servicesHighlight: str(f.servicesHighlight),
-        imageUrls,
-      });
+    case 'businesses': {
+      const locationAddress = str(f.locationAddress) || null;
+      const mapsUrl = str(f.mapsUrl) || null;
+      const hasMapLocation = Boolean(locationAddress || mapsUrl);
+      return withKnownDefaults(
+        {
+          title: str(f.title) || draft.title,
+          description: str(f.description),
+          category: str(f.category),
+          cityId: hasMapLocation ? '' : str(f.cityId) || '',
+          zoneId: hasMapLocation ? '' : str(f.zoneId) || '',
+          zoneName: draft.zoneName || str(f.zoneName) || null,
+          locationAddress,
+          locationLat: num(f.locationLat),
+          locationLng: num(f.locationLng),
+          mapsUrl,
+          locationMode: hasMapLocation ? 'map' : '',
+          contactPhone: str(f.contactPhone),
+          servicesHighlight: str(f.servicesHighlight),
+          weeklyHours: Array.isArray(f.weeklyHours) ? f.weeklyHours : undefined,
+          imageUrls,
+        },
+        !hasMapLocation
+      );
+    }
 
     case 'professionals':
       return withKnownDefaults({

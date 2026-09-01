@@ -621,7 +621,7 @@ const sq = {
     okazionHint: '7 ditë · 19€ ose 250 BC · prona, makina, pune, tregu',
     premiumHint: '15/30 ditë · prioritet · prona, makina, pune, tregu',
     aiImport: 'AI Build listing',
-    aiImportHint: 'Ngjit linke ose Instagram — AI ndërton njoftimet',
+    aiImportHint: 'Ngjit linke, Instagram ose Google Maps — AI ndërton njoftimet',
     realEstate: 'Pasuri të paluajtshme',
     realEstateHint: 'Apartamente, vila, dyqane, zyra dhe toka',
     cars: 'Makina',
@@ -640,7 +640,7 @@ const sq = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Zgjidh kategorinë e saktë, pastaj ngjit deri në 50 linke (Instagram, faqe, etj.). AI ndërton draftet — dhe bllokon kategoritë e gabuara ose përmbajtjen e ndaluar.',
+      'Zgjidh kategorinë e saktë, pastaj ngjit deri në 50 linke (Instagram, Google Maps, faqe, etj.). AI ndërton draftet — dhe bllokon kategoritë e gabuara ose përmbajtjen e ndaluar.',
     chooseCategory: 'Zgjidh kategorinë',
     chooseCategoryToContinue: 'Zgjidh një kategori për të vazhduar',
     categoryRequired: 'Zgjidh kategorinë e njoftimit përpara analizës.',
@@ -668,7 +668,7 @@ const sq = {
         ? `U postuan ${ok}, dështuan ${fail}. Kontrollo draftet e mbetura.`
         : `U postuan ${ok} njoftime.`,
     placeholder:
-      'Përshkruaj, ngjit linke (deri në 50) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
+      'Përshkruaj, ngjit linke (deri në 50) ose bashkëngjit foto — AI ndërton njoftimet…\nhttps://maps.app.goo.gl/...\nhttps://example.com/apartament\nhttps://www.instagram.com/p/...',
     analyze: 'Analizo me AI',
     analyzing: 'Duke analizuar…',
     results: 'Draftet e gatshme',
@@ -1439,7 +1439,7 @@ const en: AppMessages = {
     okazionHint: '7 days · €19 or 250 BC · properties, cars, jobs, marketplace',
     premiumHint: '15/30 days · priority · properties, cars, jobs, marketplace',
     aiImport: 'AI Build listing',
-    aiImportHint: 'Paste website or Instagram links — AI builds listings',
+    aiImportHint: 'Paste website, Instagram, or Google Maps links — AI builds listings',
     realEstate: 'Real estate',
     realEstateHint: 'Apartments, villas, shops, offices and land',
     cars: 'Cars',
@@ -1459,7 +1459,7 @@ const en: AppMessages = {
   aiImport: {
     title: 'AI Build',
     subtitle:
-      'Choose the correct category, then paste up to 50 links (Instagram, website, etc.). AI builds drafts — and blocks wrong categories or prohibited content.',
+      'Choose the correct category, then paste up to 50 links (Instagram, Google Maps, website, etc.). AI builds drafts — and blocks wrong categories or prohibited content.',
     chooseCategory: 'Choose a category',
     chooseCategoryToContinue: 'Choose a category to continue',
     categoryRequired: 'Choose the listing category before analyzing.',
@@ -1487,7 +1487,7 @@ const en: AppMessages = {
         ? `Posted ${ok}, failed ${fail}. Check remaining drafts.`
         : `Posted ${ok} listings.`,
     placeholder:
-      'Describe, paste links (up to 50), or attach photos — AI builds the listings…\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
+      'Describe, paste links (up to 50), or attach photos — AI builds the listings…\nhttps://maps.app.goo.gl/...\nhttps://example.com/apartment\nhttps://www.instagram.com/p/...',
     analyze: 'Analyze with AI',
     analyzing: 'Analyzing…',
     results: 'Ready drafts',

@@ -5,13 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
   Checkbox,
-  FormControl,
   FormControlLabel,
-  FormGroup,
-  FormLabel,
   InputAdornment,
-  Radio,
-  RadioGroup,
   Slider,
   Stack,
   Typography,
@@ -23,8 +18,6 @@ import {
   JOB_EXPERIENCE_OPTIONS,
   JOB_GENDER_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
-  JOB_TYPE_OPTIONS,
-  WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
@@ -37,15 +30,16 @@ import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
 import { useUser } from '@/hooks/use-user';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { JobFormBenefitsSection } from '@/components/jobs/job-form-benefits-section';
+import { JobFormEmploymentSection } from '@/components/jobs/job-form-employment-section';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
-import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
   ListingLocationChoice,
   type ListingLocationMode,
 } from '@/components/listings/listing-location-choice';
-import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { ListingBoostChoiceBar } from '@/components/user/listing-boost-choice-bar';
 import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
 import {
@@ -508,15 +502,8 @@ export function JobListingForm({
     parseAgeStrict(form.preferredAgeMin) ?? 18,
     parseAgeStrict(form.preferredAgeMax) ?? 65,
   ];
-  const previewSalary = form.salary.trim()
-    ? `${formatPrice(Number(form.salary), form.currency)} / muaj`
-    : 'Pagë e diskutueshme';
   const previewCity = cities.find((city) => city.id === form.cityId);
   const previewZone = previewCity?.zones.find((zone) => zone.id === form.zoneId);
-  const previewLocation =
-    form.locationMode === 'map'
-      ? form.locationAddress
-      : [previewZone?.name, previewCity?.name].filter(Boolean).join(', ');
 
   // -------------------------------------------------------------------------
   // Render
@@ -549,16 +536,19 @@ export function JobListingForm({
               sx={{
                 position: 'relative',
                 width: '100%',
-                aspectRatio: '5 / 4',
+                aspectRatio: JOB_LISTING_COVER_ASPECT_RATIO,
                 borderRadius: 2,
                 overflow: 'hidden',
               }}
             >
               <JobListingFallback
-                position={form.title}
-                salary={previewSalary}
-                location={previewLocation}
-                seed={isEdit ? editListingId : undefined}
+                industry={form.industry}
+                cityName={previewCity?.name}
+                zoneName={previewZone?.name}
+                mapsUrl={form.locationMode === 'map' ? form.mapsUrl : undefined}
+                locationAddress={form.locationMode === 'map' ? form.locationAddress : undefined}
+                locationLat={form.locationMode === 'map' ? form.locationLat : undefined}
+                locationLng={form.locationMode === 'map' ? form.locationLng : undefined}
               />
             </Box>
           </Stack>
@@ -581,6 +571,14 @@ export function JobListingForm({
           required
           fullWidth
           placeholder="p.sh. Menaxher Shitjesh, Programues Backend…"
+        />
+        <SearchableSelect
+          label="Industria"
+          value={form.industry}
+          onChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+          options={JOB_INDUSTRY_OPTIONS}
+          emptyLabel="Zgjidhni industrinë…"
+          allowCustom
         />
         <ListingDescriptionField
           label="Përshkrimi i shkurtër"
@@ -607,56 +605,25 @@ export function JobListingForm({
       </ListingFormSection>
 
       <ListingFormSection>
-        <FormGroup>
-          {JOB_BENEFIT_PRESETS.map((preset) => (
-            <FormControlLabel
-              key={preset.id}
-              control={
-                <Checkbox
-                  checked={form.benefitIds.includes(preset.id)}
-                  onChange={(e) => {
-                    setForm((p) => ({
-                      ...p,
-                      benefitIds: e.target.checked
-                        ? [...p.benefitIds, preset.id]
-                        : p.benefitIds.filter((id) => id !== preset.id),
-                    }));
-                  }}
-                />
-              }
-              label={preset.label}
-            />
-          ))}
-        </FormGroup>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={form.customBenefitEnabled}
-              onChange={(e) => setForm((previous) => ({ ...previous, customBenefitEnabled: e.target.checked }))}
-            />
+        <JobFormBenefitsSection
+          value={{
+            benefitIds: form.benefitIds,
+            customBenefitEnabled: form.customBenefitEnabled,
+            customBenefit: form.customBenefit,
+          }}
+          defaultOpen={form.benefitIds.length > 0 || form.customBenefitEnabled}
+          onChange={(next) =>
+            setForm((previous) => ({
+              ...previous,
+              benefitIds: next.benefitIds,
+              customBenefitEnabled: next.customBenefitEnabled,
+              customBenefit: next.customBenefit,
+            }))
           }
-          label="Përfitim tjetër (opsional)"
         />
-        {form.customBenefitEnabled ? (
-          <ListingTextField
-            label="Përfitim tjetër"
-            value={form.customBenefit}
-            onChange={onField('customBenefit')}
-            fullWidth
-            placeholder="p.sh. Ditë pushimi shtesë"
-          />
-        ) : null}
       </ListingFormSection>
 
       <ListingFormSection>
-        <SearchableSelect
-          label="Industria"
-          value={form.industry}
-          onChange={(v) => setForm((p) => ({ ...p, industry: v }))}
-          options={JOB_INDUSTRY_OPTIONS}
-          emptyLabel="Zgjidhni industrinë…"
-          allowCustom
-        />
         <ListingLocationChoice
           mode={form.locationMode}
           onModeChange={(locationMode) => setForm((p) => ({ ...p, locationMode }))}
@@ -764,45 +731,33 @@ export function JobListingForm({
       </ListingFormSection>
 
       <ListingFormSection>
-        <FormControl component="fieldset">
-          <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
-            Lloji i kontratës
-          </FormLabel>
-          <RadioGroup
-            row
-            value={form.jobType}
-            onChange={(_, v) => setForm((p) => ({ ...p, jobType: v }))}
-            sx={{ gap: 0.5, flexWrap: 'wrap' }}
-          >
-            {JOB_TYPE_OPTIONS.map((o) => (
-              <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
-            ))}
-          </RadioGroup>
-        </FormControl>
-        <FormControl component="fieldset">
-          <FormLabel component="legend" sx={{ mb: 0.5, fontSize: '0.875rem', fontWeight: 600 }}>
-            Vendi i punës
-          </FormLabel>
-          <RadioGroup row value={form.workLocation} onChange={(_, v) => setForm((p) => ({ ...p, workLocation: v }))}>
-            {WORK_LOCATION_OPTIONS.map((o) => (
-              <FormControlLabel key={o.value} value={o.value} control={<Radio />} label={o.label} />
-            ))}
-          </RadioGroup>
-        </FormControl>
-      </ListingFormSection>
-
-      <ListingFormSection>
+        <JobFormEmploymentSection
+          value={{
+            jobType: form.jobType,
+            workLocation: form.workLocation,
+          }}
+          defaultOpen={Boolean(form.jobType || form.workLocation)}
+          disabled={submitting}
+          onChange={(next) =>
+            setForm((previous) => ({
+              ...previous,
+              jobType: next.jobType,
+              workLocation: next.workLocation,
+            }))
+          }
+        />
         <ListingTextField
           label="Paga"
           type="text"
           inputMode="numeric"
           value={form.salary}
           onChange={(e) => {
-            const v = e.target.value.replace(/[^\d]/g, '');
-            setForm((p) => ({ ...p, salary: v }));
+            const salary = e.target.value.replace(/[^\d]/g, '');
+            setForm((p) => ({ ...p, salary }));
           }}
           fullWidth
           placeholder="p.sh. 80000"
+          disabled={submitting}
           slotProps={{
             input: {
               endAdornment: <InputAdornment position="end">/ muaj</InputAdornment>,
@@ -814,7 +769,7 @@ export function JobListingForm({
           value={form.currency}
           onChange={(v) => setForm((p) => ({ ...p, currency: v as JobFormState['currency'] }))}
           options={CURRENCY_OPTIONS}
-          disabled={!form.salary.trim()}
+          disabled={submitting || !form.salary.trim()}
         />
         <ListingTextField
           label="Numri i telefonit"

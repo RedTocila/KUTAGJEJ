@@ -1,5 +1,6 @@
 import { businessLocationLine } from '@/lib/google-maps-location';
 import { JOB_EXPERIENCE_OPTIONS, JOB_GENDER_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
+import { jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListingDetail } from '@/lib/public-listings-client';
 import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
 
@@ -66,7 +67,7 @@ export function jobDetailMetaRows(listing: PublicJobListingDetail) {
 }
 
 export function jobCoverImageUrls(listing: PublicJobListingDetail): string[] {
-  if (listing.coverMode === 'mockup') return [];
+  if (jobListingUsesMockupCover(listing)) return [];
   const images = listing.imageUrls.filter(Boolean);
   if (images.length > 0) return [images[0]!];
   if (listing.imageUrl) return [listing.imageUrl];

@@ -187,6 +187,7 @@ function formatJob(doc, cityById) {
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],
     ...featuredCardFields(doc),
+    ...mapsJsonFromDoc(doc),
   };
 }
 

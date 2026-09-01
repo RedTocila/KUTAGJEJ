@@ -27,10 +27,11 @@ import {
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { listingHeroImageUrl } from '@/lib/storage-image';
-import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -103,7 +104,7 @@ export function JobListingDetailDesktop({
     [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
   const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
-  const heroImage = listing.coverMode === 'mockup' ? null : (listing.imageUrl ?? listing.imageUrls[0] ?? null);
+  const heroImage = jobListingCoverImageUrl(listing);
   const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
@@ -141,9 +142,9 @@ export function JobListingDetailDesktop({
               sx={{
                 position: 'relative',
                 width: '100%',
-                aspectRatio: '21 / 9',
-                maxHeight: 360,
-                minHeight: 240,
+                aspectRatio: heroImage ? '21 / 9' : JOB_LISTING_COVER_ASPECT_RATIO,
+                maxHeight: heroImage ? 360 : 240,
+                minHeight: heroImage ? 240 : 160,
                 overflow: 'hidden',
                 bgcolor: 'grey.900',
               }}
@@ -167,10 +168,13 @@ export function JobListingDetailDesktop({
                 />
               ) : (
                 <JobListingFallback
-                  position={listing.title}
-                  salary={salary}
-                  location={locationLabel}
-                  seed={listing.id}
+                  industry={listing.industry}
+                  cityName={listing.cityName}
+                  zoneName={listing.zoneName}
+                  mapsUrl={listing.mapsUrl}
+                  locationAddress={listing.locationAddress}
+                  locationLat={listing.locationLat}
+                  locationLng={listing.locationLng}
                 />
               )}
               <Box

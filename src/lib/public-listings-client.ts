@@ -199,6 +199,10 @@ export interface PublicJobListing extends ListingMetricsFields {
   responsibilities?: string[];
   requirements?: string[];
   benefits?: JobListingBenefit[];
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 }
 
 /** Full job listing for `/pune/[permalink]`. */

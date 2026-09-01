@@ -51,6 +51,7 @@ import { type BusinessMineListing, type ProfessionalMineListing } from '@/lib/di
 import { hardNavigate } from '@/lib/hard-navigate';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@/lib/job-constants';
 import { isJobListingActive } from '@/lib/job-listing-expiry';
+import { jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
@@ -77,7 +78,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { TransientNotification } from '@/components/core/transient-success-alert';
-import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
@@ -160,6 +161,7 @@ function CardImageHeader({
   topRightActions,
   selectionMode = false,
   selected = false,
+  mockupCover = false,
 }: {
   imageUrl: string | null;
   fallbackContent?: React.ReactNode;
@@ -173,6 +175,7 @@ function CardImageHeader({
   topRightActions?: React.ReactNode;
   selectionMode?: boolean;
   selected?: boolean;
+  mockupCover?: boolean;
 }) {
   const thumbUrl = React.useMemo(() => listingCardImageUrl(imageUrl), [imageUrl]);
   const originalUrl = React.useMemo(() => storageImageOriginalUrl(imageUrl), [imageUrl]);
@@ -227,8 +230,8 @@ function CardImageHeader({
       sx={{
         position: 'relative',
         width: '100%',
-        aspectRatio: '16 / 7',
-        minHeight: 120,
+        aspectRatio: mockupCover ? JOB_LISTING_COVER_ASPECT_RATIO : '16 / 7',
+        minHeight: mockupCover ? undefined : 120,
         flexShrink: 0,
         borderBottom: '1px solid',
         borderColor: 'divider',
@@ -269,15 +272,17 @@ function CardImageHeader({
           {React.createElement(FallbackIcon, { size: 44, weight: 'duotone' })}
         </Stack>
       )}
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.12) 38%, transparent 58%)',
-          pointerEvents: 'none',
-          zIndex: 1,
-        }}
-      />
+      {!mockupCover ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.12) 38%, transparent 58%)',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      ) : null}
       {selectionMode ? (
         <Box
           aria-hidden
@@ -340,6 +345,7 @@ function BaseCard({
   mediaBottomOverlay,
   refreshEveryHours,
   lastRefreshedAt,
+  mockupCover = false,
 }: {
   title: string;
   price?: React.ReactNode;
@@ -372,6 +378,7 @@ function BaseCard({
   mediaBottomOverlay?: React.ReactNode;
   refreshEveryHours?: number;
   lastRefreshedAt?: string | null;
+  mockupCover?: boolean;
 }) {
   const moderationStatus = normalizeListingModerationStatus(status ?? undefined);
   const isPublic = moderationStatus === 'approved';
@@ -421,6 +428,7 @@ function BaseCard({
         bottomOverlay={mediaBottomOverlay}
         selectionMode={selectionMode}
         selected={selected}
+        mockupCover={mockupCover}
         topRightActions={
           listingId && kind ? (
             <ListingOwnerTopActions
@@ -732,7 +740,7 @@ function JobCard({
   const nowMs = useSharedSecondTick();
   const industryLabel = findLabel(JOB_INDUSTRY_OPTIONS, l.industry);
   const imageUrl = coverImage(l.imageUrls);
-  const showMockup = l.coverMode === 'mockup' || (!l.coverMode && !imageUrl);
+  const showMockup = jobListingUsesMockupCover({ coverMode: l.coverMode, imageUrl, imageUrls: l.imageUrls });
   const isExpired =
     normalizeListingModerationStatus(l.status) === 'approved' &&
     !isJobListingActive(l.createdAt, new Date(nowMs || initialNowMs), l.bumpedAt);
@@ -754,14 +762,18 @@ function JobCard({
       fallbackContent={
         showMockup ? (
           <JobListingFallback
-            position={l.title}
-            salary={l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : undefined}
-            location={l.cityName}
-            seed={l.id}
+            industry={l.industry}
+            cityName={l.cityName}
+            zoneName={l.zoneName}
+            mapsUrl={l.mapsUrl}
+            locationAddress={l.locationAddress}
+            locationLat={l.locationLat}
+            locationLng={l.locationLng}
           />
         ) : undefined
       }
       fallbackIcon={BriefcaseIcon}
+      mockupCover={showMockup}
       listingId={l.id}
       kind="job"
       autoRefreshEnabled={autoRefreshEnabled}

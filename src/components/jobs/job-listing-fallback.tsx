@@ -1,357 +1,248 @@
+'use client';
+
 import * as React from 'react';
-import LocationOnOutlined from '@mui/icons-material/LocationOnOutlined';
-import PaymentsOutlined from '@mui/icons-material/PaymentsOutlined';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
-type JobListingTheme = {
-  background: string;
-  gradient: string;
-  board: string;
-  accent: string;
-  panel: string;
-  panelLabel: string;
+import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
+import { businessMapLocation } from '@/lib/google-maps-location';
+import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
+import { jobIndustryCoverTheme, type JobCoverTheme } from '@/lib/job-industry-themes';
+import { jobIndustryIcon } from '@/lib/job-industry-icons';
+
+/** Slim cover banner — between listing photos and the location map strip. */
+export const JOB_LISTING_COVER_ASPECT_RATIO = '21 / 9';
+
+/** Theme wash fades out by 54%; map pin centered in the right 62% zone. */
+const GRADIENT_END = '54%';
+const LEFT_PANEL_WIDTH = '38%';
+/** 38% left + half of 62% right = 69% */
+const MAP_CENTER_X = '69%';
+
+const MAP_TOP_CLIP_PX = 48;
+const MAP_BOTTOM_CLIP_PX = 72;
+const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 18%, rgba(0, 0, 0, 0) ${GRADIENT_END})`;
+
+/** Google Maps night land — matches LocationMapEmbed dark styling. */
+const GOOGLE_NIGHT_LAND = '#242f3e';
+const GOOGLE_NIGHT_FILTER =
+  'invert(1) hue-rotate(180deg) saturate(0.62) brightness(1.28) contrast(0.98)';
+
+type CoverTheme = JobCoverTheme;
+
+export type JobListingFallbackProps = {
+  industry?: string | null;
+  cityName?: string | null;
+  zoneName?: string | null;
+  mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
 };
 
-const THEMES: readonly JobListingTheme[] = [
-  {
-    background: '#ee8b17',
-    gradient:
-      'radial-gradient(circle at 50% 43%, rgba(255,237,171,0.55), transparent 35%), linear-gradient(135deg, #e77d0e 0%, #f19a1c 52%, #d96e0d 100%)',
-    board: '#080808',
-    accent: '#ffea00',
-    panel: '#fff7dc',
-    panelLabel: '#7a4a08',
-  },
-  {
-    background: '#1976d2',
-    gradient:
-      'radial-gradient(circle at 50% 38%, rgba(164,224,255,0.5), transparent 37%), linear-gradient(135deg, #0754ae 0%, #2386df 54%, #153c91 100%)',
-    board: '#07152e',
-    accent: '#d8ff38',
-    panel: '#f4ffe8',
-    panelLabel: '#31550d',
-  },
-  {
-    background: '#8145c6',
-    gradient:
-      'radial-gradient(circle at 50% 38%, rgba(255,198,239,0.42), transparent 37%), linear-gradient(135deg, #5f269d 0%, #914bd0 52%, #482077 100%)',
-    board: '#201033',
-    accent: '#ffdc3e',
-    panel: '#fff5d6',
-    panelLabel: '#704c00',
-  },
-  {
-    background: '#0d9d98',
-    gradient:
-      'radial-gradient(circle at 50% 40%, rgba(186,255,226,0.46), transparent 37%), linear-gradient(135deg, #08716f 0%, #12b8a7 52%, #075354 100%)',
-    board: '#062e36',
-    accent: '#ffe13b',
-    panel: '#effffb',
-    panelLabel: '#075c5b',
-  },
-  {
-    background: '#e65045',
-    gradient:
-      'radial-gradient(circle at 50% 42%, rgba(255,224,175,0.5), transparent 36%), linear-gradient(135deg, #b92e39 0%, #ed5a45 54%, #8c1f32 100%)',
-    board: '#321318',
-    accent: '#f5ff69',
-    panel: '#fff0de',
-    panelLabel: '#8a2a24',
-  },
-  {
-    background: '#83b51d',
-    gradient:
-      'radial-gradient(circle at 50% 42%, rgba(244,255,164,0.5), transparent 36%), linear-gradient(135deg, #4c7810 0%, #94c52d 52%, #315c0b 100%)',
-    board: '#13210b',
-    accent: '#f5f23a',
-    panel: '#fffde8',
-    panelLabel: '#48620a',
-  },
-  {
-    background: '#d84791',
-    gradient:
-      'radial-gradient(circle at 50% 40%, rgba(255,208,235,0.48), transparent 36%), linear-gradient(135deg, #a92472 0%, #e1539a 52%, #741b68 100%)',
-    board: '#2a0b23',
-    accent: '#bfff4a',
-    panel: '#fff1fa',
-    panelLabel: '#8a2468',
-  },
-] as const;
+function JobCoverThemeOverlay({ theme }: { theme: CoverTheme }) {
+  return (
+    <>
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: `linear-gradient(in oklab, ${theme.colorFrom} 0%, ${theme.colorMid} 28%, ${theme.colorMid} 52%)`,
+          maskImage: GRADIENT_FADE_MASK,
+          WebkitMaskImage: GRADIENT_FADE_MASK,
+        }}
+      />
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: `linear-gradient(in oklab, ${theme.colorFrom} 0%, ${theme.colorMid} 100%)`,
+          opacity: 0.5,
+          maskImage: GRADIENT_FADE_MASK,
+          WebkitMaskImage: GRADIENT_FADE_MASK,
+        }}
+      />
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 72%)`,
+          maskImage: GRADIENT_FADE_MASK,
+          WebkitMaskImage: GRADIENT_FADE_MASK,
+        }}
+      />
+    </>
+  );
+}
 
-type JobListingFallbackProps = {
-  position?: string | null;
-  salary?: string | null;
-  location?: string | null;
-  /** Posted listings pass their ID so the selected theme remains stable. */
-  seed?: string | null;
-};
+function JobCoverMapPreview({
+  query,
+  lat,
+  lng,
+}: {
+  query?: string;
+  lat?: number;
+  lng?: number;
+}) {
+  const hasPin =
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180;
 
-function themeIndexFromSeed(seed: string): number {
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  }
-  return hash % THEMES.length;
+  const trimmed = String(query || '').trim();
+  const mapQuery = hasPin ? `${lat},${lng}` : trimmed || 'Shqipëri';
+  const zoom = hasPin ? 15 : trimmed ? 13 : 8;
+  const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=${zoom}&output=embed`;
+
+  return (
+    <Box
+      aria-hidden
+      sx={(muiTheme) => ({
+        position: 'absolute',
+        inset: 0,
+        bgcolor: '#e8eaed',
+        overflow: 'hidden',
+        ...muiTheme.applyStyles('dark', {
+          bgcolor: GOOGLE_NIGHT_LAND,
+        }),
+      })}
+    >
+      <Box
+        key={embedSrc}
+        component="iframe"
+        title=""
+        src={embedSrc}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        tabIndex={-1}
+        sx={(muiTheme) => ({
+          border: 0,
+          position: 'absolute',
+          top: -MAP_TOP_CLIP_PX,
+          left: `calc(${MAP_CENTER_X} - 50%)`,
+          width: '100%',
+          height: `calc(100% + ${MAP_TOP_CLIP_PX + MAP_BOTTOM_CLIP_PX}px)`,
+          display: 'block',
+          pointerEvents: 'none',
+          colorScheme: 'light',
+          ...muiTheme.applyStyles('dark', {
+            filter: GOOGLE_NIGHT_FILTER,
+            WebkitFilter: GOOGLE_NIGHT_FILTER,
+          }),
+        })}
+      />
+    </Box>
+  );
 }
 
 /**
- * Compact, photo-free job cover inspired by printed hiring posters.
- * All listing details stay live so the artwork is useful in forms and cards.
+ * Photo-free job cover: full-bleed map, smooth theme fade on the left, large profession icon.
  */
-export function JobListingFallback({ position, salary, location, seed }: JobListingFallbackProps) {
-  const role = position?.trim() || 'POZICION I HAPUR';
-  const salaryLabel = salary?.trim() || 'Pagë e diskutueshme';
-  const locationLabel = location?.trim() || 'Shqipëri';
-  const hasSeed = Boolean(seed?.trim());
-  const [randomThemeIndex, setRandomThemeIndex] = React.useState(0);
+export function JobListingFallback({
+  industry,
+  cityName,
+  zoneName,
+  mapsUrl,
+  locationAddress,
+  locationLat,
+  locationLng,
+}: JobListingFallbackProps) {
+  const theme = jobIndustryCoverTheme(industry);
+  const IndustryIcon = jobIndustryIcon(industry);
+  const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, industry) || 'Punë';
+  const locationParts = [zoneName, cityName].filter(Boolean);
+  const locationLabel = locationAddress?.trim() || locationParts.join(', ') || 'Shqipëri';
 
-  React.useEffect(() => {
-    if (!hasSeed) setRandomThemeIndex(Math.floor(Math.random() * THEMES.length));
-  }, [hasSeed]);
-
-  const themeIndex = hasSeed ? themeIndexFromSeed(seed!.trim()) : randomThemeIndex;
-  const theme = THEMES[themeIndex] ?? THEMES[0];
+  const mapLocation =
+    businessMapLocation({
+      locationLat,
+      locationLng,
+      mapsUrl,
+      mapsPlaceQuery: locationAddress,
+      zoneName,
+      cityName,
+    }) ?? { query: 'Shqipëri' };
 
   return (
     <Box
       role="img"
-      aria-label={`${role}, ${salaryLabel}, ${locationLabel}`}
+      aria-label={`${industryLabel}, ${locationLabel}`}
       sx={{
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
         bgcolor: theme.background,
-        background: theme.gradient,
-        color: theme.board,
-        fontFamily: '"Arial Black", Impact, sans-serif',
       }}
     >
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          top: '7%',
-          left: '19%',
-          width: '13%',
-          aspectRatio: '1',
-          border: { xs: 'clamp(5px, 1.2vw, 9px) solid', sm: '9px solid' },
-          borderColor: theme.board,
-          borderRadius: '50%',
-          transform: 'rotate(-10deg)',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            width: '58%',
-            height: { xs: 'clamp(5px, 1.2vw, 9px)', sm: 9 },
-            right: '-48%',
-            bottom: '-20%',
-            bgcolor: theme.board,
-            transform: 'rotate(-43deg)',
-            transformOrigin: 'left center',
-          },
-        }}
-      />
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          top: '13%',
-          right: '12%',
-          width: 0,
-          height: 0,
-          borderLeft: '26px solid transparent',
-          borderRight: '26px solid transparent',
-          borderBottom: `44px solid ${theme.accent}`,
-          transform: 'rotate(30deg)',
-        }}
-      />
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          left: '8%',
-          bottom: '8%',
-          width: 0,
-          height: 0,
-          borderTop: '18px solid transparent',
-          borderBottom: '18px solid transparent',
-          borderLeft: `44px solid ${theme.board}`,
-          transform: 'rotate(8deg)',
-        }}
-      />
+      <JobCoverMapPreview query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
+      <JobCoverThemeOverlay theme={theme} />
 
       <Box
         aria-hidden
         sx={{
           position: 'absolute',
-          top: '21%',
-          left: '8%',
-          right: '8%',
-          bottom: '11%',
-          bgcolor: theme.board,
-          clipPath: 'polygon(0 4%, 100% 0, 93% 100%, 7% 96%)',
-          boxShadow: `0 10px 18px ${theme.board}55`,
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '15%',
-          left: '26%',
-          right: '23%',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: LEFT_PANEL_WIDTH,
           zIndex: 1,
-          px: 1.25,
-          py: 0.55,
-          bgcolor: theme.accent,
-          transform: 'rotate(-1deg)',
-          textAlign: 'center',
-          boxShadow: `0 4px 0 ${theme.board}22`,
-        }}
-      >
-        <Typography
-          component="span"
-          sx={{
-            display: 'block',
-            color: theme.board,
-            fontWeight: 950,
-            fontSize: 'clamp(0.78rem, 2.8vw, 1.55rem)',
-            letterSpacing: '0.08em',
-            lineHeight: 1,
-          }}
-        >
-          WE ARE
-        </Typography>
-      </Box>
-
-      <Typography
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          top: '28%',
-          left: '8%',
-          right: '8%',
-          zIndex: 0,
-          color: theme.accent,
-          fontWeight: 950,
-          fontSize: 'clamp(1.8rem, 9vw, 5rem)',
-          letterSpacing: '-0.06em',
-          lineHeight: 0.86,
-          textAlign: 'center',
-          transform: 'scaleX(0.92)',
-        }}
-      >
-        HIRING
-      </Typography>
-
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '41%',
-          left: '8%',
-          right: '8%',
-          bottom: '14%',
-          zIndex: 1,
-          boxSizing: 'border-box',
-          px: { xs: 1.5, sm: 2.5 },
-          py: { xs: 1.25, sm: 2 },
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-evenly',
-          bgcolor: theme.panel,
-          border: `2px solid ${theme.board}`,
-          boxShadow: `5px 5px 0 ${theme.board}`,
-          transform: 'rotate(1deg)',
-          textAlign: 'center',
-        }}
-      >
-        <Typography
-          component="span"
-          sx={{
-            display: 'block',
-            mb: 0.5,
-            color: theme.panelLabel,
-            fontFamily: 'inherit',
-            fontWeight: 800,
-            fontSize: 'clamp(0.62rem, 2vw, 1rem)',
-            letterSpacing: '0.12em',
-            lineHeight: 1.1,
-          }}
-        >
-          POZICIONI
-        </Typography>
-        <Typography
-          component="span"
-          sx={{
-            display: 'block',
-            color: theme.board,
-            fontFamily: 'inherit',
-            fontWeight: 950,
-            fontSize: 'clamp(0.96rem, 4vw, 2.2rem)',
-            letterSpacing: '-0.035em',
-            lineHeight: 1.08,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {role}
-        </Typography>
-        <Stack
-          direction="row"
-          spacing={{ xs: 0.7, sm: 1.5 }}
-          sx={{
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            mt: 1,
-            color: theme.board,
-            fontFamily: 'Arial, sans-serif',
-            fontWeight: 800,
-            fontSize: 'clamp(0.74rem, 2.7vw, 1.2rem)',
-            lineHeight: 1.15,
-          }}
-        >
-          <Stack direction="row" spacing={0.3} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <PaymentsOutlined sx={{ fontSize: '1em' }} />
-            <Typography component="span" sx={{ font: 'inherit', overflowWrap: 'anywhere' }}>
-              {salaryLabel}
-            </Typography>
-          </Stack>
-          <Box component="span" aria-hidden sx={{ color: theme.panelLabel }}>
-            •
-          </Box>
-          <Stack direction="row" spacing={0.3} sx={{ alignItems: 'center', minWidth: 0 }}>
-            <LocationOnOutlined sx={{ fontSize: '1em' }} />
-            <Typography component="span" sx={{ font: 'inherit', overflowWrap: 'anywhere' }}>
-              {locationLabel}
-            </Typography>
-          </Stack>
-        </Stack>
-      </Box>
-
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          right: '23%',
-          bottom: '3%',
-          width: '10%',
-          aspectRatio: '1',
-          border: { xs: 'clamp(5px, 1vw, 8px) solid', sm: '8px solid' },
-          borderColor: theme.accent,
-          borderRadius: '50%',
-          transform: 'rotate(12deg)',
-          '&::after': {
-            content: '""',
-            position: 'absolute',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: theme.iconColor,
+          pointerEvents: 'none',
+          filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
+          '& svg': {
             width: '72%',
-            height: { xs: 'clamp(5px, 1vw, 8px)', sm: 8 },
-            right: '-60%',
-            bottom: '-25%',
-            bgcolor: theme.accent,
-            transform: 'rotate(38deg)',
-            transformOrigin: 'left center',
+            height: '72%',
+            maxWidth: '100%',
+            maxHeight: '100%',
           },
         }}
-      />
+      >
+        <IndustryIcon weight="duotone" />
+      </Box>
+
+      {!locationParts.length && !locationAddress?.trim() && !mapsUrl?.trim() && locationLat == null ? (
+        <Box
+          aria-hidden
+          sx={(muiTheme) => ({
+            position: 'absolute',
+            right: 10,
+            bottom: 10,
+            zIndex: 2,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            px: 1,
+            py: 0.45,
+            borderRadius: 999,
+            bgcolor: alpha('#fff', 0.92),
+            color: 'text.primary',
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            ...muiTheme.applyStyles('dark', {
+              bgcolor: alpha('#000', 0.82),
+              color: '#fff',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
+            }),
+          })}
+        >
+          <MapPinIcon size={13} weight="fill" />
+          Shqipëri
+        </Box>
+      ) : null}
     </Box>
   );
 }

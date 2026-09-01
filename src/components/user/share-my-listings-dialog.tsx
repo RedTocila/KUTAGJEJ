@@ -24,6 +24,7 @@ import { ListingSharePage } from '@/components/public/listing-share/listing-shar
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLanguage } from '@/hooks/use-language';
+import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import {
   listMyBusinessListings,
   listMyProfessionalListings,
@@ -222,18 +223,19 @@ export function ShareMyListingsDialog({
       for (const l of jobs.listings ?? []) {
         if (l.status !== 'approved') continue;
         const url = listingJobPublicHref(l);
+        const thumbUrl = jobListingCoverImageUrl({ coverMode: l.coverMode, imageUrls: l.imageUrls });
         next.push({
           key: `job:${l.id}`,
           kind: 'job',
           title: l.title,
           subtitle: [l.cityName, l.industry].filter(Boolean).join(' · '),
-          imageUrl: coverImage(l.imageUrls),
+          imageUrl: thumbUrl,
           payload: {
             listingKind: 'job',
             listingId: l.id,
             title: l.title,
             category: t.kind.job,
-            imageUrl: coverImage(l.imageUrls),
+            imageUrl: thumbUrl,
             location: l.cityName || undefined,
             createdAt: l.createdAt,
             viewCount: l.viewCount,

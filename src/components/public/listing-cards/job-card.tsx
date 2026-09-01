@@ -22,8 +22,9 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
-import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
@@ -93,7 +94,8 @@ export function JobCard({
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const cardRating = resolveListingCardRating(null, sellerRating);
-  const displayImageUrl = listing.coverMode === 'mockup' ? null : listing.imageUrl;
+  const usesMockupCover = jobListingUsesMockupCover(listing);
+  const displayImageUrl = jobListingCoverImageUrl(listing);
 
   const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
@@ -124,16 +126,27 @@ export function JobCard({
           imageUrl={displayImageUrl}
           FallbackIcon={BriefcaseIcon}
           fallbackContent={
-            <JobListingFallback
-              position={listing.title}
-              salary={salaryLabel}
-              location={locationLabel}
-              seed={listing.id}
-            />
+            usesMockupCover ? (
+              <JobListingFallback
+                industry={listing.industry}
+                cityName={listing.cityName}
+                zoneName={listing.zoneName}
+                mapsUrl={listing.mapsUrl}
+                locationAddress={listing.locationAddress}
+                locationLat={listing.locationLat}
+                locationLng={listing.locationLng}
+              />
+            ) : undefined
           }
           alt={listing.title}
-          height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
+          height={displayImageUrl ? { xs: 185, md: 200 } : undefined}
+          aspectRatio={
+            displayImageUrl
+              ? variant === 'cover' || variant === 'compact'
+                ? '1 / 1'
+                : undefined
+              : JOB_LISTING_COVER_ASPECT_RATIO
+          }
           compact={variant === 'compact'}
           topLeftBadge={jobTypeLabel || undefined}
           shareCount={listing.shareCount}

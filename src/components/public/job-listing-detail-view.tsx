@@ -255,10 +255,13 @@ export function JobListingDetailView({
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             placeholderContent={
               <JobListingFallback
-                position={listing.title}
-                salary={salary}
-                location={locationLine || listing.cityName}
-                seed={listing.id}
+                industry={listing.industry}
+                cityName={listing.cityName}
+                zoneName={listing.zoneName}
+                mapsUrl={listing.mapsUrl}
+                locationAddress={listing.locationAddress}
+                locationLat={listing.locationLat}
+                locationLng={listing.locationLng}
               />
             }
             browseListHref={ownerPreview ? undefined : paths.public.jobs}

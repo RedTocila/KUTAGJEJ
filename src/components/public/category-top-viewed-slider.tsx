@@ -21,6 +21,7 @@ import type {
   PublicRealEstateListing,
   TopViewedListing,
 } from '@/lib/public-listings-client';
+import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
 import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
@@ -38,6 +39,13 @@ type SlideModel = {
   bottomRightLabel?: string | null;
   fallbackSalary?: string | null;
   fallbackLocation?: string | null;
+  fallbackIndustry?: string | null;
+  fallbackCityName?: string | null;
+  fallbackZoneName?: string | null;
+  fallbackMapsUrl?: string | null;
+  fallbackLocationAddress?: string | null;
+  fallbackLocationLat?: number | null;
+  fallbackLocationLng?: number | null;
   imageUrl: string | null;
   href: string;
 };
@@ -89,7 +97,14 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
         bottomRightLabel: [salaryLabel, locationLabel].filter(Boolean).join(' • '),
         fallbackSalary: salaryLabel,
         fallbackLocation: locationLabel,
-        imageUrl: l.coverMode === 'mockup' ? null : l.imageUrl,
+        fallbackIndustry: l.industry,
+        fallbackCityName: l.cityName,
+        fallbackZoneName: l.zoneName ?? null,
+        fallbackMapsUrl: l.mapsUrl ?? null,
+        fallbackLocationAddress: l.locationAddress ?? null,
+        fallbackLocationLat: l.locationLat ?? null,
+        fallbackLocationLng: l.locationLng ?? null,
+        imageUrl: jobListingCoverImageUrl(l),
         href: listingJobPublicHref(l),
       };
     }
@@ -209,10 +224,13 @@ export function CategoryTopViewedSlider({
                   fallbackContent={
                     verticalId === 'jobs' ? (
                       <JobListingFallback
-                        position={slide.title}
-                        salary={slide.fallbackSalary}
-                        location={slide.fallbackLocation}
-                        seed={slide.id}
+                        industry={slide.fallbackIndustry}
+                        cityName={slide.fallbackCityName}
+                        zoneName={slide.fallbackZoneName}
+                        mapsUrl={slide.fallbackMapsUrl}
+                        locationAddress={slide.fallbackLocationAddress}
+                        locationLat={slide.fallbackLocationLat}
+                        locationLng={slide.fallbackLocationLng}
                       />
                     ) : undefined
                   }

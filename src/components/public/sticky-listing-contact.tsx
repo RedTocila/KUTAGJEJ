@@ -214,6 +214,7 @@ export interface StickyListingContactProps {
   contactPhone?: string | null;
   listingTitle?: string | null;
   listingUrl?: string | null;
+  phoneOnlyContact?: boolean;
 }
 
 /**
@@ -228,6 +229,7 @@ export function StickyListingContact({
   contactPhone,
   listingTitle,
   listingUrl,
+  phoneOnlyContact,
 }: StickyListingContactProps) {
   const renderButton = () => (
     <ListingMessageButton
@@ -236,6 +238,7 @@ export function StickyListingContact({
       contactPhone={contactPhone}
       listingTitle={listingTitle}
       listingUrl={listingUrl}
+      phoneOnlyContact={phoneOnlyContact}
       label={label}
       hideIcon={hideIcon}
       variant="contained"

@@ -421,6 +421,7 @@ export function BusinessListingDetailView({
                         mobileCtaMode={listing.mobileCtaMode}
                         reservationsEnabled={listing.reservationsEnabled}
                         reservationPanel={reservePrimaryCta ? reservationPanelProps : undefined}
+                        phoneOnlyContact={listing.phoneOnlyContact}
                       />
                     </Box>
                   )}
@@ -434,6 +435,7 @@ export function BusinessListingDetailView({
                   mobileCtaMode={listing.mobileCtaMode}
                   reservationsEnabled={listing.reservationsEnabled}
                   reservationPanel={reservePrimaryCta ? reservationPanelProps : undefined}
+                  phoneOnlyContact={listing.phoneOnlyContact}
                 />
               )}
 

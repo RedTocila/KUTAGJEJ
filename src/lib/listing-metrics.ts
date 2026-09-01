@@ -6,6 +6,40 @@ import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 
 export type ListingMetricKind = 'real-estate' | 'car' | 'job' | 'marketplace' | 'businesses' | 'professionals';
 
+export type StatsPeriod = 'all' | '1d' | '7d' | '30d' | '90d';
+
+/** Owner dashboard: per-listing metrics for all time or a recent window. */
+export async function fetchOwnerPeriodMetrics(
+  period: StatsPeriod,
+  refs: { kind: ListingMetricKind; listingId: string }[]
+): Promise<{
+  period?: StatsPeriod;
+  metrics?: Record<string, ListingMetrics>;
+  totals?: { views: number; shares: number; saves: number };
+  error?: string;
+}> {
+  if (refs.length === 0) {
+    return { period, metrics: {}, totals: { views: 0, shares: 0, saves: 0 } };
+  }
+  try {
+    const items = refs.map((ref) => `${ref.kind}:${ref.listingId}`).join(',');
+    const params = new URLSearchParams({ period, items });
+    const res = await fetch(getApiUrl(`/listing-metrics/owner-period?${params}`), {
+      headers: authHeaders(),
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Gabim.' };
+    return {
+      period: (data.period as StatsPeriod) ?? period,
+      metrics: (data.metrics ?? {}) as Record<string, ListingMetrics>,
+      totals: data.totals as { views: number; shares: number; saves: number },
+    };
+  } catch {
+    return { error: 'Nuk u arrit lidhja me serverin.' };
+  }
+}
+
 export interface ListingMetrics {
   viewCount: number;
   shareCount: number;

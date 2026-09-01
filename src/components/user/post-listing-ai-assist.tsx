@@ -60,6 +60,7 @@ import { useVisualViewportBox } from '@/hooks/use-visual-viewport';
 import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { useListingFormSnapshotRef } from '@/components/user/listing-form-snapshot-context';
+import { usePostListingFrameActions } from '@/components/user/post-listing-frame-actions';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
 
@@ -99,11 +100,14 @@ export function PostListingAiAssist({
   onApply,
   mode = 'create',
   currentListing = null,
+  placement = 'inline',
 }: {
   category: ListingCategoryKey;
   onApply: (initial: Record<string, unknown>) => void;
   mode?: 'create' | 'edit';
   currentListing?: Record<string, unknown> | null;
+  /** `frame` registers the trigger next to the dashboard close (X) button. */
+  placement?: 'inline' | 'frame';
   /** @deprecated Always a single-line bar; kept for call-site compatibility. */
   defaultOpen?: boolean;
   /** @deprecated Always a single-line bar; kept for call-site compatibility. */
@@ -386,36 +390,48 @@ export function PostListingAiAssist({
     setSuccess(null);
   };
 
+  const triggerButton = (
+    <Button
+      id={POST_LISTING_AI_BAR_ID}
+      type="button"
+      onClick={openDrawer}
+      startIcon={<SparkleIcon size={14} weight="fill" />}
+      aria-haspopup="dialog"
+      aria-expanded={drawerOpen}
+      sx={{
+        ...productButtonSx,
+        minHeight: 32,
+        px: 1.25,
+        py: 0.25,
+        fontSize: '0.8125rem',
+        fontWeight: 700,
+        borderRadius: 999,
+        bgcolor: AI_SEARCH_BLUE_MUTED,
+        color: AI_SEARCH_BLUE,
+        border: '1px solid',
+        borderColor: AI_SEARCH_BLUE_SOFT,
+        scrollMarginTop: 72,
+        flexShrink: 0,
+        '& .MuiButton-startIcon': { mr: 0.5 },
+        '&:hover': {
+          bgcolor: AI_SEARCH_BLUE_SOFT,
+          color: AI_SEARCH_BLUE_HOVER,
+          boxShadow: 'none',
+        },
+      }}
+    >
+      {buttonLabel}
+    </Button>
+  );
+
+  usePostListingFrameActions(
+    () => (placement === 'frame' ? triggerButton : null),
+    [placement, buttonLabel, drawerOpen, openDrawer],
+  );
+
   return (
     <>
-      <Button
-        id={POST_LISTING_AI_BAR_ID}
-        type="button"
-        onClick={openDrawer}
-        startIcon={<SparkleIcon size={18} weight="fill" />}
-        aria-haspopup="dialog"
-        aria-expanded={drawerOpen}
-        sx={{
-          ...productButtonSx,
-          alignSelf: { xs: 'stretch', sm: 'flex-start' },
-          minHeight: 44,
-          px: 2,
-          borderRadius: 999,
-          bgcolor: AI_SEARCH_BLUE_MUTED,
-          color: AI_SEARCH_BLUE,
-          border: '1px solid',
-          borderColor: AI_SEARCH_BLUE_SOFT,
-          scrollMarginTop: 72,
-          '& .MuiButton-startIcon': { mr: 0.75 },
-          '&:hover': {
-            bgcolor: AI_SEARCH_BLUE_SOFT,
-            color: AI_SEARCH_BLUE_HOVER,
-            boxShadow: 'none',
-          },
-        }}
-      >
-        {buttonLabel}
-      </Button>
+      {placement === 'inline' ? triggerButton : null}
 
       <Drawer
         anchor="bottom"

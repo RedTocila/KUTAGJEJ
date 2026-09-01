@@ -101,6 +101,7 @@ export default function UserBusinessesDashboardPage() {
               <ListingFormSnapshotProvider>
               <PostListingAiAssist
                 category="businesses"
+                placement="frame"
                 onApply={(initial) => {
                   setAiPrefill(initial);
                 }}

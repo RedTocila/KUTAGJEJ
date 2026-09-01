@@ -22,6 +22,8 @@ export interface ListingMessageButtonProps extends Omit<ButtonProps, 'onClick'> 
   contactPhone?: string | null;
   listingTitle?: string | null;
   listingUrl?: string | null;
+  /** Phone / WhatsApp only — no in-app messages (managed listings). */
+  phoneOnlyContact?: boolean;
 }
 
 function hasStoredSession(): boolean {
@@ -40,6 +42,7 @@ export function ListingMessageButton({
   contactPhone,
   listingTitle,
   listingUrl,
+  phoneOnlyContact = false,
   ...buttonProps
 }: ListingMessageButtonProps) {
   const router = useRouter();
@@ -57,6 +60,11 @@ export function ListingMessageButton({
   const handleClick = async () => {
     setError(null);
     if (loading) return;
+
+    if (phoneOnlyContact) {
+      setGuestOpen(true);
+      return;
+    }
 
     if (isLoading) {
       await checkSession();
@@ -124,6 +132,7 @@ export function ListingMessageButton({
         listingUrl={listingUrl}
         listingKind={listingKind}
         listingId={listingId}
+        hideAccountOption={phoneOnlyContact}
       />
     </>
   );

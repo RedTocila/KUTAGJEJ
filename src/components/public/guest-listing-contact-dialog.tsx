@@ -26,6 +26,8 @@ export interface GuestListingContactDialogProps {
   listingUrl?: string | null;
   listingKind?: string;
   listingId?: string;
+  /** Hide “open account / message” — phone and WhatsApp only. */
+  hideAccountOption?: boolean;
 }
 
 const actionBtnSx = {
@@ -45,6 +47,7 @@ export function GuestListingContactDialog({
   listingUrl,
   listingKind,
   listingId,
+  hideAccountOption = false,
 }: GuestListingContactDialogProps) {
   const t = useCopy();
   const callHref = telHref(contactPhone);
@@ -109,6 +112,7 @@ export function GuestListingContactDialog({
               {t.listingContact.whatsapp}
             </Button>
           ) : null}
+          {!hideAccountOption ? (
           <Button
             type="button"
             fullWidth
@@ -180,6 +184,7 @@ export function GuestListingContactDialog({
               </Box>
             </Stack>
           </Button>
+          ) : null}
         </Stack>
       </ProductDialogContent>
     </ProductDialog>

@@ -17,6 +17,7 @@ export function PostListingHeader({
   iconBgcolor,
   descriptionColor,
   closeHref = paths.home,
+  actions,
 }: {
   icon: PhosphorIcon;
   title: string;
@@ -25,6 +26,8 @@ export function PostListingHeader({
   iconBgcolor?: string;
   descriptionColor?: string;
   closeHref?: string;
+  /** Shown immediately left of the close (X) button. */
+  actions?: React.ReactNode;
 }) {
   const iconTileSx: SxProps<Theme> = {
     width: 40,
@@ -65,7 +68,10 @@ export function PostListingHeader({
           >
             {title}
           </Typography>
-          <UserDashboardCloseButton href={closeHref} sx={{ flexShrink: 0, mt: -0.25 }} />
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0 }}>
+            {actions}
+            <UserDashboardCloseButton href={closeHref} sx={{ mt: -0.25 }} />
+          </Stack>
         </Stack>
         {description ? (
           <Typography

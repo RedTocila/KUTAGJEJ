@@ -211,6 +211,99 @@ async function incrementEngagement(kind, listingId, event) {
   return metricsFromEngagementRow(row) ?? ensureEngagement(kind, listingId);
 }
 
+const STATS_PERIODS = new Set(['all', '1d', '7d', '30d', '90d']);
+
+function normalizeStatsPeriod(raw) {
+  const period = String(raw || 'all').trim().toLowerCase();
+  return STATS_PERIODS.has(period) ? period : 'all';
+}
+
+function statsPeriodSince(period) {
+  const now = Date.now();
+  if (period === '1d') return new Date(now - 24 * 60 * 60 * 1000);
+  if (period === '7d') return new Date(now - 7 * 24 * 60 * 60 * 1000);
+  if (period === '30d') return new Date(now - 30 * 24 * 60 * 60 * 1000);
+  if (period === '90d') return new Date(now - 90 * 24 * 60 * 60 * 1000);
+  return null;
+}
+
+async function logMetricEvent(kind, listingId, eventType) {
+  if (eventType !== 'view' && eventType !== 'share') return;
+  try {
+    const { error } = await getSupabaseAdmin().from('listing_metric_events').insert({
+      listing_kind: kind,
+      listing_id: listingId,
+      event_type: eventType,
+    });
+    if (error && !/listing_metric_events/i.test(String(error.message || ''))) {
+      console.warn('logMetricEvent:', error.message || error);
+    }
+  } catch (err) {
+    console.warn('logMetricEvent:', err?.message || err);
+  }
+}
+
+/**
+ * Per-listing metrics for a time window. Saves use saved_listings.created_at;
+ * views/shares use listing_metric_events (logged from this deploy onward).
+ */
+async function fetchPeriodMetricsMap(refs, period) {
+  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
+  if (valid.length === 0) return new Map();
+
+  const normalized = normalizeStatsPeriod(period);
+  if (normalized === 'all') return fetchMetricsMap(valid);
+
+  const since = statsPeriodSince(normalized);
+  if (!since) return fetchMetricsMap(valid);
+
+  const sb = getSupabaseAdmin();
+  const orFilter = valid.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
+  const sinceIso = since.toISOString();
+
+  const [eventsResult, savesResult] = await Promise.all([
+    sb
+      .from('listing_metric_events')
+      .select('listing_kind, listing_id, event_type')
+      .gte('created_at', sinceIso)
+      .or(orFilter),
+    sb.from('saved_listings').select('listing_kind, listing_id').gte('created_at', sinceIso).or(orFilter),
+  ]);
+
+  if (eventsResult.error && !/listing_metric_events/i.test(String(eventsResult.error.message || ''))) {
+    throw eventsResult.error;
+  }
+  if (savesResult.error) throw savesResult.error;
+
+  const viewCounts = new Map();
+  const shareCounts = new Map();
+  for (const row of eventsResult.data || []) {
+    const key = metricsKey(row.listing_kind, row.listing_id);
+    if (row.event_type === 'share') {
+      shareCounts.set(key, (shareCounts.get(key) || 0) + 1);
+    } else if (row.event_type === 'view') {
+      viewCounts.set(key, (viewCounts.get(key) || 0) + 1);
+    }
+  }
+
+  const saveCounts = new Map();
+  for (const row of savesResult.data || []) {
+    const key = metricsKey(row.listing_kind, row.listing_id);
+    saveCounts.set(key, (saveCounts.get(key) || 0) + 1);
+  }
+
+  const out = new Map();
+  for (const ref of valid) {
+    const key = metricsKey(ref.kind, ref.listingId);
+    out.set(key, {
+      viewCount: viewCounts.get(key) || 0,
+      shareCount: shareCounts.get(key) || 0,
+      saveCount: saveCounts.get(key) || 0,
+    });
+  }
+  return out;
+}
+
 async function countSaves(kind, listingId) {
   const sb = getSupabaseAdmin();
   const { count, error } = await sb
@@ -419,6 +512,9 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null,
   let engagement = null;
   if (event === 'share' || (incremented && event !== 'hot_lead')) {
     engagement = await incrementEngagement(kind, listingId, event);
+    if (event === 'share' || (event === 'view' && incremented)) {
+      await logMetricEvent(kind, listingId, event);
+    }
   }
 
   // Batched views only need to record the event. Avoid rebuilding the full
@@ -563,6 +659,8 @@ module.exports = {
   visitorKeyFromRequest,
   saverFromUser,
   fetchMetricsMap,
+  fetchPeriodMetricsMap,
+  normalizeStatsPeriod,
   attachMetricsToListing,
   attachMetricsToListings,
   attachOwnerMetrics,

@@ -239,6 +239,7 @@ function RealEstatePriceContactAside(props: {
                 WhatsApp
               </Button>
             ) : null}
+            {!listing.phoneOnlyContact ? (
             <ListingMessageButton
               listingKind="real-estate"
               listingId={listing.id}
@@ -257,6 +258,7 @@ function RealEstatePriceContactAside(props: {
                 '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
               }}
             />
+            ) : null}
           </>
         ) : (
           <Button variant="contained" disabled fullWidth size="large" sx={productButtonSx}>
@@ -286,6 +288,7 @@ function StickyContactBar(props: {
   contactPhone: string;
   listingTitle: string;
   listingUrl: string;
+  phoneOnlyContact?: boolean;
 }) {
   return (
     <StickyListingContact
@@ -294,6 +297,7 @@ function StickyContactBar(props: {
       contactPhone={props.contactPhone}
       listingTitle={props.listingTitle}
       listingUrl={props.listingUrl}
+      phoneOnlyContact={props.phoneOnlyContact}
     />
   );
 }
@@ -658,6 +662,7 @@ export function RealEstateListingDetailView({
                   contactPhone={displayPhone}
                   listingTitle={listing.title}
                   listingUrl={canonicalUrl}
+                  phoneOnlyContact={listing.phoneOnlyContact}
                 />
               )}
 

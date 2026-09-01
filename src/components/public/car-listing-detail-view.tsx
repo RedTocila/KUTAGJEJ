@@ -281,6 +281,7 @@ function CarPriceContactAside(props: {
                 WhatsApp
               </Button>
             ) : null}
+            {!listing.phoneOnlyContact ? (
             <ListingMessageButton
               listingKind="cars"
               listingId={listing.id}
@@ -299,6 +300,7 @@ function CarPriceContactAside(props: {
                 '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' },
               }}
             />
+            ) : null}
           </>
         ) : (
           <Button variant="contained" disabled fullWidth size="large" sx={productButtonSx}>
@@ -633,6 +635,7 @@ export function CarListingDetailView({
                   contactPhone={displayPhone}
                   listingTitle={listing.title}
                   listingUrl={canonicalUrl}
+                  phoneOnlyContact={listing.phoneOnlyContact}
                 />
               )}
 

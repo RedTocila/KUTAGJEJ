@@ -26,6 +26,7 @@ export function BusinessStickyMobileCta({
   mobileCtaMode,
   reservationsEnabled,
   reservationPanel,
+  phoneOnlyContact,
 }: {
   listingId: string;
   listingTitle: string;
@@ -34,6 +35,7 @@ export function BusinessStickyMobileCta({
   mobileCtaMode?: BusinessMobileCtaMode | null;
   reservationsEnabled?: boolean;
   reservationPanel?: ReservePanelProps;
+  phoneOnlyContact?: boolean;
 }) {
   const mode = businessMobileCtaModeFromListing({ mobileCtaMode, reservationsEnabled });
 
@@ -47,6 +49,7 @@ export function BusinessStickyMobileCta({
         contactPhone={contactPhone}
         listingTitle={listingTitle}
         listingUrl={listingUrl}
+        phoneOnlyContact={phoneOnlyContact}
       />
     );
   }

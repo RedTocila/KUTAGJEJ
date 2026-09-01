@@ -7,6 +7,8 @@ const {
   recordListingEvent,
   toggleSavedListing,
   fetchMetricsMap,
+  fetchPeriodMetricsMap,
+  normalizeStatsPeriod,
   saverFromUser,
 } = require('../lib/listing-metrics');
 const { getSavedKeysForSaver, listSavedListingsForSaver } = require('../lib/saved-listings-query');
@@ -106,6 +108,40 @@ router.post('/save', authMiddleware, requirePortalUser, async (req, res) => {
     res.json({ saved: result.saved, ...result.metrics });
   } catch (err) {
     console.error('POST /listing-metrics/save:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** GET /api/listing-metrics/owner-period?period=all|1d|7d|30d|90d&items=kind:id,kind:id */
+router.get('/owner-period', authMiddleware, requirePortalUser, async (req, res) => {
+  try {
+    const period = normalizeStatsPeriod(req.query.period);
+    const raw = String(req.query.items ?? '').trim();
+    const refs = raw
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const colon = part.indexOf(':');
+        if (colon <= 0) return null;
+        const kind = part.slice(0, colon);
+        const listingId = part.slice(colon + 1);
+        if (!isValidKind(kind)) return null;
+        return { kind, listingId };
+      })
+      .filter(Boolean);
+
+    const map = await fetchPeriodMetricsMap(refs, period);
+    const metrics = Object.fromEntries(map.entries());
+    const totals = { views: 0, shares: 0, saves: 0 };
+    for (const m of map.values()) {
+      totals.views += m.viewCount ?? 0;
+      totals.shares += m.shareCount ?? 0;
+      totals.saves += m.saveCount ?? 0;
+    }
+    res.json({ period, metrics, totals });
+  } catch (err) {
+    console.error('GET /listing-metrics/owner-period:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

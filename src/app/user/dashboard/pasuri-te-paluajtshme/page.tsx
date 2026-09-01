@@ -358,6 +358,7 @@ export default function UserPostListingPage() {
       {showFormShell && activeMeta ? (
         <OkazionTheme enabled={wantsOkazion}>
           <>
+          <ListingFormSnapshotProvider>
           <PostListingHeader
             icon={
               wantsOkazion
@@ -384,13 +385,14 @@ export default function UserPostListingPage() {
                   : undefined
             }
             closeHref={wantsAi ? aiReturnHref : paths.home}
+            actions={
+              activeCategory ? (
+                <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
+              ) : null
+            }
           />
 
           <PostListingFormSurface>
-            <ListingFormSnapshotProvider>
-            {activeCategory ? (
-              <PostListingAiAssist category={activeCategory} onApply={handleAiApply} />
-            ) : null}
             {aiReady ? (
               <>
                 {phase === 'real-estate-form' ? (
@@ -433,8 +435,8 @@ export default function UserPostListingPage() {
             ) : (
               <PostListingFormFieldsSkeleton />
             )}
-            </ListingFormSnapshotProvider>
           </PostListingFormSurface>
+          </ListingFormSnapshotProvider>
           </>
         </OkazionTheme>
       ) : null}

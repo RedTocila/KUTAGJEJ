@@ -23,6 +23,7 @@ const {
 const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isOurStorageUrl } = require('../lib/storage-uploads');
 const { isReservationMessageBody } = require('../lib/business-reservation-message');
+const { phoneOnlyContactForPosterId } = require('../lib/directory-listing-limits');
 
 const router = express.Router();
 
@@ -485,6 +486,12 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
 
     if (isSamePortalUser({ id: listing.posterId, model: listing.posterModel }, userRef)) {
       return res.status(400).json({ message: 'Nuk mund të dërgoni mesazh te njoftimi juaj.' });
+    }
+
+    if (await phoneOnlyContactForPosterId(listing.posterId)) {
+      return res.status(403).json({
+        message: 'Ky njoftim pranon vetëm kontakt me telefon ose WhatsApp.',
+      });
     }
 
     const sb = getSupabaseAdmin();

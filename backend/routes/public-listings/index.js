@@ -27,6 +27,7 @@ const {
   formatMarketplaceDetail,
   formatDirectoryDetail,
 } = require('../../lib/public-listings/formatters');
+const { phoneOnlyContactForPosterId } = require('../../lib/directory-listing-limits');
 const {
   latestRealEstate,
   latestCars,
@@ -322,6 +323,13 @@ async function resolvePosterAndBadges(posterId, verifiedContext, viewerId) {
   return { seller, sellerVerified: isVerified, sellerTrustBadge: hasTrust };
 }
 
+async function withPhoneOnlyContact(listing, posterId) {
+  return {
+    ...listing,
+    phoneOnlyContact: await phoneOnlyContactForPosterId(posterId),
+  };
+}
+
 /** Detail pages must never be CDN-stale (announcements, reviews, contact). */
 router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) => {
   try {
@@ -334,7 +342,7 @@ router.get('/real-estate/:id', publicNoStore(), optionalAuth, async (req, res) =
     const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, {
-      ...formatRealEstateDetail(doc, cityById, seller),
+      ...(await withPhoneOnlyContact(formatRealEstateDetail(doc, cityById, seller), doc.posterId)),
       sellerVerified,
       sellerTrustBadge,
     });
@@ -356,7 +364,7 @@ router.get('/cars/:id', publicNoStore(), optionalAuth, async (req, res) => {
     const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, {
-      ...formatCarDetail(doc, cityById, seller),
+      ...(await withPhoneOnlyContact(formatCarDetail(doc, cityById, seller), doc.posterId)),
       sellerVerified,
       sellerTrustBadge,
     });
@@ -382,7 +390,7 @@ router.get('/jobs/:id', publicNoStore(), optionalAuth, async (req, res) => {
     );
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, {
-      ...formatJobDetail(doc, cityById, seller),
+      ...(await withPhoneOnlyContact(formatJobDetail(doc, cityById, seller), doc.posterId)),
       sellerVerified,
       sellerTrustBadge,
     });
@@ -404,7 +412,7 @@ router.get('/marketplace/:id', publicNoStore(), optionalAuth, async (req, res) =
     const { seller, sellerVerified, sellerTrustBadge } = await resolvePosterAndBadges(doc.posterId, null, req.user?.id);
     const cityById = await buildCityIndex([doc]);
     const listing = await attachDetailMetrics(req, {
-      ...formatMarketplaceDetail(doc, cityById, seller),
+      ...(await withPhoneOnlyContact(formatMarketplaceDetail(doc, cityById, seller), doc.posterId)),
       sellerVerified,
       sellerTrustBadge,
     });
@@ -430,7 +438,10 @@ router.get('/businesses/:id', publicNoStore(), optionalAuth, async (req, res) =>
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await reviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, {
-      ...formatDirectoryDetail(doc, cityById, seller, reviewStats),
+      ...(await withPhoneOnlyContact(
+        formatDirectoryDetail(doc, cityById, seller, reviewStats),
+        doc.posterId,
+      )),
       sellerVerified,
       sellerTrustBadge,
     });
@@ -460,7 +471,10 @@ router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res)
     const cityById = await buildCityIndex([doc]);
     const reviewStats = await professionalReviewStatsByListingIds([doc.id]);
     const listing = await attachDetailMetrics(req, {
-      ...formatDirectoryDetail(doc, cityById, seller, reviewStats),
+      ...(await withPhoneOnlyContact(
+        formatDirectoryDetail(doc, cityById, seller, reviewStats),
+        doc.posterId,
+      )),
       sellerVerified,
       sellerTrustBadge,
     });

@@ -56,6 +56,7 @@ export default function UserProfessionalsDashboardPage() {
             <ListingFormSnapshotProvider>
             <PostListingAiAssist
               category="professionals"
+              placement="frame"
               onApply={(initial) => {
                 setAiPrefill(initial);
               }}

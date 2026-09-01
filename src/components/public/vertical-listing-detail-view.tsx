@@ -262,6 +262,7 @@ function ListingContactAside(props: {
             Nr. kontakti i padisponueshëm
           </Button>
         )}
+        {!listing.phoneOnlyContact ? (
         <ListingMessageButton
           listingKind={metricKindToConversationKind(listing.kind as ListingMetricKind)}
           listingId={listing.id}
@@ -273,6 +274,7 @@ function ListingContactAside(props: {
           size="large"
           sx={{ ...productButtonSx, py: 1.2 }}
         />
+        ) : null}
       </Stack>
     </Stack>
   );
@@ -580,6 +582,7 @@ export function VerticalListingDetailView(props: {
                 contactPhone={displayPhone}
                 listingTitle={listingTitle(listing)}
                 listingUrl={canonicalUrl}
+                phoneOnlyContact={'phoneOnlyContact' in listing ? listing.phoneOnlyContact : undefined}
               />
             )}
 

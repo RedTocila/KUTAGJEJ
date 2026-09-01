@@ -297,16 +297,19 @@ export function BusinessListingDetailDesktop({
                       Telefono
                     </Button>
                   </Stack>
+                  {!listing.phoneOnlyContact ? (
                   <ListingMessageButton
                     listingKind="businesses"
                     listingId={listing.id}
                     contactPhone={telHref}
                     listingTitle={listing.title}
                     listingUrl={canonicalUrl}
+                    phoneOnlyContact={listing.phoneOnlyContact}
                     fullWidth
                     variant="outlined"
                     sx={{ ...productButtonSx, py: 1.1 }}
                   />
+                  ) : null}
                 </Stack>
               </Box>
             </Stack>

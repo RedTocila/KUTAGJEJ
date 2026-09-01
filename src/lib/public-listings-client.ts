@@ -130,6 +130,8 @@ export interface PublicRealEstateListingDetail extends ListingMetricsFields {
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  /** When true, buyers may call / WhatsApp only — no in-app messages. */
+  phoneOnlyContact?: boolean;
 }
 
 export interface PublicCarListing extends ListingMetricsFields {
@@ -169,6 +171,7 @@ export interface PublicCarListingDetail extends Omit<PublicCarListing, 'descript
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  phoneOnlyContact?: boolean;
 }
 
 export interface PublicJobListing extends ListingMetricsFields {
@@ -214,6 +217,7 @@ export interface PublicJobListingDetail extends Omit<PublicJobListing, 'descript
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  phoneOnlyContact?: boolean;
 }
 
 export interface PublicMarketplaceListing extends ListingMetricsFields {
@@ -246,6 +250,7 @@ export interface PublicMarketplaceListingDetail extends Omit<PublicMarketplaceLi
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  phoneOnlyContact?: boolean;
 }
 
 export interface PublicDirectoryListing extends ListingMetricsFields {
@@ -293,6 +298,8 @@ export interface PublicDirectoryListing extends ListingMetricsFields {
   announcementBannerUrl?: string | null;
   /** Profesionistë — typical response time (hours). */
   responseTimeHours?: number | null;
+  /** When true, buyers may call / WhatsApp only — no in-app messages. */
+  phoneOnlyContact?: boolean;
 }
 
 export type PublicBusinessMenuCategory = { id: string; name: string; sortOrder: number };

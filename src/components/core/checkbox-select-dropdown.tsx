@@ -68,6 +68,95 @@ type MultipleProps = BaseProps & {
 
 export type CheckboxSelectDropdownProps = SingleProps | MultipleProps;
 
+function OptionsScrollArea({
+  children,
+  resetKey,
+}: {
+  children: React.ReactNode;
+  resetKey: string | number;
+}) {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = React.useState(false);
+
+  const sync = React.useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanScrollDown(el.scrollHeight - el.clientHeight - el.scrollTop > 12);
+  }, []);
+
+  React.useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return undefined;
+    el.scrollTop = 0;
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    el.addEventListener('scroll', sync, { passive: true });
+    return () => {
+      ro.disconnect();
+      el.removeEventListener('scroll', sync);
+    };
+  }, [sync, resetKey]);
+
+  return (
+    <Box sx={{ position: 'relative', flexShrink: 0 }}>
+      <Box
+        ref={scrollerRef}
+        sx={{
+          maxHeight: { xs: 'min(50dvh, 360px)', sm: 'min(45vh, 320px)' },
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
+          py: 0.75,
+          px: 0.5,
+          scrollbarWidth: 'thin',
+        }}
+      >
+        {children}
+      </Box>
+      {canScrollDown ? (
+        <Box
+          aria-hidden
+          sx={{
+            pointerEvents: 'none',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 56,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            pb: 0.5,
+            background:
+              'linear-gradient(to top, rgb(var(--mui-palette-background-paperChannel) / 1) 30%, rgb(var(--mui-palette-background-paperChannel) / 0) 100%)',
+          }}
+        >
+          <Box
+            sx={{
+              width: 26,
+              height: 26,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              color: 'primary.main',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.18)',
+            }}
+          >
+            <CaretDownIcon size={13} weight="bold" />
+          </Box>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
 function summaryForMultiple(
   values: string[],
   options: readonly CheckboxSelectOption[],
@@ -291,18 +380,7 @@ export function CheckboxSelectDropdown(props: CheckboxSelectDropdownProps) {
             </Box>
           ) : null}
 
-          <Box
-            sx={{
-              maxHeight: { xs: 'min(50dvh, 360px)', sm: 'min(45vh, 320px)' },
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'contain',
-              touchAction: 'pan-y',
-              py: 0.75,
-              px: 0.5,
-            }}
-          >
+          <OptionsScrollArea resetKey={`${open}-${query}-${filtered.length}`}>
             <Box
               sx={{
                 display: 'grid',
@@ -350,7 +428,7 @@ export function CheckboxSelectDropdown(props: CheckboxSelectDropdownProps) {
                 {t.common.noResults}
               </Typography>
             ) : null}
-          </Box>
+          </OptionsScrollArea>
 
           {panelFooter ? (
             <Stack

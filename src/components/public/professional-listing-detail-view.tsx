@@ -381,6 +381,7 @@ export function ProfessionalListingDetailView({
                 contactPhone={listing.contactPhone ?? listing.seller?.phone}
                 listingTitle={displayName || listing.title}
                 listingUrl={canonicalUrl}
+                phoneOnlyContact={listing.phoneOnlyContact}
               />
             )}
 

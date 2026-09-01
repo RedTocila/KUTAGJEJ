@@ -11,6 +11,8 @@ import {
   InputAdornment,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
@@ -22,6 +24,7 @@ import { PaperPlaneTilt as ShareIcon } from '@phosphor-icons/react/dist/ssr/Pape
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { StatsPageSkeleton } from '@/components/core/content-skeletons';
+import { portalToggleGroupSx } from '@/components/user/portal-cards';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
@@ -34,7 +37,8 @@ import {
   listMyMarketplaceListings,
   listMyRealEstateListings,
 } from '@/lib/listings-client';
-import type { ListingMetricKind } from '@/lib/listing-metrics';
+import type { ListingMetricKind, StatsPeriod } from '@/lib/listing-metrics';
+import { fetchOwnerPeriodMetrics, listingMetricsKey } from '@/lib/listing-metrics';
 import { paths } from '@/paths';
 
 type StatRow = {
@@ -45,10 +49,15 @@ type StatRow = {
   title: string;
   status: string;
   imageUrl: string | null;
-  viewCount: number;
-  shareCount: number;
-  saveCount: number;
 };
+
+const STATS_PERIOD_OPTIONS: { value: StatsPeriod; label: string }[] = [
+  { value: 'all', label: 'Të gjitha' },
+  { value: '1d', label: 'Sot' },
+  { value: '7d', label: '7 ditë' },
+  { value: '30d', label: '30 ditë' },
+  { value: '90d', label: '90 ditë' },
+];
 
 function firstImageUrl(urls: string[] | null | undefined): string | null {
   const url = urls?.find((u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim()));
@@ -140,6 +149,12 @@ export default function UserStatisticsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<StatRow[]>([]);
+  const [period, setPeriod] = React.useState<StatsPeriod>('all');
+  const [metricsLoading, setMetricsLoading] = React.useState(false);
+  const [periodMetrics, setPeriodMetrics] = React.useState<
+    Record<string, { viewCount: number; shareCount: number; saveCount: number }>
+  >({});
+  const [periodTotals, setPeriodTotals] = React.useState({ views: 0, shares: 0, saves: 0 });
   const [search, setSearch] = React.useState('');
   const deferredSearch = React.useDeferredValue(search);
   const searchQuery = React.useMemo(() => normalizeSearch(deferredSearch), [deferredSearch]);
@@ -188,9 +203,6 @@ export default function UserStatisticsPage() {
           title: l.title || 'Pa titull',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
       for (const l of cars.listings ?? []) {
@@ -202,9 +214,6 @@ export default function UserStatisticsPage() {
           title: [l.make, l.model, l.variant].filter(Boolean).join(' ') || 'Makinë',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
       for (const l of jobs.listings ?? []) {
@@ -216,9 +225,6 @@ export default function UserStatisticsPage() {
           title: l.title || 'Pa titull',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
       for (const l of mkt.listings ?? []) {
@@ -230,9 +236,6 @@ export default function UserStatisticsPage() {
           title: l.title || 'Pa titull',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
       for (const l of biz.listings ?? []) {
@@ -244,9 +247,6 @@ export default function UserStatisticsPage() {
           title: l.title || 'Pa titull',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
       for (const l of pro.listings ?? []) {
@@ -258,13 +258,9 @@ export default function UserStatisticsPage() {
           title: l.title || 'Pa titull',
           status: l.status,
           imageUrl: firstImageUrl(l.imageUrls),
-          viewCount: l.viewCount ?? 0,
-          shareCount: l.shareCount ?? 0,
-          saveCount: l.saveCount ?? 0,
         });
       }
 
-      next.sort((a, b) => b.viewCount - a.viewCount || b.saveCount - a.saveCount);
       setRows(next);
       setLoading(false);
     })();
@@ -273,9 +269,51 @@ export default function UserStatisticsPage() {
     };
   }, [user, canPublish]);
 
+  React.useEffect(() => {
+    if (!user || !canPublish || rows.length === 0) {
+      setPeriodMetrics({});
+      setPeriodTotals({ views: 0, shares: 0, saves: 0 });
+      return;
+    }
+    let cancelled = false;
+    setMetricsLoading(true);
+    void (async () => {
+      const refs = rows.map((row) => ({ kind: row.kind, listingId: row.listingId }));
+      const res = await fetchOwnerPeriodMetrics(period, refs);
+      if (cancelled) return;
+      if (res.error) {
+        setError((prev) => prev ?? res.error ?? null);
+        setPeriodMetrics({});
+        setPeriodTotals({ views: 0, shares: 0, saves: 0 });
+      } else {
+        setPeriodMetrics(res.metrics ?? {});
+        setPeriodTotals(res.totals ?? { views: 0, shares: 0, saves: 0 });
+      }
+      setMetricsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, canPublish, rows, period]);
+
+  const displayRows = React.useMemo(() => {
+    return rows
+      .map((row) => {
+        const key = listingMetricsKey(row.kind, row.listingId);
+        const metrics = periodMetrics[key] ?? { viewCount: 0, shareCount: 0, saveCount: 0 };
+        return {
+          ...row,
+          viewCount: metrics.viewCount ?? 0,
+          shareCount: metrics.shareCount ?? 0,
+          saveCount: metrics.saveCount ?? 0,
+        };
+      })
+      .sort((a, b) => b.viewCount - a.viewCount || b.saveCount - a.saveCount);
+  }, [rows, periodMetrics]);
+
   const filteredRows = React.useMemo(
-    () => (hasSearch ? rows.filter((row) => rowMatchesSearch(row, searchQuery)) : rows),
-    [rows, hasSearch, searchQuery],
+    () => (hasSearch ? displayRows.filter((row) => rowMatchesSearch(row, searchQuery)) : displayRows),
+    [displayRows, hasSearch, searchQuery],
   );
 
   if (!user) return null;
@@ -288,15 +326,8 @@ export default function UserStatisticsPage() {
     );
   }
 
-  const totals = rows.reduce(
-    (acc, r) => {
-      acc.views += r.viewCount;
-      acc.shares += r.shareCount;
-      acc.saves += r.saveCount;
-      return acc;
-    },
-    { views: 0, shares: 0, saves: 0 },
-  );
+  const totals = periodTotals;
+  const showInitialSkeleton = loading;
 
   return (
     <Stack spacing={3}>
@@ -313,10 +344,44 @@ export default function UserStatisticsPage() {
         </Alert>
       ) : null}
 
-      {loading ? (
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={period}
+        onChange={(_event, value: StatsPeriod | null) => {
+          if (value) setPeriod(value);
+        }}
+        aria-label="Periudha e statistikave"
+        sx={{
+          ...portalToggleGroupSx,
+          width: '100%',
+          display: 'flex',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          '& .MuiToggleButtonGroup-grouped': {
+            flex: 1,
+            minWidth: 0,
+            minHeight: 34,
+            px: 0.75,
+            py: 0.55,
+            fontSize: '0.72rem',
+            letterSpacing: '0.01em',
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+          },
+        }}
+      >
+        {STATS_PERIOD_OPTIONS.map((option) => (
+          <ToggleButton key={option.value} value={option.value} aria-label={option.label}>
+            {option.label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+
+      {showInitialSkeleton ? (
         <StatsPageSkeleton />
       ) : (
-        <>
+        <Box sx={{ opacity: metricsLoading ? 0.55 : 1, transition: 'opacity 0.2s ease' }}>
           <Grid container spacing={{ xs: 1, sm: 1.5 }}>
             <Grid size={4}>
               <TotalCard
@@ -344,7 +409,7 @@ export default function UserStatisticsPage() {
             </Grid>
           </Grid>
 
-          <Stack spacing={1.5}>
+          <Stack spacing={1.5} sx={{ mt: 3 }}>
             <Stack
               direction="row"
               sx={{
@@ -525,7 +590,7 @@ export default function UserStatisticsPage() {
               </Stack>
             )}
           </Stack>
-        </>
+        </Box>
       )}
 
       {leadsTarget ? (

@@ -18,6 +18,10 @@ import {
   OwnerEditHeaderActionsProvider,
   useOwnerEditHeaderActionsSlot,
 } from '@/components/user/owner-edit-header-actions';
+import {
+  PostListingFrameActionsProvider,
+  PostListingFrameActionsSlot,
+} from '@/components/user/post-listing-frame-actions';
 
 function pathMatches(pathname: string | null, base: string): boolean {
   return pathname === base || Boolean(pathname?.startsWith(`${base}/`));
@@ -108,6 +112,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
     <AuthGuard>
       <AddListingPickerProvider>
         <OwnerEditHeaderActionsProvider>
+          <PostListingFrameActionsProvider>
           <MessagesThreadChromeProvider setThreadUiOpen={setThreadUiOpen}>
             <React.Suspense fallback={null}>
               <MessageThreadSearchParams isMessages={isMessages} onUrlThreadOpen={onUrlThreadOpen} />
@@ -123,6 +128,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               {children}
             </UserDashboardFrameInner>
           </MessagesThreadChromeProvider>
+          </PostListingFrameActionsProvider>
         </OwnerEditHeaderActionsProvider>
       </AddListingPickerProvider>
     </AuthGuard>
@@ -222,7 +228,17 @@ function UserDashboardFrameInner({
               }}
             >
               {showFrameClose ? (
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0, mb: 1 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    gap: 0.75,
+                    mb: 1,
+                  }}
+                >
+                  <PostListingFrameActionsSlot />
                   <UserDashboardCloseButton href={paths.home} />
                 </Box>
               ) : null}

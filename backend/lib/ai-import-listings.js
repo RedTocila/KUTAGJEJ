@@ -729,6 +729,33 @@ function instagramAuthHeaders(csrfSession, shortcode) {
   return headers;
 }
 
+/** Pull caption text embedded in Instagram HTML when GraphQL/oEmbed are thin. */
+function extractInstagramCaptionFromHtml(html) {
+  const source = String(html || '');
+  if (!source.trim()) return null;
+  const patterns = [
+    /"caption"\s*:\s*\{\s*"text"\s*:\s*"((?:\\.|[^"\\])*)"/,
+    /"edge_media_to_caption"\s*:\s*\{\s*"edges"\s*:\s*\[\s*\{\s*"node"\s*:\s*\{\s*"text"\s*:\s*"((?:\\.|[^"\\])*)"/,
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match?.[1]) continue;
+    try {
+      const decoded = JSON.parse(`"${match[1]}"`);
+      if (typeof decoded === 'string' && decoded.trim().length > 20) return decoded.trim();
+    } catch {
+      const unescaped = match[1]
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\');
+      if (unescaped.trim().length > 20) return unescaped.trim();
+    }
+  }
+  return null;
+}
+
 /** Instagram HTML is often a login shell; oEmbed returns the real post caption. */
 async function fetchInstagramOEmbed(url, parentSignal) {
   const endpoint = `https://www.instagram.com/api/v1/oembed/?omitscript=true&url=${encodeURIComponent(url)}`;
@@ -1013,7 +1040,13 @@ async function enrichInstagramSnapshot(url, parentSignal) {
     imageUrls = imageUrls.slice(0, 1);
   }
 
-  const caption = graphql?.caption || oembed?.caption || extractMeta(crawlerHtml, 'property', 'og:description') || null;
+  const htmlCaption = extractInstagramCaptionFromHtml(crawlerHtml);
+  const caption =
+    graphql?.caption ||
+    htmlCaption ||
+    oembed?.caption ||
+    extractMeta(crawlerHtml, 'property', 'og:description') ||
+    null;
   // Prefer oEmbed display name for "author" context, but never use it as listing title.
   const authorName = oembed?.authorName || graphql?.authorName || null;
   const title = titleHintFromCaption(caption);
@@ -1311,6 +1344,42 @@ function extractLocationAddressFromSources(...sources) {
       const cleaned = cleanExtractedAddress(inline[1]);
       if (cleaned.length >= 4) return cleaned;
     }
+    const loose = text.match(
+      /\b(Rruga(?:\s+e)?\s+[^\n.,;]{4,90}|Rr\.?\s+[^\n.,;]{4,90}|Sheshi\s+[^\n.,;]{4,70})/i
+    );
+    if (loose?.[1]) {
+      const cleaned = cleanExtractedAddress(loose[1]);
+      if (cleaned.length >= 8) return cleaned;
+    }
+  }
+  return null;
+}
+
+function extractJobHoursFromText(text) {
+  const src = String(text || '');
+  if (!src.trim()) return null;
+  const match = src.match(
+    /(?:orari(?:t)?|schedule|hours?)\s*[:.]?\s*(\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}(?:\s*(?:ose|or)\s*\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2})?)/i
+  );
+  return match?.[1]?.replace(/\s+/g, ' ').trim() || null;
+}
+
+function extractEmployerNameFromJobBlob(text) {
+  const src = String(text || '').trim();
+  if (!src) return null;
+  const lines = src
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  for (const line of lines.slice(0, 6)) {
+    const cleaned = line
+      .replace(/#[\p{L}\p{N}_]+/gu, ' ')
+      .replace(/@[\p{L}\p{N}._]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (cleaned.length < 3 || cleaned.length > 80) continue;
+    if (/^(kerkon|kërkon|punonj|ofert|pozicion|adresa|orari|tel|phone|na kontaktoni)\b/i.test(cleaned)) continue;
+    if (/^[\p{L}\p{N}\s&'.-]+$/u.test(cleaned) && /[\p{L}]{3,}/u.test(cleaned)) return cleaned.slice(0, 80);
   }
   return null;
 }
@@ -1360,23 +1429,47 @@ async function applyGeocodedMapLocation(form, interpreted) {
 
 function enrichJobListingFromContent(form, interpreted, snapshot) {
   if (!form || typeof form !== 'object') return;
-  const blob = [
+  const blobOriginal = [
     form.title,
     form.description,
     interpreted?.title,
+    interpreted?.summary,
     snapshot?.caption,
     snapshot?.description,
+    snapshot?.text,
   ]
     .filter(Boolean)
-    .join('\n')
-    .toLowerCase();
+    .join('\n');
+  const blob = blobOriginal.toLowerCase();
+
+  if (!String(form.contactPhone || '').trim()) {
+    const phone = extractContactPhoneFromText(blobOriginal);
+    if (phone) form.contactPhone = phone;
+  }
+
+  if (!String(form.locationAddress || '').trim()) {
+    const address = extractLocationAddressFromSources(blobOriginal, form.description, interpreted?.summary);
+    if (address) form.locationAddress = address;
+  }
+
+  if (!interpreted?.cityName && !form.cityName && String(form.locationAddress || '').trim()) {
+    const inferredCity = inferCityNameFromAddress(form.locationAddress);
+    if (inferredCity) {
+      form.cityName = inferredCity;
+      if (interpreted) interpreted.cityName = inferredCity;
+    }
+  }
 
   if (!form.workLocation && (form.locationAddress || form.mapsUrl)) {
+    form.workLocation = 'onsite';
+  } else if (!form.workLocation && /\b(n[eë]\s+zyr[eë]|onsite|n[ëe]\s+detyr[eë])\b/i.test(blob)) {
     form.workLocation = 'onsite';
   }
 
   if (!form.industry) {
-    if (/\b(bar|kafe|restorant|restaurant|brunch|piceri|pizzeria|horeka|kamarier|banakier|waiter)\b/i.test(blob)) {
+    if (/\b(pastrim\s*kimik|dry\s*clean|impress\s*clean|lavanderi|lavanderia)\b/i.test(blob)) {
+      form.industry = 'pastrim';
+    } else if (/\b(bar|kafe|restorant|restaurant|brunch|piceri|pizzeria|horeka|kamarier|banakier|waiter)\b/i.test(blob)) {
       form.industry = 'horeka';
     } else if (/\b(ndertim|ndërtim|murator|elektricist|hidraulik|teknik)\b/i.test(blob)) {
       form.industry = 'ndertim-industri';
@@ -1386,15 +1479,53 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
   }
 
   if (!form.jobType) {
-    if (/\b(afatgjat[eë]|full[\s-]?time|kohe te plote|kohë të plotë)\b/i.test(blob)) {
+    const hours = extractJobHoursFromText(blobOriginal);
+    if (hours && /\b08:00\s*[-–]\s*1[456]:00\b/.test(hours)) {
+      form.jobType = 'full-time';
+    } else if (/\b(afatgjat[eë]|full[\s-]?time|kohe te plote|kohë të plotë)\b/i.test(blob)) {
       form.jobType = 'full-time';
     } else if (/\b(part[\s-]?time|kohe te pjesshme|kohë të pjesshme|turn|turni)\b/i.test(blob)) {
       form.jobType = 'part-time';
     }
   }
 
+  if (!form.experience) {
+    if (/\b(me\s+)?eksperienc/i.test(blob)) {
+      form.experience = '1-2';
+    } else if (/\b(pa\s+)?eksperienc/i.test(blob)) {
+      form.experience = 'no-experience';
+    }
+  }
+
   if (!form.education) {
     form.education = 'no-requirement';
+  }
+
+  const hours = extractJobHoursFromText(blobOriginal);
+  const employer = extractEmployerNameFromJobBlob(blobOriginal);
+
+  if (hours && !String(form.hours || '').trim()) {
+    form.hours = hours;
+  }
+  if (employer && !String(form.businessName || form.employerName || '').trim()) {
+    form.businessName = employer;
+  }
+
+  const caption = String(snapshot?.caption || snapshot?.description || '').trim();
+  const desc = String(form.description || '').trim();
+  const seoMeta = {
+    ...listingSeoMetaFromForm(form, interpreted),
+    caption,
+    hours,
+    businessName: employer,
+    address: form.locationAddress,
+    phone: form.contactPhone,
+  };
+
+  if ((!desc || desc.length < 140) && (caption || blobOriginal.trim())) {
+    form.description = refineCaptionToSeoDescription(caption || blobOriginal, seoMeta);
+  } else if (desc) {
+    form.description = ensureListedSeoDescription(desc, seoMeta);
   }
 }
 
@@ -2007,6 +2138,15 @@ function listingSeoMetaFromForm(form = {}, interpreted = {}) {
     bathrooms: form.bathrooms,
     category: form.category || form.propertyCategory,
     cityName: interpreted.cityName || form.cityName,
+    zoneName: interpreted.zoneName || form.zoneName,
+    address: form.locationAddress,
+    hours: form.hours,
+    phone: form.contactPhone,
+    businessName: form.businessName || form.employerName,
+    industry: form.industry,
+    jobType: form.jobType,
+    workLocation: form.workLocation,
+    salary: form.salary,
   };
 }
 
@@ -2084,10 +2224,24 @@ function buildSeoDescriptionBullets(meta = {}) {
   push('Adresa', meta.address);
   push('Orari', meta.hours);
   push('Kompania', meta.businessName);
+  push('Telefon', meta.phone);
+  push('Pozicioni', meta.title);
+  push('Industria', meta.industry);
+  if (meta.salary) {
+    const cur = String(meta.currency || '').trim();
+    push('Paga', cur ? `${meta.salary} ${cur}` : meta.salary);
+  }
   return bullets;
 }
 
 function buildSeoDescriptionOpener(meta = {}) {
+  const jobTitle = String(meta.title || '').trim();
+  const company = String(meta.businessName || '').trim();
+  const city = meta.cityName ? `në ${meta.cityName}` : null;
+  if (jobTitle || company) {
+    const subject = [company, jobTitle].filter(Boolean).join(' — ');
+    return `Ofertë pune${subject ? `: ${subject}` : ''}${city ? ` ${city}` : ''}.`;
+  }
   const vehicleLabel = vehicleTypeLabelSq(meta.vehicleType);
   const product =
     meta.make && meta.model ? `${meta.make} ${meta.model}` : meta.make || meta.model || String(meta.title || '').trim();
@@ -3118,11 +3272,18 @@ async function compressAttachedVisionImage(img, parentSignal) {
   }
 }
 
-/** Download a few scraped post photos so the model can visually identify vehicle type/make. */
-async function prepareSnapshotVisionImages(snapshotImageUrls, maxImages = MAX_SNAPSHOT_VISION_IMAGES, signal) {
-  const cap = Math.max(0, Math.min(MAX_SNAPSHOT_VISION_IMAGES, Number(maxImages) || 0));
+/** Download scraped post photos for vision OCR / product identification. */
+async function prepareSnapshotVisionImages(snapshotImageUrls, opts = {}, signal) {
+  const maxImages = Number.isFinite(opts.maxImages) ? opts.maxImages : MAX_SNAPSHOT_VISION_IMAGES;
+  const cap = Math.max(0, Math.min(MAX_SNAPSHOT_VISION_IMAGES, maxImages));
+  const preferHighDetail = Boolean(opts.preferHighDetail);
+  const category = opts.category || null;
   const urls = Array.isArray(snapshotImageUrls) ? snapshotImageUrls : [];
   const out = [];
+  const hint =
+    category === 'job-listings'
+      ? 'Job flyer/poster — OCR every readable word (employer, role, address, phone, hours, salary, requirements) and map into form fields + description bullets.'
+      : 'Scraped listing photo — identify the product/vehicle and fill vehicleType/make/model when visible.';
   for (const url of urls) {
     throwIfAborted(signal);
     if (out.length >= cap) break;
@@ -3130,8 +3291,8 @@ async function prepareSnapshotVisionImages(snapshotImageUrls, maxImages = MAX_SN
     if (dataUrl) {
       out.push({
         url: dataUrl,
-        detail: 'low',
-        hint: 'Scraped listing photo — identify the product/vehicle and fill vehicleType/make/model when visible.',
+        detail: preferHighDetail ? 'high' : 'low',
+        hint,
       });
     }
   }
@@ -3154,7 +3315,20 @@ async function interpretListing({
   // When the user didn't attach photos, analyze the scraped post images with vision.
   let visionImages = userAttached;
   if (!visionImages.length && Array.isArray(snapshot?.imageUrls) && snapshot.imageUrls.length) {
-    visionImages = await prepareSnapshotVisionImages(snapshot.imageUrls, maxSnapshotVisionImages, signal);
+    const captionLen = String(snapshot?.caption || snapshot?.description || '').trim().length;
+    const preferHighDetail =
+      preferredCategory === 'job-listings' ||
+      Boolean(snapshot?.social) ||
+      (captionLen > 0 && captionLen < 320);
+    visionImages = await prepareSnapshotVisionImages(
+      snapshot.imageUrls,
+      {
+        maxImages: maxSnapshotVisionImages,
+        preferHighDetail,
+        category: preferredCategory,
+      },
+      signal
+    );
   } else if (visionImages.length) {
     visionImages = (await Promise.all(visionImages.map((img) => compressAttachedVisionImage(img, signal)))).filter(
       Boolean
@@ -3197,6 +3371,12 @@ async function interpretListing({
               vehicleTypes: VEHICLE_TYPE_VALUES,
               motorcycleMakes,
               note: 'If photos/caption show a motorcycle/scooter, set vehicleType=motorcycle and pick make from motorcycleMakes when possible.',
+            }
+          : null,
+      jobCatalogHints:
+        preferredCategory === 'job-listings'
+          ? {
+              note: 'Job flyer OCR: extract employer name, job title/role, full street address → locationAddress, phone → contactPhone, hours/shifts → description bullets + jobType, salary if stated. Infer cityName from address (e.g. Rruga e Kavajës → Tiranë). Never leave only cityName when address/phone/hours are visible on the flyer.',
             }
           : null,
       attachedImageCount: visionImages.length,

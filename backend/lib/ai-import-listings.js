@@ -1393,10 +1393,6 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
     }
   }
 
-  if (!form.experience && /\b(me\s+)?eksperienc[eë]\b/i.test(blob)) {
-    form.experience = '1-2';
-  }
-
   if (!form.education) {
     form.education = 'no-requirement';
   }

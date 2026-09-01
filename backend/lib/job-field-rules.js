@@ -74,10 +74,7 @@ function validateJobPayload(body) {
   body.education = education || null;
 
   const experience = String(body?.experience || '').trim();
-  if (experience && !EXPERIENCE_VALUES.includes(experience)) {
-    return { ok: false, message: 'Eksperienca e zgjedhur nuk është e vlefshme.' };
-  }
-  body.experience = experience || null;
+  body.experience = experience && EXPERIENCE_VALUES.includes(experience) ? experience : null;
 
   const jobType = String(body?.jobType || '').trim();
   if (jobType && !JOB_TYPE_VALUES.includes(jobType)) {

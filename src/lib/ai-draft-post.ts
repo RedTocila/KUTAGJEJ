@@ -3,6 +3,12 @@
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
 import { resolveJobAiCover } from '@/lib/ai-import-client';
 import { defaultWeeklyHours, type WeeklyHourRow } from '@/lib/business-constants';
+import {
+  JOB_EDUCATION_OPTIONS,
+  JOB_EXPERIENCE_OPTIONS,
+  JOB_TYPE_OPTIONS,
+  WORK_LOCATION_OPTIONS,
+} from '@/lib/job-constants';
 import { normalizeFuelType } from '@/lib/car-constants';
 import {
   createBusinessListing,
@@ -39,6 +45,11 @@ async function loadCities(): Promise<RealEstateCityDto[]> {
 
 function str(value: unknown): string {
   return value == null ? '' : String(value).trim();
+}
+
+function knownOption(value: unknown, options: readonly { value: string }[]): string {
+  const candidate = str(value);
+  return options.some((option) => option.value === candidate) ? candidate : '';
 }
 
 function num(value: unknown): number | null {
@@ -271,10 +282,10 @@ export async function postAiListingDraft(
           coverMode: jobCoverMode,
           industry: str(f.industry) || 'other',
           cityId,
-          education: str(f.education) || '',
-          experience: str(f.experience) || '',
-          jobType: str(f.jobType) || 'full-time',
-          workLocation: str(f.workLocation) || 'onsite',
+          education: knownOption(f.education, JOB_EDUCATION_OPTIONS),
+          experience: knownOption(f.experience, JOB_EXPERIENCE_OPTIONS),
+          jobType: knownOption(f.jobType, JOB_TYPE_OPTIONS) || 'full-time',
+          workLocation: knownOption(f.workLocation, WORK_LOCATION_OPTIONS) || 'onsite',
           preferredGender:
             f.preferredGender === 'male' || f.preferredGender === 'female' || f.preferredGender === 'both'
               ? f.preferredGender

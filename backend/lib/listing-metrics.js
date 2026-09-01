@@ -243,9 +243,44 @@ async function logMetricEvent(kind, listingId, eventType) {
   }
 }
 
+async function fetchListingCreatedAtMap(refs) {
+  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
+  const idsByKind = new Map();
+  for (const ref of valid) {
+    if (!idsByKind.has(ref.kind)) idsByKind.set(ref.kind, []);
+    idsByKind.get(ref.kind).push(ref.listingId);
+  }
+
+  const sb = getSupabaseAdmin();
+  const out = new Map();
+
+  await Promise.all(
+    Array.from(idsByKind.entries()).map(async ([kind, ids]) => {
+      const table = TABLE_BY_KIND[kind];
+      if (!table || ids.length === 0) return;
+      let q = sb.from(table).select('id, created_at').in('id', ids);
+      if (kind === 'businesses' || kind === 'professionals') {
+        q = q.eq('vertical', kind);
+      }
+      const { data, error } = await q;
+      if (error) throw error;
+      for (const row of data || []) {
+        const createdAt = row.created_at ? new Date(row.created_at) : null;
+        if (createdAt && !Number.isNaN(createdAt.getTime())) {
+          out.set(metricsKey(kind, row.id), createdAt);
+        }
+      }
+    })
+  );
+
+  return out;
+}
+
 /**
  * Per-listing metrics for a time window. Saves use saved_listings.created_at;
- * views/shares use listing_metric_events (logged from this deploy onward).
+ * views/shares use listing_metric_events when available. Listings with no event
+ * history yet fall back to listing_engagements totals only when the listing
+ * was created inside the selected window (all activity must be within range).
  */
 async function fetchPeriodMetricsMap(refs, period) {
   const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
@@ -261,19 +296,25 @@ async function fetchPeriodMetricsMap(refs, period) {
   const orFilter = valid.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
   const sinceIso = since.toISOString();
 
-  const [eventsResult, savesResult] = await Promise.all([
+  const [eventsResult, savesResult, engagementResult, everEventsResult, listingCreatedAt] = await Promise.all([
     sb
       .from('listing_metric_events')
       .select('listing_kind, listing_id, event_type')
       .gte('created_at', sinceIso)
       .or(orFilter),
     sb.from('saved_listings').select('listing_kind, listing_id').gte('created_at', sinceIso).or(orFilter),
+    fetchEngagementRows(sb, orFilter),
+    sb.from('listing_metric_events').select('listing_kind, listing_id').or(orFilter),
+    fetchListingCreatedAtMap(valid),
   ]);
 
   if (eventsResult.error && !/listing_metric_events/i.test(String(eventsResult.error.message || ''))) {
     throw eventsResult.error;
   }
   if (savesResult.error) throw savesResult.error;
+  if (everEventsResult.error && !/listing_metric_events/i.test(String(everEventsResult.error.message || ''))) {
+    throw everEventsResult.error;
+  }
 
   const viewCounts = new Map();
   const shareCounts = new Map();
@@ -292,14 +333,42 @@ async function fetchPeriodMetricsMap(refs, period) {
     saveCounts.set(key, (saveCounts.get(key) || 0) + 1);
   }
 
+  const engagementByKey = new Map(
+    (engagementResult.data || []).map((row) => [
+      metricsKey(row.listing_kind, row.listing_id),
+      {
+        viewCount: row.view_count ?? 0,
+        shareCount: row.share_count ?? 0,
+        saveCount: row.save_count,
+      },
+    ])
+  );
+
+  const hasEventsEver = new Set(
+    (everEventsResult.data || []).map((row) => metricsKey(row.listing_kind, row.listing_id))
+  );
+
   const out = new Map();
   for (const ref of valid) {
     const key = metricsKey(ref.kind, ref.listingId);
-    out.set(key, {
-      viewCount: viewCounts.get(key) || 0,
-      shareCount: shareCounts.get(key) || 0,
-      saveCount: saveCounts.get(key) || 0,
-    });
+    let viewCount = viewCounts.get(key) || 0;
+    let shareCount = shareCounts.get(key) || 0;
+    const saveCount = saveCounts.get(key) || 0;
+
+    // Pre-event-tracking listings: only attribute cumulative totals when the
+    // listing did not exist before the selected window.
+    if (!hasEventsEver.has(key)) {
+      const createdAt = listingCreatedAt.get(key);
+      if (createdAt && createdAt >= since) {
+        const engagement = engagementByKey.get(key);
+        if (engagement) {
+          viewCount = engagement.viewCount ?? 0;
+          shareCount = engagement.shareCount ?? 0;
+        }
+      }
+    }
+
+    out.set(key, { viewCount, shareCount, saveCount });
   }
   return out;
 }

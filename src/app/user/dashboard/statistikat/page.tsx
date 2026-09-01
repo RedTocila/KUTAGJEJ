@@ -346,30 +346,32 @@ export default function UserStatisticsPage() {
 
       <ToggleButtonGroup
         exclusive
+        fullWidth
         size="small"
         value={period}
         onChange={(_event, value: StatsPeriod | null) => {
           if (value) setPeriod(value);
         }}
         aria-label="Periudha e statistikave"
-        sx={{
-          ...portalToggleGroupSx,
-          width: '100%',
-          display: 'flex',
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          '& .MuiToggleButtonGroup-grouped': {
-            flex: 1,
-            minWidth: 0,
-            minHeight: 34,
-            px: 0.75,
-            py: 0.55,
-            fontSize: '0.72rem',
-            letterSpacing: '0.01em',
-            textTransform: 'none',
-            whiteSpace: 'nowrap',
+        sx={[
+          portalToggleGroupSx,
+          {
+            width: '100%',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            '& .MuiToggleButtonGroup-grouped': {
+              flex: 1,
+              minWidth: 0,
+              minHeight: 38,
+              px: 0.85,
+              py: 0.75,
+              fontSize: '0.78rem',
+              letterSpacing: '0.02em',
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+            },
           },
-        }}
+        ]}
       >
         {STATS_PERIOD_OPTIONS.map((option) => (
           <ToggleButton key={option.value} value={option.value} aria-label={option.label}>

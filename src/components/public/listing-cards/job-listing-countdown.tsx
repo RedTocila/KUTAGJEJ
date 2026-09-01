@@ -140,7 +140,7 @@ export function JobListingCountdownPlaceholder({
   const label = condensed ? COMPACT_PLACEHOLDER_LABEL : PLACEHOLDER_LABEL;
   if (bare) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'inherit' }}>
         {showClock ? (
           <ClockIcon size={14} weight="bold" color="currentColor" className="listing-countdown-pulse-glyph" />
         ) : null}
@@ -149,7 +149,7 @@ export function JobListingCountdownPlaceholder({
           aria-hidden
           className="listing-countdown-pulse-glyph"
           sx={{
-            color: '#fff',
+            color: 'inherit',
             fontFamily: 'monospace',
             fontVariantNumeric: 'tabular-nums',
             fontWeight: 700,
@@ -220,7 +220,7 @@ export function JobListingCountdown({
 
   if (bare) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#fff' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'inherit' }}>
         {showClock ? (
           <ClockIcon size={14} weight="bold" color="currentColor" className="listing-countdown-pulse-glyph" />
         ) : null}
@@ -230,7 +230,7 @@ export function JobListingCountdown({
           suppressHydrationWarning
           className="listing-countdown-pulse-glyph"
           sx={{
-            color: '#fff',
+            color: 'inherit',
             fontFamily: 'monospace',
             fontVariantNumeric: 'tabular-nums',
             fontWeight: 700,

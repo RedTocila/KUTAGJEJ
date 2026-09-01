@@ -10,7 +10,8 @@ import { businessMapLocation } from '@/lib/google-maps-location';
 import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
-import { logoGreen, neutralInk } from '@/styles/theme/colors';
+import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { neutralInk } from '@/styles/theme/colors';
 
 export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 
@@ -24,10 +25,10 @@ const MAP_BOTTOM_CLIP_PX = 72;
 /** Soft horizontal fade — wider than before for a blurrier blend into the map. */
 const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 12%, rgba(0, 0, 0, 0.72) 28%, rgba(0, 0, 0, 0.28) 44%, rgba(0, 0, 0, 0) 62%)`;
 
-/** Cover palette — literal hex so masked gradients stay dark (no CSS var / oklab wash-out). */
-const LIGHT_COVER_SOLID = logoGreen[800];
-const LIGHT_COVER_FADE = logoGreen[700];
-const LIGHT_COVER_MID = logoGreen[600];
+/** Cover palette — literal hex so masked gradients stay stable (no CSS var / oklab wash-out). */
+const LIGHT_COVER_SOLID = '#ffffff';
+const LIGHT_COVER_FADE = neutralInk[50];
+const LIGHT_COVER_MID = neutralInk[100];
 const DARK_COVER_SOLID = neutralInk[950];
 const DARK_COVER_FADE = neutralInk[900];
 const DARK_COVER_MID = neutralInk[800];
@@ -74,7 +75,7 @@ function JobCoverThemeOverlay() {
           zIndex: 1,
           pointerEvents: 'none',
           background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 100%)`,
-          opacity: 0.38,
+          opacity: 0.15,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
@@ -90,11 +91,11 @@ function JobCoverThemeOverlay() {
           inset: 0,
           zIndex: 1,
           pointerEvents: 'none',
-          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 72%)`,
+          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0) 72%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
-            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0) 72%)`,
+            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 72%)`,
           }),
         })}
       />
@@ -211,7 +212,7 @@ export function JobListingFallback({
 
       <Box
         aria-hidden
-        sx={{
+        sx={(muiTheme) => ({
           position: 'absolute',
           left: 0,
           top: 0,
@@ -221,16 +222,20 @@ export function JobListingFallback({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#fff',
+          color: 'primary.main',
           pointerEvents: 'none',
-          filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
+          filter: `drop-shadow(0 2px 10px ${primaryMainAlpha(0.18)})`,
           '& svg': {
             width: '72%',
             height: '72%',
             maxWidth: '100%',
             maxHeight: '100%',
           },
-        }}
+          ...muiTheme.applyStyles('dark', {
+            color: '#fff',
+            filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
+          }),
+        })}
       >
         <CoverIcon weight="duotone" />
       </Box>

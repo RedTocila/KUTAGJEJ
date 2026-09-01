@@ -4,6 +4,7 @@ import * as React from 'react';
 import Image from 'next/image';
 import { Box, Button, ButtonBase, Grid, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
@@ -16,6 +17,8 @@ import type { ListingMetricKind } from '@/lib/listing-metrics';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
 import { listingCardImageUrl, listingHeroImageUrl } from '@/lib/storage-image';
 import { ProductDialog } from '@/components/core/product-dialog';
+import { CardShell } from '@/components/public/listing-cards/card-shell';
+import { ListingTitleWithVerified } from '@/components/public/listing-cards/listing-title-with-verified';
 import { productPanelSx } from '@/styles/product-sx';
 
 const FONT_CAPTION = '0.75rem';
@@ -466,19 +469,11 @@ function ProfessionalPortfolioCard({ item, onOpen }: { item: ProfessionalPortfol
         width: '100%',
         p: 0,
         m: 0,
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2.5,
-        overflow: 'hidden',
-        bgcolor: 'background.paper',
+        border: 0,
+        bgcolor: 'transparent',
         cursor: 'pointer',
         textAlign: 'left',
         color: 'inherit',
-        transition: 'border-color 0.15s ease, transform 0.15s ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-          transform: 'translateY(-1px)',
-        },
         '&:focus-visible': {
           outline: '2px solid',
           outlineColor: 'primary.main',
@@ -486,27 +481,73 @@ function ProfessionalPortfolioCard({ item, onOpen }: { item: ProfessionalPortfol
         },
       }}
     >
-      <Box sx={{ position: 'relative', height: { xs: 112, sm: 140 }, bgcolor: 'action.hover' }}>
-        {item.imageUrl ? (
-          <Image
-            src={listingCardImageUrl(item.imageUrl) ?? item.imageUrl}
-            alt={item.title}
-            fill
-            sizes="(max-width: 600px) 50vw, 220px"
-            style={{ objectFit: 'cover' }}
+      <CardShell compact>
+        <Box
+          className="listing-card-media"
+          sx={{
+            position: 'relative',
+            aspectRatio: '1 / 1',
+            width: '100%',
+            flexShrink: 0,
+            borderRadius: 1.25,
+            bgcolor: primaryMainAlpha(0.06),
+            overflow: 'hidden',
+          }}
+        >
+          {item.imageUrl ? (
+            <Image
+              src={listingCardImageUrl(item.imageUrl) ?? item.imageUrl}
+              alt={item.title}
+              fill
+              sizes="(max-width: 600px) 50vw, (max-width: 900px) 45vw, 320px"
+              className="listing-card-media-image"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <Stack
+              aria-hidden
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'primary.main',
+                opacity: 0.55,
+              }}
+            >
+              <BriefcaseIcon size={42} weight="duotone" />
+            </Stack>
+          )}
+        </Box>
+        <Stack
+          className="listing-card-body"
+          spacing={{ xs: 0.25, sm: 0.4 }}
+          sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+        >
+          <ListingTitleWithVerified
+            title={item.title}
+            maxLines={1}
+            verified={false}
+            typographySx={{
+              fontSize: { xs: '0.76rem', sm: '0.82rem' },
+              fontWeight: 650,
+              lineHeight: 1.25,
+            }}
           />
-        ) : null}
-      </Box>
-      <Stack spacing={0.25} sx={{ p: { xs: 1, sm: 1.25 } }}>
-        <Typography sx={{ fontWeight: 800, fontSize: { xs: FONT_CAPTION, sm: '0.85rem' }, lineHeight: 1.25 }} noWrap>
-          {item.title}
-        </Typography>
-        {item.location ? (
-          <Typography sx={{ fontSize: { xs: '0.625rem', sm: '0.75rem' }, color: 'text.secondary' }} noWrap>
-            {item.location}
-          </Typography>
-        ) : null}
-      </Stack>
+          {item.location ? (
+            <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center', minWidth: 0, color: 'text.secondary' }}>
+              <MapPinIcon size={12} weight="regular" color="var(--mui-palette-primary-main)" />
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem', minWidth: 0, flex: 1 }}
+              >
+                {item.location}
+              </Typography>
+            </Stack>
+          ) : null}
+        </Stack>
+      </CardShell>
     </Box>
   );
 }
@@ -549,9 +590,9 @@ export function ProfessionalPortfolioSection({
           <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Punët e mia</Typography>
           {headerAction}
         </Stack>
-        <Grid container spacing={1.5}>
+        <Grid container spacing={{ xs: 1.25, sm: 2, md: 2.5 }}>
           {visible.map((item, index) => (
-            <Grid key={item.id} size={{ xs: 6, sm: 4 }}>
+            <Grid key={item.id} size={{ xs: 6, sm: 4, md: 4 }}>
               <ProfessionalPortfolioCard item={item} onOpen={() => openItem(index)} />
             </Grid>
           ))}

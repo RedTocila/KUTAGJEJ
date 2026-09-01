@@ -375,21 +375,34 @@ export function BannerSlideCard({
         ) : null}
         {contentBelowImage && bottomLeftLabel && !showInlineImageFooter ? (
           <Box
-            sx={{
+            sx={(theme) => ({
               ...IMAGE_FROST_BADGE_SX,
               maxWidth: showNavigationArrow ? 'calc(100% - 68px)' : 'calc(100% - 20px)',
-            }}
+              bgcolor: 'rgba(255,255,255,0.9)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+              textShadow: 'none',
+              ...theme.applyStyles('dark', {
+                bgcolor: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(255,255,255,0.22)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
+              }),
+            })}
           >
             <Typography
-              sx={{
-                color: 'primary.main',
+              sx={(theme) => ({
+                color: 'text.primary',
                 fontWeight: 800,
                 fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.45rem' },
                 lineHeight: 1.15,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-              }}
+                ...theme.applyStyles('dark', {
+                  color: 'common.white',
+                }),
+              })}
             >
               {bottomLeftLabel}
             </Typography>

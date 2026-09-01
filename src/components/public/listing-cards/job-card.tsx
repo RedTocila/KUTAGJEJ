@@ -60,17 +60,22 @@ function JobExpiryAnnouncementBar({ expiresAt }: { expiresAt: string }) {
     <Stack
       direction="row"
       spacing={0.75}
-      sx={{
+      sx={(theme) => ({
         width: '100%',
         boxSizing: 'border-box',
         alignItems: 'center',
         justifyContent: 'center',
         px: 1.1,
         py: 0.65,
-        bgcolor: 'rgba(0,0,0,0.72)',
-        borderTop: '1px solid rgba(255,255,255,0.16)',
+        color: '#fff',
+        bgcolor: 'rgba(0,0,0,0.48)',
+        borderTop: '1px solid rgba(255,255,255,0.14)',
         backdropFilter: 'blur(8px)',
-      }}
+        ...theme.applyStyles('dark', {
+          bgcolor: 'rgba(0,0,0,0.72)',
+          borderTop: '1px solid rgba(255,255,255,0.16)',
+        }),
+      })}
     >
       <JobListingCountdown expiresAt={expiresAt} variant="overlay" bare showClock />
     </Stack>

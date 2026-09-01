@@ -89,7 +89,7 @@ export function HomeCategoriesStrip() {
                   sx={{
                     width: 52,
                     height: 52,
-                    borderRadius: 2,
+                    borderRadius: '50%',
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,

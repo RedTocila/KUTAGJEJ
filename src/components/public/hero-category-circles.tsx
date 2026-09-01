@@ -220,14 +220,14 @@ export function HeroCategoryCircles({
         const label = heroCategoryLabel(v.id, v.label);
         const body = (
           <>
-            {/* Mobile: softly rounded square. Desktop: 4:3 tile matching the banner. */}
+            {/* Mobile: circle tile. Desktop: 4:3 tile matching the banner. */}
             <Box
               className="hero-cat-tile"
               sx={{
                 width: { xs: 60, sm: 58, md: '100%' },
                 height: { xs: 60, sm: 58, md: 'auto' },
                 aspectRatio: { md: '4 / 3' },
-                borderRadius: { xs: 3, md: 3 },
+                borderRadius: { xs: '50%', sm: '50%', md: 3 },
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',

@@ -310,6 +310,9 @@ export async function postAiListingDraft(
           requirements: Array.isArray(f.requirements)
             ? f.requirements.map(String).filter(Boolean)
             : [],
+          requiredRoles: Array.isArray(f.requiredRoles)
+            ? f.requiredRoles.map(String).filter(Boolean)
+            : [],
           benefits: [],
           imageUrls: jobImageUrls,
         });

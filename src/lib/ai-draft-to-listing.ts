@@ -193,6 +193,7 @@ export function aiDraftToInitialListing(draft: AiListingDraft): Record<string, u
           contactPhone: str(f.contactPhone),
           responsibilities: Array.isArray(f.responsibilities) ? f.responsibilities.map(String) : [],
           requirements: Array.isArray(f.requirements) ? f.requirements.map(String) : [],
+          requiredRoles: Array.isArray(f.requiredRoles) ? f.requiredRoles.map(String).filter(Boolean) : [],
           benefitIds: [],
           imageUrls: jobCover.imageUrls,
         },

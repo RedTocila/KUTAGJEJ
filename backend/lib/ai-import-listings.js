@@ -1427,6 +1427,74 @@ async function applyGeocodedMapLocation(form, interpreted) {
   form.zoneId = '';
 }
 
+function normalizeRequiredRolesArray(raw) {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((role) => String(role ?? '').replace(/\s+/g, ' ').trim())
+      .filter((role) => role.length >= 2 && role.length <= 80)
+      .slice(0, 8);
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw
+      .split(/\s*(?:\/|,|;|\+|\||\band\b|\bdhe\b)\s*/i)
+      .map((role) => role.replace(/\s+/g, ' ').trim())
+      .filter((role) => role.length >= 2 && role.length <= 80)
+      .slice(0, 8);
+  }
+  return [];
+}
+
+function splitJobRolesFromTitle(title) {
+  const t = String(title || '').trim();
+  if (!t) return [];
+  const hasSeparator = /[/|+&]|(?:\s+dhe\s+)/i.test(t);
+  if (!hasSeparator && t.length > 50) return [];
+  const parts = normalizeRequiredRolesArray(t);
+  return parts.length >= 2 ? parts : [];
+}
+
+function extractRequiredRolesFromJobBlob(blob) {
+  const text = String(blob || '');
+  const patterns = [
+    /(?:pozicione|role|roles|pozicionet)\s*[:;]\s*([^\n]+)/i,
+    /(?:k[eë]rkohen|nevojiten|kerkohet)\s*[:;]?\s*([^\n]+)/i,
+    /(?:open\s+roles?|positions?)\s*[:;]\s*([^\n]+)/i,
+  ];
+  for (const re of patterns) {
+    const match = text.match(re);
+    if (match?.[1]) {
+      const roles = normalizeRequiredRolesArray(match[1]);
+      if (roles.length) return roles;
+    }
+  }
+  return [];
+}
+
+function ensureRequiredRolesOnForm(form, interpreted) {
+  if (!form || typeof form !== 'object') return;
+  let roles = normalizeRequiredRolesArray(form.requiredRoles);
+  if (!roles.length) roles = normalizeRequiredRolesArray(form.roles);
+  if (!roles.length) roles = normalizeRequiredRolesArray(form.positions);
+  if (!roles.length) roles = normalizeRequiredRolesArray(form.openRoles);
+  if (!roles.length) {
+    const blob = [form.title, form.description, interpreted?.title, interpreted?.summary]
+      .filter(Boolean)
+      .join('\n');
+    roles = extractRequiredRolesFromJobBlob(blob);
+  }
+  if (!roles.length) {
+    roles = splitJobRolesFromTitle(form.title || interpreted?.title);
+  }
+  if (roles.length) {
+    form.requiredRoles = roles;
+  } else if (!Array.isArray(form.requiredRoles)) {
+    form.requiredRoles = [];
+  }
+  delete form.roles;
+  delete form.positions;
+  delete form.openRoles;
+}
+
 function enrichJobListingFromContent(form, interpreted, snapshot) {
   if (!form || typeof form !== 'object') return;
   const blobOriginal = [
@@ -1520,6 +1588,8 @@ function enrichJobListingFromContent(form, interpreted, snapshot) {
   if (employer && !String(form.businessName || form.employerName || '').trim()) {
     form.businessName = employer;
   }
+
+  ensureRequiredRolesOnForm(form, interpreted);
 
   const caption = String(snapshot?.caption || snapshot?.description || '').trim();
   const desc = String(form.description || '').trim();
@@ -1786,8 +1856,8 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - make/model MUST match common catalog spellings when visible or named (Yamaha, Honda, BMW, Mercedes-Benz, Volkswagen, …). Example: Yamaha Ténéré / TMAX → vehicleType motorcycle, make "Yamaha", model "Ténéré" or "TMAX".
   - Scooter / maxi-scooter / TMAX → motorcycle.
   - Do NOT classify a vehicle as motorcycle from the word "motor" alone; "motor boat" / "motorboat" is a boat, and car engine text (e.g. "motor 2.0") is not a vehicle type.
-job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, responsibilities (string[]), requirements (string[]), locationAddress (full street/venue address), cityName, zoneName
-  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → title like "Kamarier / Banakier"), street address → form.locationAddress AND description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from address when obvious ("Rruga Pjeter Bogdani, Tirane" → cityName "Tiranë", locationAddress "Rruga Pjeter Bogdani, Tirane").
+job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, requiredRoles (string[]), responsibilities (string[]), requirements (string[]), locationAddress (full street/venue address), cityName, zoneName
+  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → requiredRoles ["Kamarier","Banakier"] and title like "Kamarier / Banakier"), street address → form.locationAddress AND description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from address when obvious ("Rruga Pjeter Bogdani, Tirane" → cityName "Tiranë", locationAddress "Rruga Pjeter Bogdani, Tirane").
   - ALWAYS extract locationAddress, cityName, and zoneName/neighborhood when they appear in the prompt, caption, or image. Put the full readable address in locationAddress — not only in description. Leave zoneName empty when unknown — never default to a random neighborhood like Astir.
   - When a street address is present, set workLocation to onsite unless the post clearly says remote/hybrid.
   - SEO JOB DESCRIPTION: when enough information is available, write a substantial, keyword-rich description (roughly 500–1100 characters) using the exact role, role synonyms, employer, city/zone, work arrangement, salary, responsibilities, requirements, shifts, and benefits. Use natural Albanian search phrases and structured bullets; never invent missing facts just to make it longer.
@@ -1822,7 +1892,7 @@ Vision + text fusion (CRITICAL when attached images are present — applies to A
 2. Extract ALL valuable facts visible in photos into the draft, including when applicable:
    - What is offered (product, job role(s), property, service, vehicle)
    - Business / employer / brand name
-   - Title / positions (e.g. "Kamarier", "Banakier" → job title; product name → marketplace title)
+   - Title / positions (e.g. "Kamarier", "Banakier" → requiredRoles[]; combine in title when useful)
    - Location: cityName AND zoneName / neighborhood AND street / landmark (put street in description as "• Adresa: …"; map city to cityName and neighborhood to zoneName)
    - Size: surfaceM2 for properties when m² is visible or stated
    - Phone numbers → contactPhone (and mention in description only if useful)
@@ -2174,6 +2244,7 @@ function listingSeoMetaFromForm(form = {}, interpreted = {}) {
     jobType: form.jobType,
     workLocation: form.workLocation,
     salary: form.salary,
+    requiredRoles: form.requiredRoles,
   };
 }
 
@@ -2253,6 +2324,9 @@ function buildSeoDescriptionBullets(meta = {}) {
   push('Kompania', meta.businessName);
   push('Telefon', meta.phone);
   push('Pozicioni', meta.title);
+  if (Array.isArray(meta.requiredRoles) && meta.requiredRoles.length) {
+    push('Role të kërkuara', meta.requiredRoles.join(', '));
+  }
   push('Industria', meta.industry);
   if (meta.salary) {
     const cur = String(meta.currency || '').trim();
@@ -2901,6 +2975,7 @@ function normalizeModelFormFields(parsed, categoryOverride = null) {
       'jobType',
       'workLocation',
       'salary',
+      'requiredRoles',
       'responsibilities',
       'requirements',
       'locationAddress',
@@ -2912,6 +2987,7 @@ function normalizeModelFormFields(parsed, categoryOverride = null) {
     copyAlias('workLocation', ['locationType']);
     copyAlias('responsibilities', ['duties']);
     copyAlias('requirements', ['qualifications']);
+    copyAlias('requiredRoles', ['roles', 'positions', 'openRoles', 'jobRoles', 'pozicione']);
     copyAlias('locationAddress', ['address', 'streetAddress', 'street', 'venueAddress']);
   }
 
@@ -3020,6 +3096,7 @@ function inferCategoryFromForm(form) {
   if (
     filled('jobType') ||
     filled('workLocation') ||
+    filled('requiredRoles') ||
     filled('responsibilities') ||
     filled('requirements') ||
     filled('industry')
@@ -3309,7 +3386,7 @@ async function prepareSnapshotVisionImages(snapshotImageUrls, opts = {}, signal)
   const out = [];
   const hint =
     category === 'job-listings'
-      ? 'Job flyer/poster — OCR every readable word (employer, role, address, phone, hours, salary, requirements) and map into form fields + description bullets.'
+      ? 'Job flyer/poster — OCR every readable word (employer, each open role → requiredRoles, address, phone, hours, salary, requirements) and map into form fields + description bullets.'
       : 'Scraped listing photo — identify the product/vehicle and fill vehicleType/make/model when visible.';
   for (const url of urls) {
     throwIfAborted(signal);

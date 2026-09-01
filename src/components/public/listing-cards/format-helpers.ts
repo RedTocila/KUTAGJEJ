@@ -1,5 +1,6 @@
 /** Pure formatting helpers used by the public listing cards. */
 
+export { findOptionLabel } from '@/lib/find-option-label';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
 
 /** Price/salary color: OKAZION red, else Premium amber, else platform green. */
@@ -51,14 +52,6 @@ export function postedLabelSq(iso: string): string {
   const d = new Date(iso);
   if (calendarDayKey(d) === calendarDayKey(new Date())) return 'Postuar sot';
   return relativeAlbanianDate(iso);
-}
-
-export function findOptionLabel<T extends { value: string; label: string }>(
-  options: readonly T[],
-  value: string | null | undefined
-): string {
-  if (!value) return '';
-  return options.find((option) => option.value === value)?.label ?? value;
 }
 
 /**

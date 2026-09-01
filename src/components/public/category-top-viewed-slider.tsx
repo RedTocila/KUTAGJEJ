@@ -11,7 +11,6 @@ import {
   listingProfessionalPublicHref,
   listingRealEstatePublicHref,
 } from '@/paths';
-import { formatRatingDisplay } from '@/lib/format-rating';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import type {
   PublicCarListing,
@@ -25,6 +24,7 @@ import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
 import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { ListingCardRating } from '@/components/public/listing-cards/listing-card-rating';
 import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
 import { BannerSliderPager } from '@/components/public/banner-slider-pager';
 import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
@@ -48,19 +48,12 @@ type SlideModel = {
   fallbackLocationLng?: number | null;
   imageUrl: string | null;
   href: string;
+  ratingAverage?: number | null;
+  reviewCount?: number;
 };
 
 function isRatingFeaturedVertical(verticalId: HomeVerticalId): boolean {
   return verticalId === 'businesses' || verticalId === 'professionals';
-}
-
-function directoryRatingSubtitle(listing: PublicDirectoryListing): string | null {
-  const count = listing.reviewCount ?? 0;
-  const avg = listing.ratingAverage;
-  if (count > 0 && avg != null && Number.isFinite(avg)) {
-    return `${formatRatingDisplay(avg)} ★`;
-  }
-  return listing.categoryLabel || listing.cityName || null;
 }
 
 function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonthLabel: string): SlideModel {
@@ -123,9 +116,11 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
       return {
         id: l.id,
         title: l.title,
-        subtitle: directoryRatingSubtitle(l),
+        subtitle: l.categoryLabel || l.cityName || null,
         imageUrl: l.imageUrl,
         href: listingBusinessPublicHref(l),
+        ratingAverage: l.ratingAverage,
+        reviewCount: l.reviewCount ?? 0,
       };
     }
     case 'professionals': {
@@ -133,9 +128,11 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
       return {
         id: l.id,
         title: l.title,
-        subtitle: directoryRatingSubtitle(l),
+        subtitle: l.categoryLabel || l.cityName || null,
         imageUrl: l.imageUrl,
         href: listingProfessionalPublicHref(l),
+        ratingAverage: l.ratingAverage,
+        reviewCount: l.reviewCount ?? 0,
       };
     }
     default:
@@ -241,22 +238,30 @@ export function CategoryTopViewedSlider({
                   bottomLeftLabel={
                     verticalId === 'jobs' && !slide.imageUrl
                       ? null
-                      : byRating && slide.subtitle?.endsWith('★')
-                        ? (
-                            <>
-                              <Box component="span" sx={{ color: 'common.white' }}>
-                                {slide.subtitle.replace(/\s*★$/, '')}
-                              </Box>
-                              <Box component="span" sx={{ color: 'warning.main', ml: 0.35 }}>
-                                ★
-                              </Box>
-                            </>
-                          )
+                      : byRating
+                        ? null
                         : slide.subtitle
                   }
-                  bottomRightLabel={verticalId === 'jobs' ? null : slide.bottomRightLabel}
+                  bottomRightLabel={
+                    verticalId === 'jobs'
+                      ? null
+                      : byRating &&
+                          slide.ratingAverage != null &&
+                          Number.isFinite(slide.ratingAverage) &&
+                          (slide.reviewCount ?? 0) > 0
+                        ? (
+                            <ListingCardRating
+                              ratingAverage={slide.ratingAverage}
+                              reviewCount={slide.reviewCount ?? 0}
+                              singleStar
+                              onMedia
+                            />
+                          )
+                        : slide.bottomRightLabel
+                  }
                   showNavigationArrow={false}
                   contentPlacement="below"
+                  inlineImageFooter={byRating}
                   hideTitleBelowImage
                   titleMaxLines={1}
                 />

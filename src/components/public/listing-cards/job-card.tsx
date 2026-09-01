@@ -22,9 +22,12 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
+import {
+  JOB_LISTING_COVER_ASPECT_RATIO,
+  jobListingCoverImageUrl,
+  jobListingUsesMockupCover,
+} from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
-import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
@@ -36,6 +39,11 @@ import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSumm
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
+
+const JobListingFallback = dynamic(
+  () => import('@/components/jobs/job-listing-fallback').then((m) => ({ default: m.JobListingFallback })),
+  { loading: () => null }
+);
 
 const JobListingCountdown = dynamic(() => import('./job-listing-countdown').then((m) => m.JobListingCountdown), {
   ssr: false,

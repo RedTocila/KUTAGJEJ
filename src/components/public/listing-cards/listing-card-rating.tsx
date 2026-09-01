@@ -18,7 +18,8 @@ export function ListingCardRating({
   reviewCount,
   showWhenEmpty = false,
   singleStar = false,
-}: ListingCardRatingSummary & { showWhenEmpty?: boolean; singleStar?: boolean }) {
+  onMedia = false,
+}: ListingCardRatingSummary & { showWhenEmpty?: boolean; singleStar?: boolean; onMedia?: boolean }) {
   const count = reviewCount ?? 0;
   if (
     !showWhenEmpty &&
@@ -36,7 +37,17 @@ export function ListingCardRating({
   if (singleStar) {
     return (
       <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', flexShrink: 0 }}>
-        <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, lineHeight: 1.25 }}>{rating}</Typography>
+        <Typography
+          sx={{
+            fontSize: '0.85rem',
+            fontWeight: 800,
+            lineHeight: 1.25,
+            color: onMedia ? '#fff' : undefined,
+            textShadow: onMedia ? '0 1px 8px rgba(0,0,0,0.45)' : undefined,
+          }}
+        >
+          {rating}
+        </Typography>
         <StarIcon size={18} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
       </Stack>
     );

@@ -5,14 +5,14 @@ import { Box } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
-import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel } from '@/lib/find-option-label';
 import { businessMapLocation } from '@/lib/google-maps-location';
+import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { jobIndustryCoverTheme, type JobCoverTheme } from '@/lib/job-industry-themes';
 import { jobIndustryIcon } from '@/lib/job-industry-icons';
 
-/** Slim cover banner — between listing photos and the location map strip. */
-export const JOB_LISTING_COVER_ASPECT_RATIO = '21 / 9';
+export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 
 /** Theme wash fades out by 54%; map pin centered in the right 62% zone. */
 const GRADIENT_END = '54%';

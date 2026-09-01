@@ -34,6 +34,22 @@ export const BANNER_SLIDE_VISUALS = [
   },
 ] as const;
 
+const IMAGE_FROST_BADGE_SX = {
+  position: 'absolute',
+  left: { xs: 10, sm: 14, md: 18 },
+  bottom: { xs: 10, sm: 14, md: 18 },
+  zIndex: 4,
+  px: { xs: 1.25, sm: 1.5 },
+  py: { xs: 0.9, sm: 1 },
+  borderRadius: 999,
+  bgcolor: 'rgba(0,0,0,0.35)',
+  border: '1px solid rgba(255,255,255,0.22)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+  textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
+} as const;
+
 export type BannerSlideCardProps = {
   href: string | null;
   suppressNavRef: React.MutableRefObject<boolean>;
@@ -47,7 +63,7 @@ export type BannerSlideCardProps = {
   /** Draw the card frame around this slide. */
   bordered?: boolean;
   /** Optional right-side metadata shown in place of the navigation arrow. */
-  bottomRightLabel?: string | null;
+  bottomRightLabel?: React.ReactNode;
   /** Optional view count shown as an uncontained overlay in the image's top-right. */
   topRightLabel?: string | null;
   /** Optional label shown in a contained badge at the image's bottom-left. */
@@ -62,6 +78,8 @@ export type BannerSlideCardProps = {
   contentPlacement?: 'overlay' | 'below';
   /** Hide the listing title below image while keeping it available as image alt text. */
   hideTitleBelowImage?: boolean;
+  /** Title + trailing metadata in the frosted bottom badge on the image (below placement). */
+  inlineImageFooter?: boolean;
   /** First visible slide only — homepage LCP. */
   priority?: boolean;
 };
@@ -87,6 +105,7 @@ export function BannerSlideCard({
   hideTitleWhenImage = false,
   contentPlacement = 'overlay',
   hideTitleBelowImage = false,
+  inlineImageFooter = false,
   priority = false,
 }: BannerSlideCardProps) {
   const rawImage = imageUrl && /^https?:\/\//i.test(imageUrl) ? imageUrl : null;
@@ -94,6 +113,8 @@ export function BannerSlideCard({
   const showTitle = Boolean(title) && (!hideTitleWhenImage || !imageSrc);
   const contentBelowImage = contentPlacement === 'below';
   const showTitleBelowImage = showTitle && !hideTitleBelowImage;
+  const showInlineImageFooter =
+    contentBelowImage && inlineImageFooter && (showTitle || bottomRightLabel);
 
   const content = (
     <Box
@@ -285,25 +306,29 @@ export function BannerSlideCard({
             </Stack>
 
             {bottomRightLabel ? (
-              <Typography
-                sx={{
-                  width: '100%',
-                  maxWidth: 'none',
-                  flex: 'none',
-                  minWidth: 0,
-                  fontWeight: 800,
-                  fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                  lineHeight: 1.2,
-                  color: 'primary.main',
-                  textAlign: 'right',
-                  textShadow: '0 1px 12px rgba(0,0,0,0.35)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {bottomRightLabel}
-              </Typography>
+              typeof bottomRightLabel === 'string' ? (
+                <Typography
+                  sx={{
+                    width: '100%',
+                    maxWidth: 'none',
+                    flex: 'none',
+                    minWidth: 0,
+                    fontWeight: 800,
+                    fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                    lineHeight: 1.2,
+                    color: 'primary.main',
+                    textAlign: 'right',
+                    textShadow: '0 1px 12px rgba(0,0,0,0.35)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {bottomRightLabel}
+                </Typography>
+              ) : (
+                <Box sx={{ flex: 'none', minWidth: 0, alignSelf: 'flex-end', mb: 0.15 }}>{bottomRightLabel}</Box>
+              )
             ) : href ? (
               <Box
                 aria-hidden
@@ -348,23 +373,11 @@ export function BannerSlideCard({
             <ArrowUpRightIcon size={18} weight="bold" />
           </Box>
         ) : null}
-        {contentBelowImage && bottomLeftLabel ? (
+        {contentBelowImage && bottomLeftLabel && !showInlineImageFooter ? (
           <Box
             sx={{
-              position: 'absolute',
-              left: { xs: 10, sm: 14, md: 18 },
-              bottom: { xs: 10, sm: 14, md: 18 },
-              zIndex: 4,
+              ...IMAGE_FROST_BADGE_SX,
               maxWidth: showNavigationArrow ? 'calc(100% - 68px)' : 'calc(100% - 20px)',
-              px: { xs: 1.25, sm: 1.5 },
-              py: { xs: 0.9, sm: 1 },
-              borderRadius: 999,
-              bgcolor: 'rgba(0,0,0,0.35)',
-              border: '1px solid rgba(255,255,255,0.22)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-              textShadow: '0 1px 10px rgba(0, 0, 0, 0.5)',
             }}
           >
             <Typography
@@ -382,8 +395,48 @@ export function BannerSlideCard({
             </Typography>
           </Box>
         ) : null}
+        {showInlineImageFooter ? (
+          <Box
+            sx={{
+              ...IMAGE_FROST_BADGE_SX,
+              right: { xs: 10, sm: 14, md: 18 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1.25,
+              minWidth: 0,
+            }}
+          >
+            {showTitle ? (
+              <Typography
+                component="h2"
+                sx={{
+                  minWidth: 0,
+                  flex: 1,
+                  color: 'common.white',
+                  fontWeight: 800,
+                  fontSize: { xs: '1.2rem', sm: '1.35rem', md: '1.45rem' },
+                  lineHeight: 1.15,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: titleMaxLines === 1 ? 'nowrap' : 'normal',
+                  display: titleMaxLines === 1 ? 'block' : '-webkit-box',
+                  WebkitLineClamp: titleMaxLines > 1 ? titleMaxLines : undefined,
+                  WebkitBoxOrient: titleMaxLines > 1 ? 'vertical' : undefined,
+                }}
+              >
+                {title}
+              </Typography>
+            ) : (
+              <Box sx={{ flex: 1, minWidth: 0 }} />
+            )}
+            {bottomRightLabel ? (
+              <Box sx={{ flexShrink: 0, ml: 'auto' }}>{bottomRightLabel}</Box>
+            ) : null}
+          </Box>
+        ) : null}
       </Box>
-      {contentBelowImage && (showTitleBelowImage || bottomRightLabel) ? (
+      {contentBelowImage && !showInlineImageFooter && (showTitleBelowImage || bottomRightLabel) ? (
         <Stack
           direction="row"
           spacing={1.25}
@@ -418,22 +471,26 @@ export function BannerSlideCard({
             </Typography>
           ) : null}
           {bottomRightLabel ? (
-            <Typography
-              sx={{
-                flexShrink: 0,
-                maxWidth: '42%',
-                color: 'primary.main',
-                fontWeight: 800,
-                fontSize: { xs: '0.98rem', sm: '1.05rem' },
-                lineHeight: 1.2,
-                textAlign: 'right',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {bottomRightLabel}
-            </Typography>
+            typeof bottomRightLabel === 'string' ? (
+              <Typography
+                sx={{
+                  flexShrink: 0,
+                  maxWidth: '42%',
+                  color: 'primary.main',
+                  fontWeight: 800,
+                  fontSize: { xs: '0.98rem', sm: '1.05rem' },
+                  lineHeight: 1.2,
+                  textAlign: 'right',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {bottomRightLabel}
+              </Typography>
+            ) : (
+              <Box sx={{ flexShrink: 0, ml: 'auto' }}>{bottomRightLabel}</Box>
+            )
           ) : null}
         </Stack>
       ) : null}

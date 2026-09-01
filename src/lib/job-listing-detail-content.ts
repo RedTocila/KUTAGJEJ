@@ -2,7 +2,7 @@ import { businessLocationLine } from '@/lib/google-maps-location';
 import { JOB_EXPERIENCE_OPTIONS, JOB_GENDER_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import { jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListingDetail } from '@/lib/public-listings-client';
-import { findOptionLabel } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel } from '@/lib/find-option-label';
 
 const ALBANIAN_MONTHS = ['Jan', 'Shk', 'Mar', 'Pri', 'Maj', 'Qer', 'Kor', 'Gus', 'Sht', 'Tet', 'Nën', 'Dhj'] as const;
 

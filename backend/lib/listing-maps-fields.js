@@ -2,25 +2,69 @@
 
 const { parseGoogleMapsLocation } = require('./google-maps-location');
 
+function parseOptionalCoord(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeAddress(value) {
+  const trimmed = String(value || '').trim();
+  return trimmed ? trimmed.slice(0, 160) : null;
+}
+
 /**
- * Parse optional mapsUrl from a listing create/update body.
+ * Parse optional mapsUrl / street address / coordinates from a listing create/update body.
  * @returns {Promise<{ ok: true, mapsUrl: string|null, locationLat: number|null, locationLng: number|null, locationAddress: string|null } | { ok: true, skip: true } | { ok: false, message: string }>}
  */
 async function parseMapsFieldsFromBody(body, { requiredWhenProvided = true } = {}) {
-  if (body?.mapsUrl === undefined) {
+  const mapsUrlProvided = body?.mapsUrl !== undefined;
+  const locationAddressProvided = body?.locationAddress !== undefined;
+  const locationLatProvided = body?.locationLat !== undefined;
+  const locationLngProvided = body?.locationLng !== undefined;
+
+  if (!mapsUrlProvided && !locationAddressProvided && !locationLatProvided && !locationLngProvided) {
     return { ok: true, skip: true };
   }
-  const parsed = await parseGoogleMapsLocation(body.mapsUrl);
-  if (!parsed.ok) return parsed;
-  if (requiredWhenProvided && String(body.mapsUrl || '').trim() && !parsed.mapsUrl) {
-    return { ok: false, message: 'Linku i Google Maps nuk është i vlefshëm.' };
+
+  let mapsUrl = mapsUrlProvided ? String(body.mapsUrl || '').trim() || null : null;
+  let locationLat = locationLatProvided ? parseOptionalCoord(body.locationLat) : null;
+  let locationLng = locationLngProvided ? parseOptionalCoord(body.locationLng) : null;
+  let locationAddress = locationAddressProvided ? normalizeAddress(body.locationAddress) : null;
+
+  if (mapsUrlProvided) {
+    const parsed = await parseGoogleMapsLocation(body.mapsUrl);
+    if (!parsed.ok) return parsed;
+    if (requiredWhenProvided && String(body.mapsUrl || '').trim() && !parsed.mapsUrl) {
+      return { ok: false, message: 'Linku i Google Maps nuk është i vlefshëm.' };
+    }
+    mapsUrl = parsed.mapsUrl;
+    if (parsed.locationLat != null) locationLat = parsed.locationLat;
+    if (parsed.locationLng != null) locationLng = parsed.locationLng;
+    if (parsed.locationAddress && !locationAddress) locationAddress = parsed.locationAddress;
   }
+
+  if (!mapsUrl && locationAddress) {
+    mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationAddress)}`;
+  }
+
+  const hasMapData = Boolean(mapsUrl || locationAddress || (locationLat != null && locationLng != null));
+  if (!hasMapData) {
+    return {
+      ok: true,
+      mapsUrl: null,
+      locationLat: null,
+      locationLng: null,
+      locationAddress: null,
+    };
+  }
+
   return {
     ok: true,
-    mapsUrl: parsed.mapsUrl,
-    locationLat: parsed.locationLat,
-    locationLng: parsed.locationLng,
-    locationAddress: parsed.locationAddress,
+    mapsUrl,
+    locationLat,
+    locationLng,
+    locationAddress,
   };
 }
 

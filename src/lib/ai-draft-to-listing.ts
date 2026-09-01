@@ -36,7 +36,7 @@ function withKnownDefaults(record: Record<string, unknown>, withZone = false): R
 }
 
 /** Salvage street address from AI description/caption when form.locationAddress was left empty. */
-function extractJobAddressFromText(...chunks: (unknown)[]): string | null {
+export function extractJobAddressFromText(...chunks: unknown[]): string | null {
   const addressInlineRe =
     /(?:^|[\n•\-\*]\s*)(?:Adresa|ADRESA|Address|Vendndodhja|Vendndodhje)\s*[:;]\s*(.+?)(?:\.(?:\s|$)|$)/i;
   const streetLineRe =

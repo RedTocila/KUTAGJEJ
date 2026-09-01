@@ -215,7 +215,11 @@ export function JobOwnerEdit({
         description: (draft.description ?? '').trim(),
         industry: draft.industry,
         cityId: loc.cityId,
+        zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
+        locationAddress: loc.locationAddress,
+        locationLat: loc.locationLat,
+        locationLng: loc.locationLng,
         education: draft.education,
         experience: draft.experience,
         jobType: draft.jobType,
@@ -230,7 +234,6 @@ export function JobOwnerEdit({
         requirements: draft.requirements ?? [],
         benefits: draft.benefits ?? [],
         imageUrls,
-        zoneId: loc.zoneId,
       });
       if (res.error) {
         setError(res.error);

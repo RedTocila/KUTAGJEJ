@@ -15,6 +15,9 @@ export function JobFormStringList({
   onChange,
   minItems = 1,
   maxItems = 8,
+  addButtonLabel = 'Shto pikë',
+  itemFieldLabel = (index: number) => `Pika ${index + 1}`,
+  placeholder = 'p.sh. …',
 }: {
   label: string;
   hint?: string;
@@ -22,6 +25,9 @@ export function JobFormStringList({
   onChange: (items: string[]) => void;
   minItems?: number;
   maxItems?: number;
+  addButtonLabel?: string;
+  itemFieldLabel?: (index: number) => string;
+  placeholder?: string;
 }) {
   const updateAt = (index: number, value: string) => {
     onChange(items.map((line, i) => (i === index ? value : line)));
@@ -56,8 +62,8 @@ export function JobFormStringList({
               value={line}
               onChange={(e) => updateAt(index, e.target.value)}
               fullWidth
-              label={`Pika ${index + 1}`}
-              placeholder="p.sh. …"
+              label={itemFieldLabel(index)}
+              placeholder={placeholder}
             />
             <IconButton
               aria-label="Hiq pikën"
@@ -91,7 +97,7 @@ export function JobFormStringList({
         >
           <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', justifyContent: 'center' }}>
             <PlusIcon size={16} weight="bold" />
-            <span>Shto pikë</span>
+            <span>{addButtonLabel}</span>
           </Stack>
         </Button>
       </Stack>

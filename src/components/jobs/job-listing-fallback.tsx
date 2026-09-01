@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Box } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
@@ -41,6 +41,7 @@ const GOOGLE_NIGHT_FILTER =
 export type JobListingFallbackProps = {
   title?: string | null;
   industry?: string | null;
+  requiredRoles?: string[] | null;
   cityName?: string | null;
   zoneName?: string | null;
   mapsUrl?: string | null;
@@ -48,6 +49,30 @@ export type JobListingFallbackProps = {
   locationLat?: number | null;
   locationLng?: number | null;
 };
+
+function normalizeRequiredRoles(requiredRoles?: string[] | null): string[] {
+  return (requiredRoles ?? []).map((role) => String(role).replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+/** Shrink the profession icon when more roles need room below it. */
+function coverIconScale(roleCount: number): number {
+  if (roleCount <= 1) return 0.72;
+  if (roleCount === 2) return 0.58;
+  if (roleCount === 3) return 0.5;
+  return 0.42;
+}
+
+function coverRoleFontSize(roleCount: number): string {
+  if (roleCount <= 2) return '0.78rem';
+  if (roleCount <= 4) return '0.72rem';
+  return '0.66rem';
+}
+
+function coverRoleBulletSize(roleCount: number): number {
+  if (roleCount <= 2) return 6;
+  if (roleCount <= 4) return 5.5;
+  return 5;
+}
 
 function JobCoverThemeOverlay() {
   return (
@@ -172,6 +197,7 @@ function JobCoverMapPreview({
 export function JobListingFallback({
   title,
   industry,
+  requiredRoles,
   cityName,
   zoneName,
   mapsUrl,
@@ -179,9 +205,15 @@ export function JobListingFallback({
   locationLat,
   locationLng,
 }: JobListingFallbackProps) {
-  const CoverIcon = resolveJobCoverIcon(title, industry);
+  const roles = normalizeRequiredRoles(requiredRoles);
+  const roleCount = roles.length;
+  const iconScale = coverIconScale(roleCount);
+  const roleFontSize = coverRoleFontSize(roleCount);
+  const roleBulletSize = coverRoleBulletSize(roleCount);
+  const roleHint = roles.join(' / ');
+  const CoverIcon = resolveJobCoverIcon(title || roleHint, industry);
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, industry) || 'Punë';
-  const roleLabel = String(title || '').trim() || industryLabel;
+  const roleLabel = String(title || '').trim() || roleHint || industryLabel;
   const locationParts = [zoneName, cityName].filter(Boolean);
   const locationLabel = locationAddress?.trim() || locationParts.join(', ') || 'Shqipëri';
 
@@ -220,24 +252,78 @@ export function JobListingFallback({
           width: LEFT_PANEL_WIDTH,
           zIndex: 1,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: roleCount > 0 ? 0.5 : 0,
+          px: 0.5,
           color: 'primary.main',
           pointerEvents: 'none',
           filter: `drop-shadow(0 2px 10px ${primaryMainAlpha(0.18)})`,
-          '& svg': {
-            width: '72%',
-            height: '72%',
-            maxWidth: '100%',
-            maxHeight: '100%',
-          },
           ...muiTheme.applyStyles('dark', {
             color: '#fff',
             filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
           }),
         })}
       >
-        <CoverIcon weight="duotone" />
+        <Box
+          sx={{
+            width: `${iconScale * 100}%`,
+            maxWidth: '88%',
+            aspectRatio: '1',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            '& svg': {
+              width: '100%',
+              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
+            },
+          }}
+        >
+          <CoverIcon weight="duotone" />
+        </Box>
+        {roleCount > 0 ? (
+          <Stack spacing={0.35} sx={{ width: '100%', maxWidth: '96%', px: 0.25, alignItems: 'center' }}>
+            {roles.map((role, index) => (
+              <Stack
+                key={`${role}-${index}`}
+                direction="row"
+                spacing={0.55}
+                sx={{ alignItems: 'center', justifyContent: 'center', minWidth: 0, maxWidth: '100%' }}
+              >
+                <Box
+                  sx={{
+                    width: roleBulletSize,
+                    height: roleBulletSize,
+                    borderRadius: '50%',
+                    bgcolor: 'currentColor',
+                    flexShrink: 0,
+                    opacity: 0.92,
+                  }}
+                />
+                <Typography
+                  sx={(muiTheme) => ({
+                    fontSize: roleFontSize,
+                    fontWeight: 800,
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.01em',
+                    color: 'primary.main',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                    ...muiTheme.applyStyles('dark', { color: '#fff' }),
+                  })}
+                >
+                  {role}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        ) : null}
       </Box>
 
       {!locationParts.length && !locationAddress?.trim() && !mapsUrl?.trim() && locationLat == null ? (

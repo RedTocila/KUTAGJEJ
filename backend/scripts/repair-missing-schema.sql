@@ -57,6 +57,9 @@ begin
   end if;
 end $$;
 
+alter table public.job_listings
+  add column if not exists required_roles text[] not null default '{}';
+
 -- Premium listing windows
 alter table public.real_estate_listings
   add column if not exists premium_until timestamptz;

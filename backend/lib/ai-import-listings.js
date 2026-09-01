@@ -1398,7 +1398,6 @@ function listingHasLocationEvidence(form, interpreted) {
   if (!form || typeof form !== 'object') return false;
   if (String(form.locationAddress || '').trim()) return true;
   if (String(form.mapsUrl || '').trim()) return true;
-  if (String(interpreted?.cityName || form.cityName || '').trim()) return true;
   if (String(interpreted?.zoneName || form.zoneName || '').trim()) return true;
   return Boolean(extractLocationAddressFromSources(form.description));
 }

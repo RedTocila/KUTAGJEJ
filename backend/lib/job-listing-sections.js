@@ -19,7 +19,10 @@ const MAX_LINE_LEN = 500;
 const MAX_BENEFITS = 8;
 const MIN_BENEFITS = 0;
 
-function normalizeLines(raw, { minItems = 1, maxItems = MAX_LINES } = {}) {
+function normalizeLines(
+  raw,
+  { minItems = 1, maxItems = MAX_LINES, minLineLen = MIN_LINE_LEN, maxLineLen = MAX_LINE_LEN } = {},
+) {
   if (!Array.isArray(raw)) return { ok: false, message: 'Lista duhet të jetë varg.' };
   const lines = raw
     .map((line) => String(line ?? '').replace(/\s+/g, ' ').trim())
@@ -30,11 +33,11 @@ function normalizeLines(raw, { minItems = 1, maxItems = MAX_LINES } = {}) {
     return { ok: false, message: `Shtoni të paktën ${minItems} pika.` };
   }
   for (const line of lines) {
-    if (line.length < MIN_LINE_LEN) {
-      return { ok: false, message: `Çdo pikë duhet të ketë të paktën ${MIN_LINE_LEN} karaktere.` };
+    if (line.length < minLineLen) {
+      return { ok: false, message: `Çdo pikë duhet të ketë të paktën ${minLineLen} karaktere.` };
     }
-    if (line.length > MAX_LINE_LEN) {
-      return { ok: false, message: `Çdo pikë mund të ketë deri në ${MAX_LINE_LEN} karaktere.` };
+    if (line.length > maxLineLen) {
+      return { ok: false, message: `Çdo pikë mund të ketë deri në ${maxLineLen} karaktere.` };
     }
   }
   return { ok: true, lines };
@@ -80,6 +83,12 @@ function validateJobSections(body) {
   );
   if (!req.ok) return { ok: false, message: `Kërkesat: ${req.message}` };
 
+  const roles = normalizeLines(
+    Array.isArray(body?.requiredRoles) ? body.requiredRoles : [],
+    { minItems: 0, maxItems: MAX_LINES, minLineLen: 2, maxLineLen: 80 },
+  );
+  if (!roles.ok) return { ok: false, message: `Role të kërkuara: ${roles.message}` };
+
   const ben = normalizeBenefits(Array.isArray(body?.benefits) ? body.benefits : []);
   if (!ben.ok) return { ok: false, message: ben.message };
 
@@ -87,6 +96,7 @@ function validateJobSections(body) {
     ok: true,
     responsibilities: resp.lines,
     requirements: req.lines,
+    requiredRoles: roles.lines,
     benefits: ben.benefits,
   };
 }

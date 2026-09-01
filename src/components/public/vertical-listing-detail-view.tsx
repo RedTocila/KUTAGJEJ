@@ -843,6 +843,9 @@ function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
     case 'job':
       return [
         { Icon: BriefcaseIcon, label: 'Industria', value: findOptionLabel(JOB_INDUSTRY_OPTIONS, l.industry) },
+        ...(l.requiredRoles?.length
+          ? [{ Icon: UserIcon, label: 'Role të kërkuara', value: l.requiredRoles.join(', ') }]
+          : []),
         { Icon: ClockIcon, label: 'Lloji i punës', value: findOptionLabel(JOB_TYPE_OPTIONS, l.jobType) },
         { Icon: MapPinIcon, label: 'Vendi', value: findOptionLabel(WORK_LOCATION_OPTIONS, l.workLocation) },
         { Icon: UserIcon, label: 'Eksperienca', value: findOptionLabel(JOB_EXPERIENCE_OPTIONS, l.experience) },

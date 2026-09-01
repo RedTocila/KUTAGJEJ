@@ -1,6 +1,7 @@
 'use client';
 
 import type { AiListingDraft } from '@/lib/ai-listing-draft';
+import { extractJobAddressFromText } from '@/lib/ai-draft-to-listing';
 import { resolveJobAiCover } from '@/lib/ai-import-client';
 import { defaultWeeklyHours, type WeeklyHourRow } from '@/lib/business-constants';
 import {
@@ -276,12 +277,20 @@ export async function postAiListingDraft(
       }
 
       case 'job-listings': {
+        const locationAddress = str(f.locationAddress) || extractJobAddressFromText(str(f.description), draft.summary) || null;
+        const mapsUrl = str(f.mapsUrl) || null;
+        const hasMapLocation = Boolean(locationAddress || mapsUrl);
         result = await createJobListing({
           title: str(f.title) || draft.title || 'Punë',
           description: str(f.description) || draft.summary || draft.title || '',
           coverMode: jobCoverMode,
           industry: str(f.industry) || 'other',
-          cityId,
+          cityId: hasMapLocation ? null : cityId,
+          zoneId: hasMapLocation ? null : zoneId || null,
+          mapsUrl,
+          locationAddress,
+          locationLat: num(f.locationLat),
+          locationLng: num(f.locationLng),
           education: knownOption(f.education, JOB_EDUCATION_OPTIONS),
           experience: knownOption(f.experience, JOB_EXPERIENCE_OPTIONS),
           jobType: knownOption(f.jobType, JOB_TYPE_OPTIONS) || 'full-time',

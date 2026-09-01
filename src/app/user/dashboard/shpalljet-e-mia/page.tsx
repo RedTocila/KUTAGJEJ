@@ -764,6 +764,7 @@ function JobCard({
           <JobListingFallback
             title={l.title}
             industry={l.industry}
+            requiredRoles={l.requiredRoles}
             cityName={l.cityName}
             zoneName={l.zoneName}
             mapsUrl={l.mapsUrl}

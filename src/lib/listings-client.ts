@@ -139,6 +139,7 @@ export interface JobMineListing extends ListingMetrics {
   contactPhone?: string | null;
   responsibilities?: string[];
   requirements?: string[];
+  requiredRoles?: string[];
   benefits?: { id: string; label: string }[];
   imageUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
@@ -375,6 +376,9 @@ export interface JobListingPayload {
   cityId?: string | null;
   zoneId?: string | null;
   mapsUrl?: string | null;
+  locationAddress?: string | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
   education: string;
   experience: string;
   jobType: string;
@@ -387,6 +391,7 @@ export interface JobListingPayload {
   contactPhone: string;
   responsibilities: string[];
   requirements: string[];
+  requiredRoles?: string[];
   benefits: JobListingBenefitPayload[];
   imageUrls?: string[];
 }

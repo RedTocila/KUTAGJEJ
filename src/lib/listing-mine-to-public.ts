@@ -226,6 +226,7 @@ export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
     expiresAt: expires.toISOString(),
     responsibilities: mine.responsibilities ?? [],
     requirements: mine.requirements ?? [],
+    requiredRoles: mine.requiredRoles ?? [],
     benefits: mine.benefits ?? [],
     seller: null,
     ...metricsFrom(mine),

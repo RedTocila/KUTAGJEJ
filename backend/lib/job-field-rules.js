@@ -152,6 +152,7 @@ function validateJobPayload(body) {
     ok: true,
     responsibilities: sections.responsibilities,
     requirements: sections.requirements,
+    requiredRoles: sections.requiredRoles,
     benefits: sections.benefits,
   };
 }

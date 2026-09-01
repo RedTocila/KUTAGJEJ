@@ -100,6 +100,7 @@ type JobFormState = {
   description: string;
   coverMode: 'image' | 'mockup';
   industry: string;
+  requiredRoles: string[];
   cityId: string;
   zoneId: string;
   cityNameHint: string;
@@ -132,6 +133,7 @@ function emptyForm(): JobFormState {
     description: '',
     coverMode: 'mockup',
     industry: '',
+    requiredRoles: [],
     cityId: '',
     zoneId: '',
     cityNameHint: '',
@@ -236,6 +238,7 @@ function formFromListing(l: JobMineListing): JobFormState {
     coverMode:
       l.coverMode === 'image' || l.coverMode === 'mockup' ? l.coverMode : l.imageUrls?.length ? 'image' : 'mockup',
     industry: l.industry || '',
+    requiredRoles: (l.requiredRoles?.length ? l.requiredRoles : []) as string[],
     cityId: l.cityId ? String(l.cityId) : '',
     zoneId: l.zoneId ? String(l.zoneId) : '',
     cityNameHint: l.cityName ?? '',
@@ -434,6 +437,9 @@ export function JobListingForm({
         cityId: loc.cityId,
         zoneId: loc.zoneId,
         mapsUrl: loc.mapsUrl,
+        locationAddress: loc.locationAddress,
+        locationLat: loc.locationLat,
+        locationLng: loc.locationLng,
         education: form.education,
         experience: form.experience,
         jobType: form.jobType,
@@ -446,6 +452,7 @@ export function JobListingForm({
         contactPhone: form.contactPhone.trim(),
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
+        requiredRoles: normalizeLines(form.requiredRoles),
         benefits: buildBenefitsPayload(form),
         imageUrls: form.coverMode === 'image' ? [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES) : [],
         coverMode: form.coverMode,
@@ -544,6 +551,7 @@ export function JobListingForm({
               <JobListingFallback
                 title={form.title}
                 industry={form.industry}
+                requiredRoles={form.requiredRoles}
                 cityName={previewCity?.name}
                 zoneName={previewZone?.name}
                 mapsUrl={form.locationMode === 'map' ? form.mapsUrl : undefined}
@@ -580,6 +588,16 @@ export function JobListingForm({
           options={JOB_INDUSTRY_OPTIONS}
           emptyLabel="Zgjidhni industrinë…"
           allowCustom
+        />
+        <JobFormStringList
+          label="Role të kërkuara (opsionale)"
+          hint="Shtoni pozicionet ose role që kërkoni për këtë punë."
+          items={form.requiredRoles}
+          onChange={(requiredRoles) => setForm((p) => ({ ...p, requiredRoles }))}
+          minItems={0}
+          addButtonLabel="Shto rol"
+          itemFieldLabel={(index) => `Roli ${index + 1}`}
+          placeholder="p.sh. Programues, Menaxher shitjesh…"
         />
         <ListingDescriptionField
           label="Përshkrimi i shkurtër"

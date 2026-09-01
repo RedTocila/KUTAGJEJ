@@ -40,6 +40,7 @@ type SlideModel = {
   fallbackSalary?: string | null;
   fallbackLocation?: string | null;
   fallbackIndustry?: string | null;
+  fallbackRequiredRoles?: string[] | null;
   fallbackCityName?: string | null;
   fallbackZoneName?: string | null;
   fallbackMapsUrl?: string | null;
@@ -91,6 +92,7 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
         fallbackSalary: salaryLabel,
         fallbackLocation: locationLabel,
         fallbackIndustry: l.industry,
+        fallbackRequiredRoles: l.requiredRoles ?? [],
         fallbackCityName: l.cityName,
         fallbackZoneName: l.zoneName ?? null,
         fallbackMapsUrl: l.mapsUrl ?? null,
@@ -224,6 +226,7 @@ export function CategoryTopViewedSlider({
                       <JobListingFallback
                         title={slide.title}
                         industry={slide.fallbackIndustry}
+                        requiredRoles={slide.fallbackRequiredRoles}
                         cityName={slide.fallbackCityName}
                         zoneName={slide.fallbackZoneName}
                         mapsUrl={slide.fallbackMapsUrl}

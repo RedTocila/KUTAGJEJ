@@ -183,6 +183,7 @@ function formatJob(doc, cityById) {
     permalinkPath: listingPermalinkFromDoc(doc, doc.title),
     responsibilities: Array.isArray(doc.responsibilities) ? doc.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(doc.requirements) ? doc.requirements.filter(Boolean) : [],
+    requiredRoles: Array.isArray(doc.requiredRoles) ? doc.requiredRoles.filter(Boolean) : [],
     benefits: Array.isArray(doc.benefits)
       ? doc.benefits.map((b) => ({ id: String(b.id), label: String(b.label) }))
       : [],

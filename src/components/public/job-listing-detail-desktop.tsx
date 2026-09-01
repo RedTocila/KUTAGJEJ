@@ -170,6 +170,7 @@ export function JobListingDetailDesktop({
                 <JobListingFallback
                   title={listing.title}
                   industry={listing.industry}
+                  requiredRoles={listing.requiredRoles}
                   cityName={listing.cityName}
                   zoneName={listing.zoneName}
                   mapsUrl={listing.mapsUrl}

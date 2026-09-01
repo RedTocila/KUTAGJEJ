@@ -452,6 +452,7 @@ function formatMineJobFull(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     responsibilities: doc.responsibilities ?? [],
     requirements: doc.requirements ?? [],
+    requiredRoles: doc.requiredRoles ?? [],
     benefits: doc.benefits ?? [],
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     status: doc.status || 'pending',

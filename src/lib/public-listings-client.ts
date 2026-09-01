@@ -201,6 +201,7 @@ export interface PublicJobListing extends ListingMetricsFields {
   permalinkPath?: string;
   responsibilities?: string[];
   requirements?: string[];
+  requiredRoles?: string[];
   benefits?: JobListingBenefit[];
   mapsUrl?: string | null;
   locationAddress?: string | null;

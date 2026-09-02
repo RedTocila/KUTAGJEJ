@@ -11,8 +11,6 @@ import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
 import { inferRequiredRolesFromTitle, sanitizeRequiredRoles } from '@/lib/job-required-roles';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { neutralInk } from '@/styles/theme/colors';
 
 export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 
@@ -26,16 +24,13 @@ const MAP_BOTTOM_CLIP_PX = 72;
 /** Soft horizontal fade — wider than before for a blurrier blend into the map. */
 const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 12%, rgba(0, 0, 0, 0.72) 28%, rgba(0, 0, 0, 0.28) 44%, rgba(0, 0, 0, 0) 62%)`;
 
-/** Cover palette — literal hex so masked gradients stay stable (no CSS var / oklab wash-out). */
-const LIGHT_COVER_SOLID = '#ffffff';
-const LIGHT_COVER_FADE = neutralInk[50];
-const LIGHT_COVER_MID = neutralInk[100];
-const DARK_COVER_SOLID = neutralInk[950];
-const DARK_COVER_FADE = neutralInk[900];
-const DARK_COVER_MID = neutralInk[800];
-
 /** Google Maps night land — matches LocationMapEmbed dark styling. */
 const GOOGLE_NIGHT_LAND = '#242f3e';
+
+/** Cover palette — dark charcoal/navy so the left wash reads black, not grey. */
+const COVER_GRADIENT_SOLID = '#050608';
+const COVER_GRADIENT_FADE = '#0c1018';
+const COVER_GRADIENT_MID = GOOGLE_NIGHT_LAND;
 const GOOGLE_NIGHT_FILTER =
   'invert(1) hue-rotate(180deg) saturate(0.62) brightness(1.28) contrast(0.98)';
 
@@ -104,50 +99,40 @@ function JobCoverThemeOverlay() {
     <>
       <Box
         aria-hidden
-        sx={(muiTheme) => ({
+        sx={{
           position: 'absolute',
           inset: 0,
           zIndex: 1,
           pointerEvents: 'none',
-          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 28%, ${LIGHT_COVER_MID} 52%)`,
+          background: `linear-gradient(180deg, ${COVER_GRADIENT_SOLID} 0%, ${COVER_GRADIENT_FADE} 30%, ${COVER_GRADIENT_MID} 58%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_FADE} 28%, ${DARK_COVER_MID} 52%)`,
-          }),
-        })}
+        }}
       />
       <Box
         aria-hidden
-        sx={(muiTheme) => ({
+        sx={{
           position: 'absolute',
           inset: 0,
           zIndex: 1,
           pointerEvents: 'none',
-          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 100%)`,
-          opacity: 0.15,
+          background: `linear-gradient(180deg, ${COVER_GRADIENT_SOLID} 0%, ${COVER_GRADIENT_MID} 100%)`,
+          opacity: 0.55,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_MID} 100%)`,
-            opacity: 0.48,
-          }),
-        })}
+        }}
       />
       <Box
         aria-hidden
-        sx={(muiTheme) => ({
+        sx={{
           position: 'absolute',
           inset: 0,
           zIndex: 1,
           pointerEvents: 'none',
-          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0) 72%)`,
+          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 72%)`,
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 72%)`,
-          }),
-        })}
+        }}
       />
     </>
   );
@@ -178,15 +163,12 @@ function JobCoverMapPreview({
   return (
     <Box
       aria-hidden
-      sx={(muiTheme) => ({
+      sx={{
         position: 'absolute',
         inset: 0,
-        bgcolor: '#e8eaed',
+        bgcolor: GOOGLE_NIGHT_LAND,
         overflow: 'hidden',
-        ...muiTheme.applyStyles('dark', {
-          bgcolor: GOOGLE_NIGHT_LAND,
-        }),
-      })}
+      }}
     >
       <Box
         key={embedSrc}
@@ -196,7 +178,7 @@ function JobCoverMapPreview({
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         tabIndex={-1}
-        sx={(muiTheme) => ({
+        sx={{
           border: 0,
           position: 'absolute',
           top: -MAP_TOP_CLIP_PX,
@@ -205,12 +187,9 @@ function JobCoverMapPreview({
           height: `calc(100% + ${MAP_TOP_CLIP_PX + MAP_BOTTOM_CLIP_PX}px)`,
           display: 'block',
           pointerEvents: 'none',
-          colorScheme: 'light',
-          ...muiTheme.applyStyles('dark', {
-            filter: GOOGLE_NIGHT_FILTER,
-            WebkitFilter: GOOGLE_NIGHT_FILTER,
-          }),
-        })}
+          filter: GOOGLE_NIGHT_FILTER,
+          WebkitFilter: GOOGLE_NIGHT_FILTER,
+        }}
       />
     </Box>
   );
@@ -263,20 +242,19 @@ export function JobListingFallback({
     <Box
       role="img"
       aria-label={`${roleLabel}, ${locationLabel}`}
-      sx={(muiTheme) => ({
+      sx={{
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        bgcolor: LIGHT_COVER_SOLID,
-        ...muiTheme.applyStyles('dark', { bgcolor: DARK_COVER_SOLID }),
-      })}
+        bgcolor: COVER_GRADIENT_SOLID,
+      }}
     >
       <JobCoverMapPreview query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
       <JobCoverThemeOverlay />
 
       <Box
         aria-hidden
-        sx={(muiTheme) => ({
+        sx={{
           position: 'absolute',
           left: 0,
           top: 0,
@@ -289,14 +267,10 @@ export function JobListingFallback({
           justifyContent: 'center',
           gap: roleCount > 0 ? (isCard ? 0.35 : 0.5) : 0,
           px: isCard ? 0.75 : 0.5,
-          color: 'primary.main',
+          color: '#fff',
           pointerEvents: 'none',
-          filter: `drop-shadow(0 2px 10px ${primaryMainAlpha(0.18)})`,
-          ...muiTheme.applyStyles('dark', {
-            color: '#fff',
-            filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
-          }),
-        })}
+          filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.35)})`,
+        }}
       >
         <Box
           sx={{
@@ -350,18 +324,17 @@ export function JobListingFallback({
                   }}
                 />
                 <Typography
-                  sx={(muiTheme) => ({
+                  sx={{
                     fontSize: roleFontSize,
                     fontWeight: 800,
                     lineHeight: 1.25,
                     letterSpacing: '-0.01em',
-                    color: 'primary.main',
+                    color: '#fff',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     minWidth: 0,
-                    ...muiTheme.applyStyles('dark', { color: '#fff' }),
-                  })}
+                  }}
                 >
                   {role}
                 </Typography>

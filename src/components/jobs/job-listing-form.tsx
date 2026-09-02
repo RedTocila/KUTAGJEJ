@@ -31,6 +31,7 @@ import { useUser } from '@/hooks/use-user';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { sanitizeRequiredRoles } from '@/lib/job-required-roles';
+import { JobFormBenefitsSection } from '@/components/jobs/job-form-benefits-section';
 import { JobFormEmploymentSection } from '@/components/jobs/job-form-employment-section';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';

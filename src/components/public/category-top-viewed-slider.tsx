@@ -23,8 +23,9 @@ import type {
 import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
-import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingCardRating } from '@/components/public/listing-cards/listing-card-rating';
+import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
 import { BannerSliderPager } from '@/components/public/banner-slider-pager';
 import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
@@ -174,6 +175,42 @@ export function CategoryTopViewedSlider({
 
   if (slides.length === 0) return null;
 
+  if (verticalId === 'jobs') {
+    return (
+      <Box
+        component="section"
+        aria-label={t.browse.mostViewedAria}
+        sx={{
+          pt: 0,
+          pb: 0,
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          overflowX: 'hidden',
+        }}
+      >
+        <Container maxWidth="xl" sx={{ minWidth: 0, px: { xs: 2, md: 3, lg: 4 } }}>
+          <Typography
+            component="h2"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: '0.95rem', md: '1.05rem' },
+              letterSpacing: '-0.01em',
+              mb: { xs: 0.5, md: 0.75 },
+            }}
+          >
+            {t.browse.mostViewed}
+          </Typography>
+          <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
+            {(listings as PublicJobListing[]).map((listing) => (
+              <JobCard key={listing.id} listing={listing} variant="carousel" />
+            ))}
+          </ListingsCarousel>
+        </Container>
+      </Box>
+    );
+  }
+
   return (
     <Box
       component="section"
@@ -214,49 +251,31 @@ export function CategoryTopViewedSlider({
               const dist = Math.abs(i - idx);
               const wrapDist = Math.min(dist, slides.length - dist);
               const eager = wrapDist <= 1;
-              const isJobMockupSlide = verticalId === 'jobs' && !slide.imageUrl;
               return (
                 <BannerSlideCard
                   key={slide.id}
                   href={slide.href}
                   suppressNavRef={suppressNavRef}
                   imageUrl={slide.imageUrl}
-                  fallbackContent={
-                    isJobMockupSlide ? (
-                      <JobListingFallback
-                        title={slide.title}
-                        industry={slide.fallbackIndustry}
-                        requiredRoles={slide.fallbackRequiredRoles}
-                        cityName={slide.fallbackCityName}
-                        zoneName={slide.fallbackZoneName}
-                        mapsUrl={slide.fallbackMapsUrl}
-                        locationAddress={slide.fallbackLocationAddress}
-                        locationLat={slide.fallbackLocationLat}
-                        locationLng={slide.fallbackLocationLng}
-                      />
-                    ) : undefined
-                  }
                   fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
                   eager={eager}
                   title={slide.title}
                   topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
-                  bottomLeftLabel={isJobMockupSlide ? slide.title : byRating ? null : slide.subtitle}
+                  bottomLeftLabel={byRating ? null : slide.subtitle}
                   bottomRightLabel={
-                    verticalId === 'jobs'
-                      ? null
-                      : byRating &&
-                          slide.ratingAverage != null &&
-                          Number.isFinite(slide.ratingAverage) &&
-                          (slide.reviewCount ?? 0) > 0
-                        ? (
-                            <ListingCardRating
-                              ratingAverage={slide.ratingAverage}
-                              reviewCount={slide.reviewCount ?? 0}
-                              singleStar
-                              onMedia
-                            />
-                          )
-                        : slide.bottomRightLabel
+                    byRating &&
+                    slide.ratingAverage != null &&
+                    Number.isFinite(slide.ratingAverage) &&
+                    (slide.reviewCount ?? 0) > 0
+                      ? (
+                          <ListingCardRating
+                            ratingAverage={slide.ratingAverage}
+                            reviewCount={slide.reviewCount ?? 0}
+                            singleStar
+                            onMedia
+                          />
+                        )
+                      : slide.bottomRightLabel
                   }
                   showNavigationArrow={false}
                   contentPlacement="below"

@@ -56,7 +56,7 @@ function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeLi
     case 'cars':
       return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
     case 'jobs':
-      return <JobCard key={listing.id} listing={listing as PublicJobListing} />;
+      return <JobCard key={listing.id} listing={listing as PublicJobListing} variant="carousel" />;
     case 'marketplace':
       return <MarketplaceCard key={listing.id} listing={listing as PublicMarketplaceListing} />;
     case 'businesses':

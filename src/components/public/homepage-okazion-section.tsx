@@ -20,7 +20,7 @@ function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
     case 'car':
       return <CarCard listing={listing} />;
     case 'job':
-      return <JobCard listing={listing} />;
+      return <JobCard listing={listing} variant="homepage" />;
     case 'marketplace':
       return <MarketplaceCard listing={listing} />;
     default:

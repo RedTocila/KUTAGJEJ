@@ -2,124 +2,331 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
-import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { alpha } from '@mui/material/styles';
+import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
-import { GraduationCap as GraduationCapIcon } from '@phosphor-icons/react/dist/ssr/GraduationCap';
-import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
-import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
-import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
+import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
-import { listingJobPublicHref } from '@/paths';
+import { listingJobPublicHref, paths } from '@/paths';
+import { resolveJobCardRoles } from '@/lib/job-card-roles';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
+import { nextSaveCount, nextShareCount, toggleListingSave } from '@/lib/listing-metrics';
+import type { ListingSharePayload } from '@/lib/listing-share';
 import {
-  JOB_EDUCATION_OPTIONS,
-  JOB_EXPERIENCE_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
-import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import {
-  JOB_LISTING_COVER_ASPECT_RATIO,
-  jobListingCoverImageUrl,
-  jobListingUsesMockupCover,
-} from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
+import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
+import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-saved-state';
+import { useUser } from '@/hooks/use-user';
 import { ListingCardLink } from '@/components/public/listing-card-link';
+import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
+import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
+import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
+import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 
-import { CardDescription } from './card-description';
-import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, listingCardRelativeDate } from './format-helpers';
+import type { ListingCardRatingSummary } from './listing-card-rating';
+import { OkazionCountdownPlaceholder } from './okazion-countdown';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
-import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
-import { ListingPrice } from './listing-price';
-import { ListingTitleWithVerified } from './listing-title-with-verified';
-import { SpecRow, type Spec } from './spec-row';
 
-const JobListingFallback = dynamic(
-  () => import('@/components/jobs/job-listing-fallback').then((m) => ({ default: m.JobListingFallback })),
-  { loading: () => null }
+const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
+  ssr: false,
+  loading: () => <OkazionCountdownPlaceholder />,
+});
+
+const JobListingCountdown = dynamic(
+  () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
+  {
+    ssr: false,
+    loading: () => <JobListingCountdownPlaceholder variant="default" />,
+  }
 );
 
-const JobListingCountdown = dynamic(() => import('./job-listing-countdown').then((m) => m.JobListingCountdown), {
-  ssr: false,
-  loading: () => <JobListingCountdownPlaceholder variant="overlay" bare />,
-});
-function workLocationIcon(value: string) {
-  if (value === 'remote') return HouseIcon;
-  if (value === 'hybrid') return PathIcon;
-  return BuildingsIcon;
+function JobCardTag({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        px: compact ? 1 : 1.2,
+        py: compact ? 0.3 : 0.45,
+        borderRadius: 999,
+        border: '1px solid',
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        color: 'text.secondary',
+        fontSize: compact ? '0.68rem' : '0.75rem',
+        fontWeight: 600,
+        lineHeight: 1.2,
+        maxWidth: '100%',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
-function JobExpiryAnnouncementBar({ expiresAt }: { expiresAt: string }) {
+function JobCardActions({
+  listing,
+  sharePayload,
+  compact = false,
+}: {
+  listing: PublicJobListing;
+  sharePayload: ListingSharePayload;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const { user } = useUser();
+  const savedCtx = useSavedListingsOptional();
+  const saved = useListingSavedState('job', listing.id, listing.saved);
+  const cachedSaveCount = useListingSaveCount('job', listing.id, listing.saveCount ?? 0, saved);
+  const [shareCount, setShareCount] = React.useState(listing.shareCount ?? 0);
+  const [localSaveCount, setLocalSaveCount] = React.useState(listing.saveCount ?? 0);
+  const [shareOpen, setShareOpen] = React.useState(false);
+
+  const saveCount = savedCtx ? cachedSaveCount : localSaveCount;
+
+  React.useEffect(() => {
+    setShareCount(listing.shareCount ?? 0);
+    setLocalSaveCount(listing.saveCount ?? 0);
+  }, [listing.id, listing.saveCount, listing.shareCount]);
+
+  const handleShare = React.useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShareOpen(true);
+  }, []);
+
+  const handleSave = React.useCallback(
+    async (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!user) {
+        router.push(paths.user.auth);
+        return;
+      }
+      const wasSaved = saved;
+      setLocalSaveCount((count) => Math.max(0, count + (wasSaved ? -1 : 1)));
+
+      if (savedCtx) {
+        await savedCtx.toggleSaved('job', listing.id, { fromCount: saveCount });
+        return;
+      }
+      const metrics = await toggleListingSave('job', listing.id);
+      if (metrics) setLocalSaveCount((count) => nextSaveCount(count, metrics));
+      else setLocalSaveCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
+    },
+    [listing.id, router, saveCount, saved, savedCtx, user]
+  );
+
   return (
+    <>
+      <Stack direction="row" spacing={compact ? 0.5 : 0.75} sx={{ alignItems: 'center', flexShrink: 0 }}>
+        <ListingMediaActionButton
+          aria-label="Ndaj njoftimin"
+          count={shareCount}
+          compact={compact}
+          icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
+          onClick={handleShare}
+        />
+        <ListingMediaActionButton
+          aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+          count={saveCount}
+          active={saved}
+          accent="primary"
+          compact={compact}
+          icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
+          onClick={handleSave}
+        />
+      </Stack>
+      {shareOpen ? (
+        <ListingSharePage
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          payload={sharePayload}
+          onShared={(metrics) => setShareCount((count) => nextShareCount(count, metrics))}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function JobCardRoleBullets({
+  roles,
+  fontSize,
+  bulletSize,
+  twoColumns = false,
+}: {
+  roles: string[];
+  fontSize: string;
+  bulletSize: number;
+  twoColumns?: boolean;
+}) {
+  const items = roles.map((role, index) => (
     <Stack
+      component="li"
+      key={`${role}-${index}`}
       direction="row"
-      spacing={0.75}
-      sx={(theme) => ({
-        width: '100%',
-        boxSizing: 'border-box',
-        alignItems: 'center',
-        justifyContent: 'center',
-        px: 1.1,
-        py: 0.65,
-        color: '#fff',
-        bgcolor: 'rgba(0,0,0,0.48)',
-        borderTop: '1px solid rgba(255,255,255,0.14)',
-        backdropFilter: 'blur(8px)',
-        ...theme.applyStyles('dark', {
-          bgcolor: 'rgba(0,0,0,0.72)',
-          borderTop: '1px solid rgba(255,255,255,0.16)',
-        }),
-      })}
+      spacing={0.65}
+      sx={{ alignItems: 'flex-start', minWidth: 0 }}
     >
-      <JobListingCountdown expiresAt={expiresAt} variant="overlay" bare showClock />
+      <Box
+        aria-hidden
+        sx={{
+          width: bulletSize,
+          height: bulletSize,
+          borderRadius: '50%',
+          bgcolor: 'primary.main',
+          flexShrink: 0,
+          mt: '0.48em',
+          opacity: 0.9,
+        }}
+      />
+      <Typography
+        sx={{
+          fontSize,
+          lineHeight: 1.35,
+          fontWeight: 700,
+          color: 'text.secondary',
+          minWidth: 0,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {role}
+      </Typography>
+    </Stack>
+  ));
+
+  if (twoColumns) {
+    return (
+      <Box
+        component="ul"
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+          gap: 0.55,
+          columnGap: 1.1,
+          m: 0,
+          p: 0,
+          listStyle: 'none',
+        }}
+      >
+        {items}
+      </Box>
+    );
+  }
+
+  return (
+    <Stack component="ul" spacing={0.5} sx={{ m: 0, p: 0, listStyle: 'none' }}>
+      {items}
     </Stack>
   );
 }
 
+function jobCardSnippet(listing: PublicJobListing, salaryLabel: string, locationLabel: string): string {
+  const description = String(listing.description ?? '').replace(/\s+/g, ' ').trim();
+  if (description) return description;
+  if (locationLabel) return `Pozicion i hapur në ${locationLabel}.`;
+  return `${salaryLabel}.`;
+}
+
+type JobCardVariant = 'default' | 'cover' | 'compact' | 'carousel' | 'homepage';
+
 export function JobCard({
   listing,
-  sellerRating = null,
-  imagePriority = false,
+  sellerRating: _sellerRating = null,
+  imagePriority: _imagePriority = false,
   variant = 'default',
-  locationInPriceRow = false,
+  locationInPriceRow: _locationInPriceRow = false,
 }: {
   listing: PublicJobListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
-  /** `'cover'` is the square crop used on the jobs browse page. Homepage stays `'default'`. */
-  variant?: 'default' | 'cover' | 'compact';
+  variant?: JobCardVariant;
   locationInPriceRow?: boolean;
 }) {
-  const viewCount = listing.viewCount ?? 0;
+  const compact = variant === 'compact';
+  const carousel = variant === 'carousel';
+  const homepage = variant === 'homepage';
+  const dense = compact || carousel;
+  const mixedHome = homepage || carousel;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
   const workLocationLabel = findOptionLabel(WORK_LOCATION_OPTIONS, listing.workLocation);
-  const experienceLabel = findOptionLabel(JOB_EXPERIENCE_OPTIONS, listing.experience);
-  const educationLabel = findOptionLabel(JOB_EDUCATION_OPTIONS, listing.education);
   const locationLabel = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const salaryLabel =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
-  const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
-  const cardRating = resolveListingCardRating(null, sellerRating);
-  const usesMockupCover = jobListingUsesMockupCover(listing);
-  const displayImageUrl = jobListingCoverImageUrl(listing);
+  const viewCount = listing.viewCount ?? 0;
+  const postedLabel = listingCardRelativeDate(listing);
+  const requiredRoles = resolveJobCardRoles(listing);
+  const snippet = jobCardSnippet(listing, salaryLabel, locationLabel);
+  const CoverIcon = resolveJobCoverIcon(listing.title, listing.industry);
+  const employerLabel = industryLabel || 'Punë';
 
-  const WorkLocationIcon = workLocationIcon(listing.workLocation);
+  const tags = [
+    jobTypeLabel,
+    locationLabel || workLocationLabel,
+    listing.salary != null ? salaryLabel : null,
+  ].filter(Boolean) as string[];
+  const visibleTags = mixedHome ? tags.slice(0, 2) : tags;
 
-  const specs: Spec[] = [
-    ...(listing.jobType ? [{ Icon: ClockIcon, label: jobTypeLabel, title: 'Tipi i punës' }] : []),
-    ...(listing.workLocation ? [{ Icon: WorkLocationIcon, label: workLocationLabel, title: 'Vendi i punës' }] : []),
-    ...(listing.experience ? [{ Icon: StarIcon, label: experienceLabel, title: 'Eksperienca' }] : []),
-    ...(listing.education && listing.education !== 'no-requirement'
-      ? [{ Icon: GraduationCapIcon, label: educationLabel, title: 'Arsimi' }]
-      : []),
-  ];
+  const sharePayload = React.useMemo<ListingSharePayload>(
+    () => ({
+      listingKind: 'job',
+      listingId: listing.id,
+      title: listing.title,
+      category: industryLabel,
+      priceLabel: salaryLabel,
+      badge: jobTypeLabel,
+      imageUrl: listing.imageUrl ?? null,
+      location: locationLabel || listing.cityName || undefined,
+      specs: [
+        { icon: 'clock', label: jobTypeLabel },
+        { icon: 'briefcase', label: industryLabel },
+      ],
+      createdAt: listing.createdAt,
+      viewCount,
+      saveCount: listing.saveCount,
+      contactPhone: listing.contactPhone?.trim() || undefined,
+      url: listingJobPublicHref(listing),
+    }),
+    [
+      industryLabel,
+      jobTypeLabel,
+      listing.contactPhone,
+      listing.createdAt,
+      listing.id,
+      listing.imageUrl,
+      listing.cityName,
+      listing.saveCount,
+      listing.title,
+      locationLabel,
+      salaryLabel,
+      viewCount,
+    ]
+  );
+
+  const eyeSize = homepage ? 13 : carousel ? 12 : compact ? 13 : 14;
+  const roleFontSize = homepage ? '0.9rem' : carousel ? '0.82rem' : compact ? '0.84rem' : '0.92rem';
+  const roleBulletSize = homepage ? 6 : carousel ? 5.5 : compact ? 5 : 6;
+  const roleTwoColumns = requiredRoles.length >= 3;
+  const jobExpiresAt = listing.isOkazion
+    ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
+    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
 
   return (
     <ListingCardLink
@@ -129,277 +336,174 @@ export function JobCard({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={compact}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
-        <CardMedia
-          listingKind="job"
-          listingId={listing.id}
-          imageUrl={displayImageUrl}
-          FallbackIcon={BriefcaseIcon}
-          fallbackContent={
-            usesMockupCover ? (
-              <JobListingFallback
-                title={listing.title}
-                industry={listing.industry}
-                requiredRoles={listing.requiredRoles}
-                cityName={listing.cityName}
-                zoneName={listing.zoneName}
-                mapsUrl={listing.mapsUrl}
-                locationAddress={listing.locationAddress}
-                locationLat={listing.locationLat}
-                locationLng={listing.locationLng}
-              />
-            ) : undefined
-          }
-          alt={listing.title}
-          height={displayImageUrl ? { xs: 185, md: 200 } : undefined}
-          aspectRatio={
-            displayImageUrl
-              ? variant === 'cover' || variant === 'compact'
-                ? '1 / 1'
-                : undefined
-              : JOB_LISTING_COVER_ASPECT_RATIO
-          }
-          compact={variant === 'compact'}
-          topLeftBadge={jobTypeLabel || undefined}
-          shareCount={listing.shareCount}
-          saveCount={listing.saveCount}
-          saved={listing.saved}
-          premium={Boolean(listing.isPremium)}
-          okazion={Boolean(listing.isOkazion)}
-          okazionUntil={listing.okazionUntil}
-          sellerVerified={Boolean(listing.sellerVerified)}
-          bottomOverlay={
-            variant !== 'compact' && !listing.isOkazion ? <JobExpiryAnnouncementBar expiresAt={expiresAt} /> : undefined
-          }
-          priority={imagePriority}
-          sharePayload={{
-            title: listing.title,
-            category: industryLabel,
-            priceLabel: salaryLabel,
-            badge: jobTypeLabel,
-            imageUrl: displayImageUrl,
-            location: locationLabel || undefined,
-            specs: [
-              ...(listing.jobType ? [{ icon: 'clock' as const, label: jobTypeLabel }] : []),
-              ...(listing.workLocation
-                ? [
-                    {
-                      icon:
-                        listing.workLocation === 'remote'
-                          ? ('house' as const)
-                          : listing.workLocation === 'hybrid'
-                            ? ('path' as const)
-                            : ('buildings' as const),
-                      label: workLocationLabel,
-                    },
-                  ]
-                : []),
-              ...(listing.experience ? [{ icon: 'star' as const, label: experienceLabel }] : []),
-              ...(listing.education && listing.education !== 'no-requirement'
-                ? [{ icon: 'graduation' as const, label: educationLabel }]
-                : []),
-            ],
-            createdAt: listing.createdAt,
-            viewCount,
-            saveCount: listing.saveCount,
-            contactPhone: listing.contactPhone?.trim() || undefined,
-            url: listingJobPublicHref(listing),
+        <Stack
+          className="listing-card-body"
+          spacing={homepage ? 1.35 : carousel ? 1 : compact ? 1.1 : 1.5}
+          sx={{
+            p: homepage
+              ? { xs: 1.5, sm: 1.65 }
+              : carousel
+                ? { xs: 1.35, sm: 1.5 }
+                : compact
+                  ? { xs: 1.35, sm: 1.5 }
+                  : { xs: 1.75, sm: 2 },
+            height: '100%',
+            minHeight: mixedHome ? { xs: 318, md: 332 } : compact ? 0 : 280,
           }}
-        />
-        {variant === 'compact' ? (
+        >
           <Stack
-            className="listing-card-body"
-            spacing={{ xs: 0.25, sm: 0.4 }}
-            sx={{ pt: { xs: 0.65, sm: 0.8 }, px: { xs: 0.25, sm: 0.4 }, pb: { xs: 0.8, sm: 1 } }}
+            direction="row"
+            spacing={homepage ? 1 : carousel ? 0.9 : 1.1}
+            sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}
           >
-            <ListingTitleWithVerified
-              title={listing.title}
-              maxLines={1}
-              verified={false}
-              typographySx={{
-                fontSize: { xs: '0.76rem', sm: '0.82rem' },
-                fontWeight: 650,
-                lineHeight: 1.25,
-              }}
-            />
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              {listing.salary != null ? (
-                <ListingPrice
-                  price={listing.salary}
-                  currency={listing.currency}
-                  isPremium={listing.isPremium}
-                  isOkazion={listing.isOkazion}
-                  fontSize="0.9rem"
-                  fontWeight={800}
-                  suffix={
-                    <Typography
-                      component="span"
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ ml: 0.35, fontWeight: 500 }}
-                    >
-                      / muaj
-                    </Typography>
-                  }
-                />
-              ) : (
-                <Typography sx={{ color: 'primary.main', fontWeight: 800, fontSize: '0.9rem', lineHeight: 1.2 }}>
-                  Pagë e diskutueshme
-                </Typography>
-              )}
-              <Stack
-                direction="row"
-                spacing={0.35}
-                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
-              >
-                <EyeIcon size={12} weight="regular" />
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
-            </Stack>
-            {locationLabel ? (
-              <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', color: 'text.disabled', minWidth: 0 }}>
-                <MapPinIcon size={12} weight="regular" color="var(--mui-palette-primary-main)" />
-                <Typography variant="caption" noWrap color="text.disabled" sx={{ fontSize: '0.68rem' }}>
-                  {locationLabel}
-                </Typography>
-              </Stack>
-            ) : null}
-          </Stack>
-        ) : (
-          <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
-            <ListingTitleWithVerified title={listing.title} maxLines={1} verified={false} />
-            {cardRating ? (
-              <ListingCardRating ratingAverage={cardRating.ratingAverage} reviewCount={cardRating.reviewCount} />
-            ) : null}
-            {locationInPriceRow ? (
-              <Stack
-                direction="row"
-                sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}
-              >
-                {listing.salary != null ? (
-                  <ListingPrice
-                    price={listing.salary}
-                    currency={listing.currency}
-                    isPremium={listing.isPremium}
-                    isOkazion={listing.isOkazion}
-                    fontSize="1rem"
-                    suffix={
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 0.5, fontWeight: 500 }}
-                      >
-                        / muaj
-                      </Typography>
-                    }
-                    sx={{ minWidth: 0, flex: '1 1 auto' }}
-                  />
-                ) : (
-                  <Typography
-                    sx={{
-                      fontWeight: 800,
-                      fontSize: '1rem',
-                      color: 'primary.main',
-                      lineHeight: 1.2,
-                      minWidth: 0,
-                      flex: '1 1 auto',
-                    }}
-                  >
-                    Pagë e diskutueshme
-                  </Typography>
-                )}
-                {locationLabel ? (
-                  <Stack
-                    direction="row"
-                    spacing={0.5}
-                    sx={{
-                      alignItems: 'center',
-                      color: 'text.secondary',
-                      minWidth: 0,
-                      maxWidth: '50%',
-                      flexShrink: 1,
-                    }}
-                  >
-                    <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                    <Typography
-                      variant="caption"
-                      noWrap
-                      sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, textAlign: 'right' }}
-                    >
-                      {locationLabel}
-                    </Typography>
-                  </Stack>
-                ) : null}
-              </Stack>
-            ) : listing.salary != null ? (
-              <ListingPrice
-                price={listing.salary}
-                currency={listing.currency}
-                isPremium={listing.isPremium}
-                isOkazion={listing.isOkazion}
-                fontSize="1rem"
-                suffix={
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ ml: 0.5, fontWeight: 500 }}
-                  >
-                    / muaj
-                  </Typography>
-                }
-              />
-            ) : (
-              <Typography
+            <Stack
+              direction="row"
+              spacing={homepage ? 1 : carousel ? 0.9 : 1.1}
+              sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}
+            >
+              <Box
                 sx={{
-                  fontWeight: 800,
-                  fontSize: '1rem',
+                  width: homepage ? 38 : carousel ? 32 : compact ? 36 : 40,
+                  height: homepage ? 38 : carousel ? 32 : compact ? 36 : 40,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   color: 'primary.main',
-                  lineHeight: 1.2,
+                  '& svg': {
+                    width: homepage ? 19 : carousel ? 16 : compact ? 18 : 20,
+                    height: homepage ? 19 : carousel ? 16 : compact ? 18 : 20,
+                  },
                 }}
               >
-                Pagë e diskutueshme
-              </Typography>
-            )}
-
-            <CardDescription text={listing.description} />
-
-            <SpecRow specs={specs} />
-
-            {!locationInPriceRow && locationLabel ? (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}>
-                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                <CoverIcon weight="duotone" />
+              </Box>
+              <Stack direction="row" spacing={0.55} sx={{ alignItems: 'center', minWidth: 0, flexWrap: 'wrap' }}>
                 <Typography
-                  variant="caption"
                   noWrap
-                  sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0, flex: 1 }}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: homepage ? '0.8rem' : carousel ? '0.74rem' : compact ? '0.78rem' : '0.84rem',
+                    color: 'text.secondary',
+                    maxWidth: '100%',
+                  }}
                 >
-                  {locationLabel}
+                  {employerLabel}
                 </Typography>
-              </Stack>
-            ) : null}
-
-            <Box sx={{ flex: 1 }} />
-
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
-              </Typography>
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <EyeIcon size={14} weight="regular" />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
+                {listing.sellerVerified ? (
+                  <ListingVerifiedBadge size={homepage ? 13 : carousel ? 12 : compact ? 13 : 14} />
+                ) : null}
+                {listing.isPremium && !listing.isOkazion ? (
+                  <ListingPremiumBadge size={homepage ? 18 : carousel ? 16 : compact ? 18 : 20} aria-label="Premium" />
+                ) : null}
               </Stack>
             </Stack>
+            <JobCardActions listing={listing} sharePayload={sharePayload} compact={dense} />
           </Stack>
-        )}
+
+          <Typography
+            component="h3"
+            sx={{
+              fontWeight: 800,
+              fontSize: homepage ? '0.98rem' : carousel ? '0.88rem' : compact ? '0.95rem' : { xs: '1.08rem', sm: '1.15rem' },
+              lineHeight: 1.25,
+              letterSpacing: '-0.02em',
+              color: 'text.primary',
+              display: '-webkit-box',
+              WebkitLineClamp: homepage ? 3 : carousel || compact ? 2 : 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {listing.title}
+          </Typography>
+
+          {visibleTags.length > 0 ? (
+            <Stack
+              direction="row"
+              spacing={0.65}
+              sx={{ alignItems: 'center', flexWrap: 'wrap', gap: homepage ? 0.65 : 0.55 }}
+            >
+              {visibleTags.map((tag) => (
+                <JobCardTag key={tag} compact={dense && !homepage}>
+                  {tag}
+                </JobCardTag>
+              ))}
+            </Stack>
+          ) : null}
+
+          <Stack spacing={0.75} sx={{ flex: homepage ? '0 0 auto' : carousel ? '1 1 auto' : compact ? '0 0 auto' : '1 1 auto' }}>
+            <Box
+              sx={(theme) => ({
+                p: homepage ? 1.15 : carousel ? 1 : compact ? 1.1 : 1.35,
+                borderRadius: homepage ? 2 : carousel ? 1.5 : 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.black, 0.02),
+                minHeight: homepage ? 0 : carousel ? 52 : compact ? 0 : 72,
+              })}
+            >
+              {requiredRoles.length > 0 ? (
+                <JobCardRoleBullets
+                  roles={requiredRoles}
+                  fontSize={roleFontSize}
+                  bulletSize={roleBulletSize}
+                  twoColumns={roleTwoColumns}
+                />
+              ) : (
+                <Typography
+                  sx={{
+                    fontStyle: 'italic',
+                    fontSize: roleFontSize,
+                    lineHeight: 1.45,
+                    color: 'text.secondary',
+                    display: '-webkit-box',
+                    WebkitLineClamp: homepage || carousel || compact ? 2 : 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {snippet}
+                </Typography>
+              )}
+            </Box>
+
+            {listing.isOkazion ? (
+              <OkazionCountdown expiresAt={listing.okazionUntil} compact={dense && !homepage} />
+            ) : (
+              <JobListingCountdown expiresAt={jobExpiresAt} variant="default" condensed={dense && !homepage} />
+            )}
+          </Stack>
+
+          {homepage ? <Box sx={{ flex: 1, minHeight: 4 }} /> : !dense ? <Box sx={{ flex: 1, minHeight: 8 }} /> : null}
+
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.disabled"
+              sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.72rem' : undefined }}
+            >
+              {postedLabel}
+            </Typography>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
+              <EyeIcon size={eyeSize} weight="regular" />
+              <Typography
+                variant="caption"
+                color="text.disabled"
+                sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.7rem' : undefined }}
+              >
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Stack>
       </CardShell>
     </ListingCardLink>
   );

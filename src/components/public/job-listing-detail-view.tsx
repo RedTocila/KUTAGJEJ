@@ -904,7 +904,7 @@ export function JobListingDetailView({
                 >
                   <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
                     {similar.map((item) => (
-                      <JobCard key={item.id} listing={item} />
+                      <JobCard key={item.id} listing={item} variant="carousel" />
                     ))}
                   </ListingsCarousel>
                 </Box>

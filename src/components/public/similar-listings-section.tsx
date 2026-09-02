@@ -81,7 +81,9 @@ export async function SimilarListingsSection({
             : kind === 'cars'
               ? (similar as PublicCarListing[]).map((item) => <CarCard key={item.id} listing={item} />)
               : kind === 'jobs'
-                ? (similar as PublicJobListing[]).map((item) => <JobCard key={item.id} listing={item} />)
+                ? (similar as PublicJobListing[]).map((item) => (
+                    <JobCard key={item.id} listing={item} variant="carousel" />
+                  ))
                 : kind === 'marketplace'
                   ? (similar as PublicMarketplaceListing[]).map((item) => (
                       <MarketplaceCard key={item.id} listing={item} />

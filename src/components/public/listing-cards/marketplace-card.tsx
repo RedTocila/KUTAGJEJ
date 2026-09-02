@@ -2,7 +2,6 @@
 
 import { Box, Stack, Typography } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
@@ -14,6 +13,7 @@ import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
+import { CardLocationBadge } from './card-location-badge';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, listingCardRelativeDate } from './format-helpers';
@@ -133,16 +133,7 @@ export function MarketplaceCard({
                 fontSize="0.9rem"
                 fontWeight={800}
               />
-              <Stack
-                direction="row"
-                spacing={0.35}
-                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
-              >
-                <EyeIcon size={12} weight="regular" />
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
+              <CardLocationBadge cityName={listing.cityName} />
             </Stack>
           </Stack>
         ) : (
@@ -182,12 +173,7 @@ export function MarketplaceCard({
               <Typography variant="caption" color="text.disabled">
                 {listingCardRelativeDate(listing)}
               </Typography>
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <EyeIcon size={14} weight="regular" />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
+              <CardLocationBadge cityName={listing.cityName} iconSize={14} />
             </Stack>
           </Stack>
         )}

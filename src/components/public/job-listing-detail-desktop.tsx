@@ -645,7 +645,7 @@ export function JobListingDetailDesktop({
                     </Typography>
                     <ListingsCarousel slotWidth={{ md: 300 }}>
                       {similar.map((item) => (
-                        <JobCard key={item.id} listing={item} />
+                        <JobCard key={item.id} listing={item} variant="carousel" />
                       ))}
                     </ListingsCarousel>
                   </Stack>

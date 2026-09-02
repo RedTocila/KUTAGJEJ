@@ -3,7 +3,6 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
 import { Gauge as GaugeIcon } from '@phosphor-icons/react/dist/ssr/Gauge';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
@@ -16,6 +15,7 @@ import type { PublicCarListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
+import { CardLocationBadge } from './card-location-badge';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatKilometers, formatPrice, listingCardRelativeDate } from './format-helpers';
@@ -132,16 +132,7 @@ export function CarCard({
                 fontSize="0.9rem"
                 fontWeight={800}
               />
-              <Stack
-                direction="row"
-                spacing={0.35}
-                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
-              >
-                <EyeIcon size={12} weight="regular" />
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
+              <CardLocationBadge cityName={listing.cityName} />
             </Stack>
           </Stack>
         ) : (
@@ -181,12 +172,7 @@ export function CarCard({
               <Typography variant="caption" color="text.disabled">
                 {listingCardRelativeDate(listing)}
               </Typography>
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <EyeIcon size={14} weight="regular" />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
+              <CardLocationBadge cityName={listing.cityName} iconSize={14} />
             </Stack>
           </Stack>
         )}

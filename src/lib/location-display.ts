@@ -98,3 +98,13 @@ export function formatBrowseLocationPhrase(zones: LocationZoneRef[], cityName: s
 export function formatZoneCitySummary(zoneName: string, cityName: string): string {
   return `${cleanLocationPart(zoneName)} · ${cleanLocationPart(cityName)}`;
 }
+
+/** 3-letter uppercase label for compact listing cards (e.g. Tiranë → TIR). */
+export function formatCityAbbreviation(cityName: string): string {
+  const normalized = cleanLocationPart(cityName)
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-zA-Z]/g, '')
+    .toUpperCase();
+  return normalized.slice(0, 3) || '—';
+}

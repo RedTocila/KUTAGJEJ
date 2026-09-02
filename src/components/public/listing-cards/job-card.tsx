@@ -24,7 +24,6 @@ import {
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import {
   JOB_LISTING_COVER_ASPECT_RATIO,
-  JOB_POSTER_ASPECT_RATIO,
   jobListingCoverImageUrl,
   jobListingUsesMockupCover,
 } from '@/lib/job-listing-cover';
@@ -89,20 +88,14 @@ export function JobCard({
   imagePriority = false,
   variant = 'default',
   locationInPriceRow = false,
-  companyName,
-  posterMockupVariant = 'card',
 }: {
   listing: PublicJobListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
-  /** `'poster'` = portrait hiring mockup only, no text body below. */
-  variant?: 'default' | 'cover' | 'compact' | 'poster';
+  /** `'cover'` is the square crop used on the jobs browse page. Homepage stays `'default'`. */
+  variant?: 'default' | 'cover' | 'compact';
   locationInPriceRow?: boolean;
-  companyName?: string | null;
-  /** Poster mockup density — homepage uses `default` to match the listing form. */
-  posterMockupVariant?: 'default' | 'card';
 }) {
-  const isPoster = variant === 'poster';
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
@@ -115,8 +108,7 @@ export function JobCard({
   const expiresAt = listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString();
   const cardRating = resolveListingCardRating(null, sellerRating);
   const usesMockupCover = jobListingUsesMockupCover(listing);
-  const displayImageUrl = isPoster ? null : jobListingCoverImageUrl(listing);
-  const showPosterMockup = isPoster || usesMockupCover;
+  const displayImageUrl = jobListingCoverImageUrl(listing);
 
   const WorkLocationIcon = workLocationIcon(listing.workLocation);
 
@@ -137,7 +129,7 @@ export function JobCard({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact' || isPoster}
+        compact={variant === 'compact'}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -147,13 +139,9 @@ export function JobCard({
           imageUrl={displayImageUrl}
           FallbackIcon={BriefcaseIcon}
           fallbackContent={
-            showPosterMockup ? (
+            usesMockupCover ? (
               <JobListingFallback
-                variant={isPoster ? posterMockupVariant : 'card'}
-                listingId={listing.id}
-                posterColorSeed={listing.posterColorSeed}
                 title={listing.title}
-                companyName={companyName ?? listing.employerName}
                 industry={listing.industry}
                 requiredRoles={listing.requiredRoles}
                 cityName={listing.cityName}
@@ -162,30 +150,20 @@ export function JobCard({
                 locationAddress={listing.locationAddress}
                 locationLat={listing.locationLat}
                 locationLng={listing.locationLng}
-                experience={listing.experience}
-                education={listing.education}
-                jobType={listing.jobType}
-                salary={listing.salary}
-                currency={listing.currency}
-                expiresAt={expiresAt}
-                createdAt={listing.createdAt}
-                bumpedAt={listing.bumpedAt}
               />
             ) : undefined
           }
           alt={listing.title}
-          height={displayImageUrl && !isPoster ? { xs: 185, md: 200 } : undefined}
+          height={displayImageUrl ? { xs: 185, md: 200 } : undefined}
           aspectRatio={
-            isPoster
-              ? JOB_POSTER_ASPECT_RATIO
-              : displayImageUrl
-                ? variant === 'cover' || variant === 'compact'
-                  ? '1 / 1'
-                  : undefined
-                : JOB_LISTING_COVER_ASPECT_RATIO
+            displayImageUrl
+              ? variant === 'cover' || variant === 'compact'
+                ? '1 / 1'
+                : undefined
+              : JOB_LISTING_COVER_ASPECT_RATIO
           }
-          compact={variant === 'compact' || isPoster}
-          topLeftBadge={isPoster ? undefined : jobTypeLabel || undefined}
+          compact={variant === 'compact'}
+          topLeftBadge={jobTypeLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
@@ -194,9 +172,7 @@ export function JobCard({
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           bottomOverlay={
-            !isPoster && variant !== 'compact' && !listing.isOkazion ? (
-              <JobExpiryAnnouncementBar expiresAt={expiresAt} />
-            ) : undefined
+            variant !== 'compact' && !listing.isOkazion ? <JobExpiryAnnouncementBar expiresAt={expiresAt} /> : undefined
           }
           priority={imagePriority}
           sharePayload={{
@@ -233,7 +209,7 @@ export function JobCard({
             url: listingJobPublicHref(listing),
           }}
         />
-        {isPoster ? null : variant === 'compact' ? (
+        {variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}

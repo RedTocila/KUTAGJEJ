@@ -47,14 +47,6 @@ type SlideModel = {
   fallbackLocationAddress?: string | null;
   fallbackLocationLat?: number | null;
   fallbackLocationLng?: number | null;
-  fallbackExperience?: string | null;
-  fallbackEducation?: string | null;
-  fallbackJobType?: string | null;
-  fallbackSalaryAmount?: number | null;
-  fallbackCurrency?: 'EUR' | 'LEK' | null;
-  fallbackEmployerName?: string | null;
-  fallbackExpiresAt?: string | null;
-  fallbackCreatedAt?: string | null;
   imageUrl: string | null;
   href: string;
   ratingAverage?: number | null;
@@ -107,14 +99,6 @@ function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonth
         fallbackLocationAddress: l.locationAddress ?? null,
         fallbackLocationLat: l.locationLat ?? null,
         fallbackLocationLng: l.locationLng ?? null,
-        fallbackExperience: l.experience,
-        fallbackEducation: l.education,
-        fallbackJobType: l.jobType,
-        fallbackSalaryAmount: l.salary,
-        fallbackCurrency: l.currency,
-        fallbackEmployerName: l.employerName ?? null,
-        fallbackExpiresAt: l.expiresAt,
-        fallbackCreatedAt: l.createdAt,
         imageUrl: jobListingCoverImageUrl(l),
         href: listingJobPublicHref(l),
       };
@@ -231,7 +215,6 @@ export function CategoryTopViewedSlider({
               const wrapDist = Math.min(dist, slides.length - dist);
               const eager = wrapDist <= 1;
               const isJobMockupSlide = verticalId === 'jobs' && !slide.imageUrl;
-              const jobListing = verticalId === 'jobs' ? (listings[i] as PublicJobListing) : null;
               return (
                 <BannerSlideCard
                   key={slide.id}
@@ -241,11 +224,7 @@ export function CategoryTopViewedSlider({
                   fallbackContent={
                     isJobMockupSlide ? (
                       <JobListingFallback
-                        variant="card"
-                        listingId={slide.id}
-                        posterColorSeed={jobListing?.posterColorSeed}
                         title={slide.title}
-                        companyName={slide.fallbackEmployerName}
                         industry={slide.fallbackIndustry}
                         requiredRoles={slide.fallbackRequiredRoles}
                         cityName={slide.fallbackCityName}
@@ -254,13 +233,6 @@ export function CategoryTopViewedSlider({
                         locationAddress={slide.fallbackLocationAddress}
                         locationLat={slide.fallbackLocationLat}
                         locationLng={slide.fallbackLocationLng}
-                        experience={slide.fallbackExperience}
-                        education={slide.fallbackEducation}
-                        jobType={slide.fallbackJobType}
-                        salary={slide.fallbackSalaryAmount}
-                        currency={slide.fallbackCurrency}
-                        expiresAt={slide.fallbackExpiresAt}
-                        createdAt={slide.fallbackCreatedAt}
                       />
                     ) : undefined
                   }
@@ -268,7 +240,7 @@ export function CategoryTopViewedSlider({
                   eager={eager}
                   title={slide.title}
                   topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
-                  bottomLeftLabel={isJobMockupSlide ? null : byRating ? null : slide.subtitle}
+                  bottomLeftLabel={isJobMockupSlide ? slide.title : byRating ? null : slide.subtitle}
                   bottomRightLabel={
                     verticalId === 'jobs'
                       ? null

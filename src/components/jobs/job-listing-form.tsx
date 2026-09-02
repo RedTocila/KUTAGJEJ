@@ -19,7 +19,7 @@ import {
   JOB_GENDER_OPTIONS,
   JOB_INDUSTRY_OPTIONS,
 } from '@/lib/job-constants';
-import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage, professionalTitleFromUser } from '@/lib/listing-form-defaults';
+import { applyEmptyKnownDefaults, knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { mergeCreateFormState, mergeImageUrls } from '@/lib/listing-form-draft';
 import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/listings-client';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
@@ -30,12 +30,10 @@ import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
 import { useUser } from '@/hooks/use-user';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { sanitizeRequiredRoles } from '@/lib/job-required-roles';
-import { jobPosterColorSeedFromListingId, pickRandomJobPosterColorSeed } from '@/lib/job-hiring-poster';
 import { JobFormBenefitsSection } from '@/components/jobs/job-form-benefits-section';
 import { JobFormEmploymentSection } from '@/components/jobs/job-form-employment-section';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
-import { JOB_POSTER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -276,7 +274,7 @@ export function JobListingForm({
   initialListing,
 }: JobListingFormProps) {
   const isEdit = Boolean(editListingId);
-  const { checkSession, user } = useUser();
+  const { checkSession } = useUser();
   const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -301,11 +299,6 @@ export function JobListingForm({
   const [loadingCities, setLoadingCities] = React.useState(true);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const [posterColorSeed, setPosterColorSeed] = React.useState(() => {
-    if (initialListing?.posterColorSeed != null) return initialListing.posterColorSeed;
-    if (initialListing?.id) return jobPosterColorSeedFromListingId(initialListing.id);
-    return pickRandomJobPosterColorSeed();
-  });
   const formSnapshot = React.useMemo(
     () =>
       ({
@@ -459,11 +452,10 @@ export function JobListingForm({
         contactPhone: form.contactPhone.trim(),
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
-        requiredRoles: sanitizeRequiredRoles(normalizeLines(form.requiredRoles)),
+        requiredRoles: normalizeLines(form.requiredRoles),
         benefits: buildBenefitsPayload(form),
         imageUrls: form.coverMode === 'image' ? [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES) : [],
         coverMode: form.coverMode,
-        posterColorSeed: form.coverMode === 'mockup' ? posterColorSeed : null,
       };
 
       const result =
@@ -519,8 +511,6 @@ export function JobListingForm({
   ];
   const previewCity = cities.find((city) => city.id === form.cityId);
   const previewZone = previewCity?.zones.find((zone) => zone.id === form.zoneId);
-  const previewCompanyName = professionalTitleFromUser(user) || undefined;
-  const previewSalary = parseFloatStrict(form.salary);
 
   // -------------------------------------------------------------------------
   // Render
@@ -533,16 +523,10 @@ export function JobListingForm({
           label="Kopertina e njoftimit"
           value={form.coverMode}
           onChange={(value) =>
-            setForm((previous) => {
-              const coverMode = value === 'image' ? 'image' : 'mockup';
-              if (!isEdit && coverMode === 'mockup' && previous.coverMode !== 'mockup') {
-                setPosterColorSeed(pickRandomJobPosterColorSeed());
-              }
-              return {
-                ...previous,
-                coverMode,
-              };
-            })
+            setForm((previous) => ({
+              ...previous,
+              coverMode: value === 'image' ? 'image' : 'mockup',
+            }))
           }
           options={[
             { value: 'mockup', label: 'Mockup automatik' },
@@ -559,15 +543,13 @@ export function JobListingForm({
               sx={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: 320,
-                aspectRatio: JOB_POSTER_ASPECT_RATIO,
+                aspectRatio: JOB_LISTING_COVER_ASPECT_RATIO,
                 borderRadius: 2,
                 overflow: 'hidden',
               }}
             >
               <JobListingFallback
                 title={form.title}
-                companyName={previewCompanyName}
                 industry={form.industry}
                 requiredRoles={form.requiredRoles}
                 cityName={previewCity?.name}
@@ -576,14 +558,6 @@ export function JobListingForm({
                 locationAddress={form.locationMode === 'map' ? form.locationAddress : undefined}
                 locationLat={form.locationMode === 'map' ? form.locationLat : undefined}
                 locationLng={form.locationMode === 'map' ? form.locationLng : undefined}
-                experience={form.experience}
-                education={form.education}
-                jobType={form.jobType}
-                salary={previewSalary}
-                currency={form.currency || null}
-                previewSeed={!isEdit ? posterColorSeed : undefined}
-                posterColorSeed={isEdit ? posterColorSeed : undefined}
-                listingId={isEdit ? editListingId : undefined}
               />
             </Box>
           </Stack>

@@ -199,7 +199,6 @@ export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
     title: mine.title,
     description: mine.description ?? '',
     coverMode: mine.coverMode === 'mockup' ? 'mockup' : 'image',
-    posterColorSeed: mine.posterColorSeed ?? null,
     industry: mine.industry,
     cityName: mine.cityName,
     zoneName: mine.zoneName ?? null,

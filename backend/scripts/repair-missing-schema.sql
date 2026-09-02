@@ -762,21 +762,3 @@ where cover_mode = 'image'
   and status = 'approved'
   and coalesce(array_length(image_urls, 1), 0) = 0;
 
--- Stable hiring-poster palette index (locked when the listing is published).
-alter table public.job_listings
-  add column if not exists poster_color_seed integer;
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conrelid = 'public.job_listings'::regclass
-      and conname = 'job_listings_poster_color_seed_check'
-  ) then
-    alter table public.job_listings
-      add constraint job_listings_poster_color_seed_check
-      check (poster_color_seed is null or (poster_color_seed >= 0 and poster_color_seed < 12));
-  end if;
-end $$;
-

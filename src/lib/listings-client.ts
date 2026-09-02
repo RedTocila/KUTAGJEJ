@@ -118,7 +118,6 @@ export interface JobMineListing extends ListingMetrics {
   title: string;
   description?: string;
   coverMode?: 'image' | 'mockup';
-  posterColorSeed?: number | null;
   industry: string;
   cityId?: string | null;
   zoneId?: string | null;
@@ -373,7 +372,6 @@ export interface JobListingPayload {
   title: string;
   description: string;
   coverMode?: 'image' | 'mockup';
-  posterColorSeed?: number | null;
   industry: string;
   cityId?: string | null;
   zoneId?: string | null;

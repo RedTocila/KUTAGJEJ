@@ -43,7 +43,8 @@ export function HomepageMixedListingCard({
           listing={item.listing}
           sellerRating={sellerRating}
           imagePriority={imagePriority}
-          variant={compact ? 'compact' : 'default'}
+          variant="poster"
+          posterMockupVariant="default"
         />
       );
     case 'marketplace':

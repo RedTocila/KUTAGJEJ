@@ -20,7 +20,7 @@ function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
     case 'car':
       return <CarCard listing={listing} />;
     case 'job':
-      return <JobCard listing={listing} />;
+      return <JobCard listing={listing} variant="poster" posterMockupVariant="default" />;
     case 'marketplace':
       return <MarketplaceCard listing={listing} />;
     default:
@@ -110,7 +110,7 @@ export function HomepageOkazionSection({
       {loading && listings.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel equalMediaHeight>
+        <ListingsCarousel equalMediaHeight={false}>
           {listings.map((listing) => (
             <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
           ))}

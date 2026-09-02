@@ -13,6 +13,7 @@ import {
   type PublicMarketplaceListing,
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
+import { HOMEPAGE_JOB_POSTER_CAROUSEL_SLOT_WIDTH } from '@/lib/job-listing-cover';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -56,7 +57,7 @@ function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeLi
     case 'cars':
       return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
     case 'jobs':
-      return <JobCard key={listing.id} listing={listing as PublicJobListing} />;
+      return <JobCard key={listing.id} listing={listing as PublicJobListing} variant="poster" posterMockupVariant="default" />;
     case 'marketplace':
       return <MarketplaceCard key={listing.id} listing={listing as PublicMarketplaceListing} />;
     case 'businesses':
@@ -193,7 +194,10 @@ export function LazyHomeSection({
         {!loaded && listings.length === 0 ? (
           <CarouselSkeleton />
         ) : (
-          <ListingsCarousel equalMediaHeight>
+          <ListingsCarousel
+            equalMediaHeight={verticalId !== 'jobs'}
+            slotWidth={verticalId === 'jobs' ? HOMEPAGE_JOB_POSTER_CAROUSEL_SLOT_WIDTH : undefined}
+          >
             {listings.map((listing) => renderListingCard(verticalId, listing))}
           </ListingsCarousel>
         )}

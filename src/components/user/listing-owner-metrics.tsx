@@ -5,7 +5,6 @@ import RouterLink from 'next/link';
 import { Box, Button, CircularProgress, DialogContentText, Stack, Tooltip, Typography } from '@mui/material';
 import { ArrowsClockwise as RefreshIcon } from '@phosphor-icons/react/dist/ssr/ArrowsClockwise';
 import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
@@ -13,7 +12,6 @@ import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilS
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { paths } from '@/paths';
@@ -21,8 +19,12 @@ import { errorMainAlpha, primaryMainAlpha, warningMainAlpha } from '@/lib/css-va
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import { ANNOUNCE_COST_BC } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
-import { refreshListingBoost, setListingAutoRefresh } from '@/lib/listing-refresh-client';
-import { bumpButtonAriaLabelSq, refreshCostBc, refreshCostTooltipSq } from '@/lib/listing-refresh-cost';
+import { refreshListingBoost } from '@/lib/listing-refresh-client';
+import {
+  bumpButtonAriaLabelSq,
+  refreshCostButtonLabel,
+  refreshCostTooltipSq,
+} from '@/lib/listing-refresh-cost';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
@@ -185,10 +187,11 @@ function editHrefFor(listingId: string, kind: ListingMetricKind) {
 }
 
 function formatCountdown(ms: number): string {
-  const totalMinutes = Math.max(0, Math.ceil(ms / (60 * 1000)));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
 /**
@@ -281,8 +284,6 @@ export function ListingOwnerMetrics({
   listingId,
   kind,
   canRefresh = false,
-  autoRefreshEnabled = false,
-  onAutoRefreshChange,
   isPremium = false,
   premiumUntil = null,
   onPremiumApplied,
@@ -302,9 +303,6 @@ export function ListingOwnerMetrics({
   kind?: ListingMetricKind;
   /** Only approved listings can be bumped to the top. */
   canRefresh?: boolean;
-  /** Whether this listing is enrolled in Auto-Refresh. */
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   /** Active Premium window from plan or add-on. */
   isPremium?: boolean;
   premiumUntil?: string | null;
@@ -320,7 +318,7 @@ export function ListingOwnerMetrics({
     refreshedAt?: string | null;
     boostCredits?: number;
   }) => void;
-  /** Last manual/auto refresh anchor; uses listing createdAt on initial load. */
+  /** Last manual refresh anchor from refresh / premium / okazion. */
   lastRefreshedAt?: string | null;
   /** Cooldown window from active package/subscription. */
   refreshEveryHours?: number | null;
@@ -332,7 +330,6 @@ export function ListingOwnerMetrics({
   const t = useCopy();
   const { checkSession } = useUser();
   const [busy, setBusy] = React.useState(false);
-  const [autoBusy, setAutoBusy] = React.useState(false);
   const [premiumBusy, setPremiumBusy] = React.useState(false);
   const [okazionBusy, setOkazionBusy] = React.useState(false);
   const [premiumOn, setPremiumOn] = React.useState(Boolean(isPremium));
@@ -381,7 +378,7 @@ export function ListingOwnerMetrics({
     }),
     [okazionSupported, okazionOn, isOkazion, premiumOn, isPremium]
   );
-  const refreshCost = refreshCostBc(refreshTierFlags);
+  const bumpButtonLabel = refreshCostButtonLabel(refreshTierFlags);
   const bumpButtonAriaLabel = bumpButtonAriaLabelSq(refreshTierFlags);
   const refreshTooltip = refreshCostTooltipSq(refreshTierFlags);
   const showAnnounce = Boolean(listingId && canRefresh && (kind === 'businesses' || kind === 'professionals'));
@@ -401,49 +398,6 @@ export function ListingOwnerMetrics({
       void checkSession();
     } finally {
       setBusy(false);
-    }
-  };
-  const handleRefreshRef = React.useRef(handleRefresh);
-  handleRefreshRef.current = handleRefresh;
-
-  /**
-   * Auto: when enrolled and cooldown ends, fire the same bump as a manual click.
-   */
-  const autoRefreshAttemptKeyRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (!autoRefreshEnabled) {
-      autoRefreshAttemptKeyRef.current = null;
-      return;
-    }
-    if (!canRefresh || !listingId || !kind) return;
-    if (refreshLocked || busy || autoBusy) return;
-
-    const attemptKey = `${listingId}:${lastRefreshAtLocal ?? 'none'}`;
-    if (autoRefreshAttemptKeyRef.current === attemptKey) return;
-
-    const timer = window.setTimeout(() => {
-      if (autoRefreshAttemptKeyRef.current === attemptKey) return;
-      autoRefreshAttemptKeyRef.current = attemptKey;
-      void handleRefreshRef.current();
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [autoRefreshEnabled, canRefresh, listingId, kind, refreshLocked, busy, autoBusy, lastRefreshAtLocal]);
-
-  const handleToggleAuto = async () => {
-    if (!listingId || !kind || autoBusy) return;
-    setError(null);
-    setAutoBusy(true);
-    try {
-      const next = !autoRefreshEnabled;
-      const res = await setListingAutoRefresh({ kind, listingId, enabled: next });
-      if (res.error) {
-        setError(res.error);
-        return;
-      }
-      onAutoRefreshChange?.(Boolean(res.enabled));
-      void checkSession();
-    } finally {
-      setAutoBusy(false);
     }
   };
 
@@ -508,14 +462,25 @@ export function ListingOwnerMetrics({
     }
   };
 
-  const anyBusy = busy || autoBusy || premiumBusy || okazionBusy;
+  const anyBusy = busy || premiumBusy || okazionBusy;
   const refreshButtonDisabled = anyBusy || refreshLocked;
+  const refreshTimer = formatCountdown(remainingRefreshMs);
+  const refreshStatusText = `Mund ta ngreni në krye pas ${refreshTimer}`;
   const premiumDisabled = anyBusy || premiumOn || okazionOn;
   const okazionDisabled = anyBusy || okazionOn || premiumOn;
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
       {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} onSavesClick={onSavesClick} /> : null}
+
+      {refreshLocked ? (
+        <Typography
+          variant="caption"
+          sx={{ color: 'error.main', fontSize: '0.64rem', fontWeight: 700, textAlign: 'left', lineHeight: 1.35 }}
+        >
+          {refreshStatusText}
+        </Typography>
+      ) : null}
 
       <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 0.8 }}>
         {listingId && kind && canRefresh ? (
@@ -530,15 +495,13 @@ export function ListingOwnerMetrics({
               '& .MuiButton-root': { width: '100%', justifyContent: 'center' },
             }}
           >
-            <Tooltip
-              title={refreshLocked ? `${refreshTooltip} · ${formatCountdown(remainingRefreshMs)}` : refreshTooltip}
-            >
+            <Tooltip title={refreshLocked ? refreshStatusText : refreshTooltip}>
               <span>
                 <Button
                   size="small"
                   variant="contained"
                   color="primary"
-                  aria-label={bumpButtonAriaLabel}
+                  aria-label={refreshLocked ? `${bumpButtonAriaLabel} · ${refreshTimer}` : bumpButtonAriaLabel}
                   disabled={refreshButtonDisabled}
                   onClick={() => {
                     void handleRefresh();
@@ -556,6 +519,7 @@ export function ListingOwnerMetrics({
                           borderColor: 'divider',
                           boxShadow: 'none',
                           opacity: 1,
+                          pointerEvents: 'none',
                           '&.Mui-disabled': {
                             bgcolor: 'transparent',
                             color: 'text.disabled',
@@ -565,39 +529,11 @@ export function ListingOwnerMetrics({
                         }
                       : fadedPrimarySx),
                   }}
-                ></Button>
+                >
+                  {refreshLocked ? null : bumpButtonLabel}
+                </Button>
               </span>
             </Tooltip>
-            {refreshEveryHours !== 0 ? (
-              <Tooltip
-                title={
-                  autoRefreshEnabled
-                    ? 'Hiq nga Auto'
-                    : `Shto në Auto · ngrihet automatikisht në krye pas cooldown · ${refreshCost} BC`
-                }
-              >
-                <span>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    color="primary"
-                    aria-label="Auto"
-                    disabled={anyBusy}
-                    onClick={() => {
-                      void handleToggleAuto();
-                    }}
-                    startIcon={
-                      autoBusy ? <CircularProgress size={14} color="inherit" /> : <TimerIcon size={16} weight="bold" />
-                    }
-                    endIcon={!autoBusy && autoRefreshEnabled ? <CheckCircleIcon size={14} weight="fill" /> : undefined}
-                    sx={{
-                      ...labeledBtnSx,
-                      ...(autoRefreshEnabled ? fadedPrimaryStrongSx : fadedPrimarySx),
-                    }}
-                  ></Button>
-                </span>
-              </Tooltip>
-            ) : null}
             <Tooltip
               title={
                 premiumOn

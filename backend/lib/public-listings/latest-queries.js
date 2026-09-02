@@ -32,7 +32,7 @@ const {
 const { mergePublicFilter } = require('../listing-moderation');
 const { hasBumpedAtColumn } = require('../ensure-bumped-at-schema');
 const { formatRealEstate, formatCar, formatJob, formatMarketplace, formatDirectory } = require('./formatters');
-const { loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet } = require('./load-poster-brief');
+const { loadVerifiedPosterIdSet, loadTrustBadgePosterIdSet, loadPosterDisplayNameMap } = require('./load-poster-brief');
 
 const TABLE_BY_KIND = {
   'real-estate': 'real_estate_listings',
@@ -106,6 +106,7 @@ const LIST_SELECT_BY_TABLE = {
     'description',
     'industry',
     'cover_mode',
+    'poster_color_seed',
     'education',
     'experience',
     'job_type',
@@ -296,12 +297,18 @@ async function formatDocsForKind(kind, docs) {
         : Promise.resolve(null),
   ]);
   const formatted = formatDocsLocal(kind, docs, cityById, reviewStats);
-  const [withMetrics, verifiedIds, trustIds] = await Promise.all([
+  const [withMetrics, verifiedIds, trustIds, employerNameMap] = await Promise.all([
     attachMetricsToListings(formatted),
     loadVerifiedPosterIdSet(docs.map((d) => d.posterId)),
     loadTrustBadgePosterIdSet(docs.map((d) => d.posterId)),
+    kind === 'job' ? loadPosterDisplayNameMap(docs.map((d) => d.posterId)) : Promise.resolve(null),
   ]);
-  return applySellerBadges(docs, withMetrics, verifiedIds, trustIds);
+  const withBadges = applySellerBadges(docs, withMetrics, verifiedIds, trustIds);
+  if (kind !== 'job' || !employerNameMap) return withBadges;
+  return withBadges.map((listing, i) => ({
+    ...listing,
+    employerName: employerNameMap.get(String(docs[i]?.posterId || '')) ?? null,
+  }));
 }
 
 const LATEST_VERTICAL_SPECS = [

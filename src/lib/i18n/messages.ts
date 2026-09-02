@@ -869,6 +869,13 @@ const sq = {
       },
     },
   },
+  jobPoster: {
+    hiringSuffix: 'po kërkon:',
+    openPosition: 'Pozicion i hapur',
+    negotiableSalary: 'E diskutueshme',
+    defaultCountry: 'Shqipëri',
+    perMonth: '/ muaj',
+  },
   auth: {
     login: 'Hyr',
     register: 'Regjistrohu',
@@ -1685,6 +1692,13 @@ const en: AppMessages = {
         description: 'When your verification request is approved or rejected.',
       },
     },
+  },
+  jobPoster: {
+    hiringSuffix: 'is hiring:',
+    openPosition: 'Open position',
+    negotiableSalary: 'Negotiable',
+    defaultCountry: 'Albania',
+    perMonth: '/ month',
   },
   auth: {
     login: 'Log in',

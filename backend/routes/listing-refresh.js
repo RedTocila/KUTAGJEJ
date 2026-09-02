@@ -53,14 +53,15 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
 router.get('/auto', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     if (!AUTO_REFRESH_ENABLED) {
+      const snapshot = await getAutoRefreshSnapshot(req.user.id);
       return res.json({
         enabled: false,
-        slots: 0,
-        used: 0,
+        slots: snapshot.slots,
+        used: snapshot.used,
         enrolled: [],
-        cooldowns: [],
-        planCode: 'disabled',
-        refreshEveryHours: 0,
+        cooldowns: snapshot.cooldowns,
+        planCode: snapshot.planCode,
+        refreshEveryHours: snapshot.refreshEveryHours,
       });
     }
     // Opportunistic tick: Vercel serverless never runs the in-process scheduler.

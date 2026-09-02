@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box, Skeleton, Stack } from '@mui/material';
 
 import { buildHomepageMixedLatest, type HomepageMixedListing } from '@/lib/homepage-latest-listings';
+import { HOMEPAGE_JOB_POSTER_CAROUSEL_SLOT_WIDTH } from '@/lib/job-listing-cover';
 import { getHomepageListingsCacheSnapshot, patchHomepageListingsCache } from '@/lib/homepage-session-cache';
 import { fetchHomepageRecommended } from '@/lib/public-listings-client';
 import { HomepageMixedListingCard, mixedListingKey } from '@/components/public/homepage-mixed-listing-card';
@@ -86,7 +87,7 @@ export function HomepageRecommendedSection({
       {loading && items.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel equalMediaHeight>
+        <ListingsCarousel equalMediaHeight={false} slotWidth={HOMEPAGE_JOB_POSTER_CAROUSEL_SLOT_WIDTH}>
           {items.map((item, index) => (
             <HomepageMixedListingCard
               key={mixedListingKey(item)}

@@ -44,6 +44,18 @@ const PREFERRED_GENDER_VALUES = ['male', 'female', 'both'];
 
 const CURRENCY_VALUES = ['EUR', 'LEK'];
 const COVER_MODE_VALUES = ['image', 'mockup'];
+const POSTER_COLOR_SEED_MAX = 12;
+
+function normalizePosterColorSeed(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const seed = Number(raw);
+  if (!Number.isInteger(seed) || seed < 0 || seed >= POSTER_COLOR_SEED_MAX) return null;
+  return seed;
+}
+
+function randomPosterColorSeed() {
+  return Math.floor(Math.random() * POSTER_COLOR_SEED_MAX);
+}
 
 /**
  * Returns { ok: true } or { ok: false, message }.
@@ -93,6 +105,11 @@ function validateJobPayload(body) {
     return { ok: false, message: 'Lloji i kopertinës nuk është i vlefshëm.' };
   }
   body.coverMode = coverMode || 'image';
+
+  body.posterColorSeed = normalizePosterColorSeed(body?.posterColorSeed);
+  if (body.coverMode === 'mockup' && body.posterColorSeed === null) {
+    body.posterColorSeed = randomPosterColorSeed();
+  }
 
   const preferredGender = String(body?.preferredGender || '').trim();
   if (preferredGender && !PREFERRED_GENDER_VALUES.includes(preferredGender)) {

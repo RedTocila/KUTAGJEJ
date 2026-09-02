@@ -1,5 +1,11 @@
-/** Slim cover banner — between listing photos and the location map strip. */
+/** Slim cover banner on job detail pages. */
 export const JOB_LISTING_COVER_ASPECT_RATIO = '21 / 9';
+
+/** Portrait hiring poster on browse/home cards — slightly shorter than 3:4. */
+export const JOB_POSTER_ASPECT_RATIO = '4 / 5';
+
+/** Homepage carousels — wide enough to match the build-form poster preview. */
+export const HOMEPAGE_JOB_POSTER_CAROUSEL_SLOT_WIDTH = { xs: 300, sm: 320, md: 340 } as const;
 
 type JobCoverListing = {
   coverMode?: 'image' | 'mockup';

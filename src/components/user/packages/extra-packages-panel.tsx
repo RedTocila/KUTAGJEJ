@@ -21,7 +21,6 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { ArrowClockwise as ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
@@ -33,7 +32,7 @@ import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFou
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
-import type { AutoRefreshPackage, PremiumPackage, PremiumVoucher } from '@/types/payment';
+import type { PremiumPackage, PremiumVoucher } from '@/types/payment';
 import { paths } from '@/paths';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -45,9 +44,7 @@ import {
 import { listMyListings } from '@/lib/listings-client';
 import {
   applyPremiumVoucher,
-  buyAutoRefreshWithCredits,
   buyPremiumWithCredits,
-  fetchAutoRefreshStatus,
   listPremiumPackages,
   listPremiumVouchers,
 } from '@/lib/payments-client';
@@ -75,25 +72,6 @@ import {
   PurchasedVoucherStack,
   ReferralDiscountNote,
 } from './package-ui';
-
-const FALLBACK_AUTO_PACKAGES: AutoRefreshPackage[] = [
-  {
-    id: 'auto-refresh-10',
-    slots: 10,
-    priceEur: 14,
-    priceBc: 150,
-    labelSq: '10 njoftime Auto-Refresh',
-    labelEn: '10 Auto-Refresh listings',
-  },
-  {
-    id: 'auto-refresh-20',
-    slots: 20,
-    priceEur: 24,
-    priceBc: 250,
-    labelSq: '20 njoftime Auto-Refresh',
-    labelEn: '20 Auto-Refresh listings',
-  },
-];
 
 const FALLBACK_PREMIUM_PACKAGES: PremiumPackage[] = [
   {
@@ -155,15 +133,6 @@ function pickerKindIcon(kind: ListingMetricKind): PhosphorIcon {
     default:
       return BuildingsIcon;
   }
-}
-
-function checkoutAutoRefreshHref(packageId: string) {
-  const q = new URLSearchParams({
-    kind: 'auto-refresh',
-    packageId,
-    returnTo: paths.user.packagesExtra,
-  });
-  return `${paths.user.checkout}?${q.toString()}`;
 }
 
 function checkoutPremiumHref(packageId: string) {
@@ -256,172 +225,6 @@ async function loadApprovedListingsForPicker(): Promise<PickerListing[]> {
     });
   }
   return out;
-}
-
-function AutoRefreshSection() {
-  const router = useRouter();
-  const t = useCopy();
-  const { user, checkSession } = useUser();
-  const lifetimePercent = useLifetimePackageDiscount();
-  const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<string | null>(null);
-  const [busyId, setBusyId] = React.useState<string | null>(null);
-  const [slots, setSlots] = React.useState(0);
-  const [used, setUsed] = React.useState(0);
-  const [enabled, setEnabled] = React.useState(false);
-  const [packages, setPackages] = React.useState<AutoRefreshPackage[]>(FALLBACK_AUTO_PACKAGES);
-  const [confirmPackage, setConfirmPackage] = React.useState<AutoRefreshPackage | null>(null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      const { status, error: err } = await fetchAutoRefreshStatus();
-      if (cancelled) return;
-      if (err) setError(err);
-      if (status) {
-        setEnabled(status.enabled);
-        setSlots(status.slots);
-        setUsed(status.used);
-        if (status.packages?.length) {
-          setPackages(
-            status.packages.map((p) => {
-              const fallback = FALLBACK_AUTO_PACKAGES.find((f) => f.id === p.id);
-              return {
-                ...p,
-                priceBc: Number(p.priceBc) || fallback?.priceBc || 0,
-                labelEn: p.labelEn || fallback?.labelEn,
-              };
-            })
-          );
-        }
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const onBuyCard = (pkg: AutoRefreshPackage) => {
-    router.push(checkoutAutoRefreshHref(pkg.id));
-  };
-
-  if (!enabled && !loading) return null;
-
-  const onBuyBc = async (pkg: AutoRefreshPackage): Promise<boolean> => {
-    setBusyId(pkg.id);
-    setError(null);
-    setSuccess(null);
-    const result = await buyAutoRefreshWithCredits(pkg.id);
-    setBusyId(null);
-    if (result.error) {
-      setError(result.error);
-      return false;
-    }
-    if (typeof result.autoRefreshSlots === 'number') setSlots(result.autoRefreshSlots);
-    if (typeof result.used === 'number') setUsed(result.used);
-    setConfirmPackage(null);
-    setSuccess(result.message || `U shtuan ${result.slots ?? pkg.slots} vende Auto-Refresh.`);
-    await checkSession();
-    return true;
-  };
-
-  return (
-    <Stack spacing={1.25}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Box
-          sx={{
-            px: 1.05,
-            py: 0.4,
-            borderRadius: 999,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            fontWeight: 750,
-            fontSize: '0.68rem',
-            lineHeight: 1.2,
-            color: 'text.secondary',
-            letterSpacing: '0.01em',
-          }}
-        >
-          {t.packages.inUse(used, slots)}
-        </Box>
-      </Stack>
-
-      {error ? (
-        <Alert severity="warning" sx={{ borderRadius: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      ) : null}
-      <TransientSuccessAlert message={success} onDismiss={() => setSuccess(null)} sx={{ borderRadius: 2 }} />
-
-      {loading ? (
-        <PackageRowsSkeleton count={2} rowHeight={200} />
-      ) : (
-        <Stack spacing={1.75}>
-          {packages.map((pkg, index) => {
-            const busy = busyId === pkg.id;
-            const priceBc = Number(pkg.priceBc) || 0;
-            const canAfford = balance >= priceBc && priceBc > 0;
-            const best = index === 1;
-            return (
-              <ExtraPackageCard
-                key={pkg.id}
-                icon={ArrowClockwiseIcon}
-                category="Auto-refresh"
-                title={t.packages.autoRefreshPackageTitle(pkg.slots)}
-                subtitle={t.packages.autoRefreshSubtitle}
-                badge={best ? t.packages.bestValue : null}
-                highlighted={best}
-                details={[
-                  t.packages.autoRefreshFeatureRefreshes(pkg.slots),
-                  t.packages.autoRefreshFeatureValid,
-                  t.packages.autoRefreshFeatureAnytime,
-                ]}
-                actions={
-                  <>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      disabled={busy}
-                      onClick={() => onBuyCard(pkg)}
-                      sx={dualPayButtonSx('primary')}
-                    >
-                      <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={busy || !canAfford}
-                      onClick={() => setConfirmPackage(pkg)}
-                      startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <BoostCoinIcon size={16} />}
-                      sx={dualPayButtonSx('primary', 'outlined')}
-                    >
-                      {formatBc(priceBc)} BC
-                    </Button>
-                  </>
-                }
-              />
-            );
-          })}
-        </Stack>
-      )}
-      <BcPurchaseDialog
-        open={Boolean(confirmPackage)}
-        packageLabel={confirmPackage?.labelSq || ''}
-        priceBc={confirmPackage?.priceBc || 0}
-        busy={Boolean(confirmPackage && busyId === confirmPackage.id)}
-        onClose={() => setConfirmPackage(null)}
-        onConfirm={() => {
-          if (!confirmPackage) return;
-          void onBuyBc(confirmPackage);
-        }}
-      />
-    </Stack>
-  );
 }
 
 function PremiumListingSection() {
@@ -1100,7 +903,6 @@ export function ExtraPackagesPanel() {
   return (
     <Stack spacing={1.75}>
       <ReferralDiscountNote percent={lifetimePercent} />
-      <AutoRefreshSection />
       <OkazionPackagesSection />
       <PremiumListingSection />
       <ConvertListingSection />

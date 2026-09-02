@@ -152,9 +152,39 @@ async function loadPosterBrief(_posterModelHint, posterId, verifiedContext = nul
   }
 }
 
+function posterDisplayNameFromRow(row) {
+  const businessName = String(row.business_name || '').trim();
+  const businessOwner = String(row.business_owner || '').trim();
+  const fullName = `${row.first_name || ''} ${row.last_name || ''}`.replace(/\s+/g, ' ').trim();
+  if (row.account_type === 'business') {
+    return businessName || businessOwner || fullName || null;
+  }
+  return fullName || businessName || null;
+}
+
+/** Batch-resolve poster display names for job hiring posters (business name or individual name). */
+async function loadPosterDisplayNameMap(posterIds) {
+  const ids = [...new Set((posterIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
+  if (!ids.length) return new Map();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('profiles')
+    .select('id, account_type, first_name, last_name, business_name, business_owner')
+    .in('id', ids);
+  if (error) throw error;
+
+  const map = new Map();
+  for (const row of data || []) {
+    const name = posterDisplayNameFromRow(row);
+    if (name) map.set(String(row.id), name);
+  }
+  return map;
+}
+
 module.exports = {
   loadPosterBrief,
   loadVerifiedPosterIdSet,
   loadTrustBadgePosterIdSet,
+  loadPosterDisplayNameMap,
   posterHasTrustBadge,
 };

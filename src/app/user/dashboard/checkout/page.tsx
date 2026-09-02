@@ -101,7 +101,7 @@ export default function UserCheckoutPage() {
             ? paths.user.packagesMain
             : kind === 'okazion'
               ? `${paths.user.packagesExtra}?assignOkazion=1`
-              : kind === 'auto-refresh' || kind === 'premium'
+              : kind === 'premium'
                 ? `${paths.user.packagesExtra}?assignPremium=1`
                 : paths.user.credits;
 
@@ -152,21 +152,9 @@ export default function UserCheckoutPage() {
         return;
       }
 
-      if (kind === 'auto-refresh' && packageId) {
-        const { packages: pkgs, error: err } = await listAutoRefreshPackages();
+      if (kind === 'auto-refresh') {
         if (cancelled) return;
-        if (err) {
-          setError(err);
-          setLoading(false);
-          return;
-        }
-        const pkg = (pkgs ?? []).find((p) => p.id === packageId);
-        if (!pkg) {
-          setError('Paketa Auto-Refresh nuk u gjet.');
-          setLoading(false);
-          return;
-        }
-        setCheckout({ kind: 'auto-refresh', pkg, returnTo: paths.user.packagesExtra });
+        setError('Auto-Refresh nuk ofrohet më.');
         setLoading(false);
         return;
       }

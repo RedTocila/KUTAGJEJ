@@ -180,6 +180,7 @@ export interface PublicJobListing extends ListingMetricsFields {
   title: string;
   description: string;
   coverMode?: 'image' | 'mockup';
+  posterColorSeed?: number | null;
   industry: string;
   cityName: string | null;
   zoneName?: string | null;
@@ -207,6 +208,8 @@ export interface PublicJobListing extends ListingMetricsFields {
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  /** Poster business or individual display name for hiring mockup. */
+  employerName?: string | null;
 }
 
 /** Full job listing for `/pune/[permalink]`. */

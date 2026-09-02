@@ -247,7 +247,10 @@ export function JobListingDetailView({
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             placeholderContent={
               <JobListingFallback
+                listingId={listing.id}
+                posterColorSeed={listing.posterColorSeed}
                 title={listing.title}
+                companyName={listing.seller?.displayName}
                 industry={listing.industry}
                 requiredRoles={listing.requiredRoles}
                 cityName={listing.cityName}
@@ -256,6 +259,13 @@ export function JobListingDetailView({
                 locationAddress={listing.locationAddress}
                 locationLat={listing.locationLat}
                 locationLng={listing.locationLng}
+                experience={listing.experience}
+                education={listing.education}
+                jobType={listing.jobType}
+                salary={listing.salary}
+                currency={listing.currency}
+                expiresAt={listing.expiresAt}
+                createdAt={listing.createdAt}
               />
             }
             browseListHref={ownerPreview ? undefined : paths.public.jobs}

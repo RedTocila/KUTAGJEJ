@@ -86,10 +86,6 @@ import { ListingModerationNotice, ListingSubmittedPendingAlert } from '@/compone
 import { ListingModerationStatusChip } from '@/components/user/listing-moderation-status-chip';
 import { ListingOwnerMetrics, ListingOwnerTopActions } from '@/components/user/listing-owner-metrics';
 
-function autoRefreshKey(kind: string, listingId: string) {
-  return `${kind}:${listingId}`;
-}
-
 function refreshCooldownKey(kind: string, listingId: string) {
   return `${kind}:${listingId}`;
 }
@@ -330,8 +326,6 @@ function BaseCard({
   fallbackIcon,
   listingId,
   kind,
-  autoRefreshEnabled = false,
-  onAutoRefreshChange,
   isPremium = false,
   premiumUntil = null,
   isOkazion = false,
@@ -359,8 +353,6 @@ function BaseCard({
   fallbackIcon: PhosphorIcon;
   listingId?: string;
   kind?: ListingMetricKind;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   isPremium?: boolean;
   premiumUntil?: string | null;
   isExpired?: boolean;
@@ -499,8 +491,6 @@ function BaseCard({
             listingId={listingId}
             kind={kind}
             canRefresh={isPublic}
-            autoRefreshEnabled={autoRefreshEnabled}
-            onAutoRefreshChange={onAutoRefreshChange}
             isPremium={isPremium}
             premiumUntil={premiumUntil}
             isOkazion={isOkazion}
@@ -586,8 +576,6 @@ function applyBusinessAnnouncement(
 
 function RealEstateCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
@@ -595,8 +583,6 @@ function RealEstateCard({
   lastRefreshedAt,
 }: {
   l: RealEstateMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
@@ -620,8 +606,6 @@ function RealEstateCard({
       fallbackIcon={BuildingsIcon}
       listingId={l.id}
       kind="real-estate"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       isOkazion={Boolean(l.isOkazion)}
@@ -652,8 +636,6 @@ function RealEstateCard({
 
 function CarCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
@@ -661,8 +643,6 @@ function CarCard({
   lastRefreshedAt,
 }: {
   l: CarMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
@@ -686,8 +666,6 @@ function CarCard({
       fallbackIcon={CarIcon}
       listingId={l.id}
       kind="car"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       isOkazion={Boolean(l.isOkazion)}
@@ -719,8 +697,6 @@ function CarCard({
 
 function JobCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
@@ -728,8 +704,6 @@ function JobCard({
   lastRefreshedAt,
 }: {
   l: JobMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
@@ -763,6 +737,8 @@ function JobCard({
         showMockup ? (
           <JobListingFallback
             variant="card"
+            listingId={l.id}
+            posterColorSeed={l.posterColorSeed}
             title={l.title}
             industry={l.industry}
             requiredRoles={l.requiredRoles}
@@ -772,6 +748,8 @@ function JobCard({
             locationAddress={l.locationAddress}
             locationLat={l.locationLat}
             locationLng={l.locationLng}
+            createdAt={l.createdAt}
+            bumpedAt={l.bumpedAt}
           />
         ) : undefined
       }
@@ -779,8 +757,6 @@ function JobCard({
       mockupCover={showMockup}
       listingId={l.id}
       kind="job"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       isOkazion={Boolean(l.isOkazion)}
@@ -803,8 +779,6 @@ function JobCard({
 
 function MarketplaceCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onOkazionApplied,
   onRefreshed,
@@ -812,8 +786,6 @@ function MarketplaceCard({
   lastRefreshedAt,
 }: {
   l: MarketplaceMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
@@ -840,8 +812,6 @@ function MarketplaceCard({
       fallbackIcon={StorefrontIcon}
       listingId={l.id}
       kind="marketplace"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       isOkazion={Boolean(l.isOkazion)}
@@ -857,8 +827,6 @@ function MarketplaceCard({
 
 function BusinessCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onRefreshed,
   onAnnouncementSaved,
@@ -866,8 +834,6 @@ function BusinessCard({
   lastRefreshedAt,
 }: {
   l: BusinessMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
   onAnnouncementSaved?: (result: {
@@ -898,8 +864,6 @@ function BusinessCard({
       fallbackIcon={BuildingOfficeIcon}
       listingId={l.id}
       kind="businesses"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
@@ -927,8 +891,6 @@ function BusinessCard({
 
 function ProfessionalCard({
   l,
-  autoRefreshEnabled,
-  onAutoRefreshChange,
   onPremiumApplied,
   onRefreshed,
   onAnnouncementSaved,
@@ -936,8 +898,6 @@ function ProfessionalCard({
   lastRefreshedAt,
 }: {
   l: ProfessionalMineListing;
-  autoRefreshEnabled?: boolean;
-  onAutoRefreshChange?: (enabled: boolean) => void;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
   onRefreshed?: (result: { refreshedAt: string; boostCredits: number }) => void;
   onAnnouncementSaved?: (result: {
@@ -968,8 +928,6 @@ function ProfessionalCard({
       fallbackIcon={UsersIcon}
       listingId={l.id}
       kind="professionals"
-      autoRefreshEnabled={autoRefreshEnabled}
-      onAutoRefreshChange={onAutoRefreshChange}
       isPremium={Boolean(l.isPremium)}
       premiumUntil={l.premiumUntil ?? null}
       onPremiumApplied={onPremiumApplied}
@@ -1244,7 +1202,6 @@ export default function UserMyListingsPage() {
 
   const [loading, setLoading] = React.useState(true);
   const [errors, setErrors] = React.useState<(string | null)[]>([null, null, null, null, null, null]);
-  const [autoRefreshKeys, setAutoRefreshKeys] = React.useState<Set<string>>(() => new Set());
   const [refreshCooldownByKey, setRefreshCooldownByKey] = React.useState<Record<string, string>>({});
   const [refreshEveryHours, setRefreshEveryHours] = React.useState(48);
   const [selectionMode, setSelectionMode] = React.useState(false);
@@ -1289,7 +1246,6 @@ export default function UserMyListingsPage() {
 
     void fetchListingAutoRefresh().then((auto) => {
       if (cancelled) return;
-      setAutoRefreshKeys(new Set((auto.enrolled ?? []).map((e) => autoRefreshKey(e.kind, e.listingId))));
       const cooldownMap: Record<string, string> = {};
       for (const cooldown of auto.cooldowns ?? []) {
         if (!cooldown.lastRefreshedAt) continue;
@@ -1297,7 +1253,7 @@ export default function UserMyListingsPage() {
       }
       setRefreshCooldownByKey(cooldownMap);
       setRefreshEveryHours(
-        auto.refreshEveryHours === 0 ? 0 : Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48
+        Number(auto.refreshEveryHours) > 0 ? Number(auto.refreshEveryHours) : 48
       );
     });
 
@@ -1305,16 +1261,6 @@ export default function UserMyListingsPage() {
       cancelled = true;
     };
   }, [user?.id, canView]);
-
-  const setAutoForListing = React.useCallback((kind: string, listingId: string, enabled: boolean) => {
-    setAutoRefreshKeys((prev) => {
-      const next = new Set(prev);
-      const key = autoRefreshKey(kind, listingId);
-      if (enabled) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  }, []);
 
   const enterSelectionMode = React.useCallback((seedKey?: string) => {
     setSelectionMode(true);
@@ -1367,11 +1313,6 @@ export default function UserMyListingsPage() {
     setMktListings((prev) => filterOut(prev, 'marketplace'));
     setBizListings((prev) => filterOut(prev, 'businesses'));
     setProListings((prev) => filterOut(prev, 'professionals'));
-    setAutoRefreshKeys((prev) => {
-      const next = new Set(prev);
-      for (const item of items) next.delete(autoRefreshKey(item.kind, item.id));
-      return next;
-    });
     setRefreshCooldownByKey((prev) => {
       const next = { ...prev };
       for (const item of items) delete next[refreshCooldownKey(item.kind, item.id)];
@@ -1606,8 +1547,6 @@ export default function UserMyListingsPage() {
         return (
           <RealEstateCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('real-estate', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('real-estate', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setReListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1628,8 +1567,6 @@ export default function UserMyListingsPage() {
         return (
           <CarCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('car', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('car', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setCarListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1650,8 +1587,6 @@ export default function UserMyListingsPage() {
         return (
           <JobCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('job', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('job', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setJobListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1673,8 +1608,6 @@ export default function UserMyListingsPage() {
         return (
           <MarketplaceCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('marketplace', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('marketplace', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setMktListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1695,8 +1628,6 @@ export default function UserMyListingsPage() {
         return (
           <BusinessCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('businesses', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('businesses', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setBizListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -1723,8 +1654,6 @@ export default function UserMyListingsPage() {
         return (
           <ProfessionalCard
             l={item.listing}
-            autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('professionals', item.listing.id))}
-            onAutoRefreshChange={(enabled) => setAutoForListing('professionals', item.listing.id, enabled)}
             onPremiumApplied={({ premiumUntil }) => {
               setProListings((prev) => markListingPremium(prev, item.listing.id, premiumUntil));
             }}
@@ -2019,8 +1948,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <RealEstateCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('real-estate', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('real-estate', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setReListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}
@@ -2048,8 +1975,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <CarCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('car', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('car', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setCarListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}
@@ -2077,8 +2002,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <JobCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('job', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('job', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setJobListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}
@@ -2107,8 +2030,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <MarketplaceCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('marketplace', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('marketplace', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setMktListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}
@@ -2136,8 +2057,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <BusinessCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('businesses', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('businesses', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setBizListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}
@@ -2174,8 +2093,6 @@ export default function UserMyListingsPage() {
               renderCard={(l) => (
                 <ProfessionalCard
                   l={l}
-                  autoRefreshEnabled={autoRefreshKeys.has(autoRefreshKey('professionals', l.id))}
-                  onAutoRefreshChange={(enabled) => setAutoForListing('professionals', l.id, enabled)}
                   onPremiumApplied={({ premiumUntil }) => {
                     setProListings((prev) => markListingPremium(prev, l.id, premiumUntil));
                   }}

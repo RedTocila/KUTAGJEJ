@@ -164,6 +164,7 @@ function formatJob(doc, cityById) {
     title: doc.title,
     description: snippet(doc.description),
     coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
+    posterColorSeed: doc.posterColorSeed ?? null,
     industry: doc.industry,
     cityName: city?.name ?? null,
     zoneName: zone?.name ?? null,

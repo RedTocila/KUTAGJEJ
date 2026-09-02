@@ -9,7 +9,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { Avatar, Box, ButtonBase, Chip, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Stack, Typography } from '@mui/material';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 
@@ -19,9 +19,6 @@ import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap 
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
-  isJobListingNew,
-  jobCompanyAvatarUrl,
-  jobCompanyInitials,
   jobCoverImageUrls,
   jobDetailMetaRows,
   type JobDetailBenefit,
@@ -46,7 +43,6 @@ import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';
@@ -161,11 +157,7 @@ export function JobListingDetailView({
       }),
     [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
-  const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const coverImageUrls = React.useMemo(() => jobCoverImageUrls(listing), [listing]);
-  const companyAvatarUrl = React.useMemo(() => jobCompanyAvatarUrl(listing), [listing]);
-  const companyInitials = React.useMemo(() => jobCompanyInitials(companyName), [companyName]);
-  const isNew = isJobListingNew(listing.createdAt);
 
   const [shareOpen, setShareOpen] = React.useState(false);
 
@@ -283,6 +275,7 @@ export function JobListingDetailView({
         <Box
           sx={{
             px: 2,
+            pt: 2,
             pb: 0,
             maxWidth: CONTENT_MAX,
             mx: 'auto',
@@ -295,89 +288,7 @@ export function JobListingDetailView({
           }}
         >
           <Stack spacing={2} sx={{ minWidth: 0, width: '100%', overflow: 'visible' }}>
-            <Stack spacing={1} sx={{ mt: -1.5, alignItems: 'flex-start', width: '100%', overflow: 'visible' }}>
-              <Stack
-                direction="row"
-                spacing={1.25}
-                sx={{ alignItems: 'flex-end', width: '100%', position: 'relative', zIndex: 2 }}
-              >
-                <Avatar
-                  src={companyAvatarUrl ?? undefined}
-                  alt={companyName}
-                  sx={{
-                    width: 64,
-                    height: 64,
-                    flexShrink: 0,
-                    mt: -4.5,
-                    border: '3px solid',
-                    borderColor: 'background.default',
-                    bgcolor: 'grey.900',
-                    color: 'primary.main',
-                    fontWeight: 800,
-                    fontSize: FONT_BODY,
-                  }}
-                >
-                  {companyInitials}
-                </Avatar>
-
-                <Box sx={{ flex: 1, minWidth: 0, pb: 0.25 }}>
-                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 0.55,
-                        minWidth: 0,
-                        maxWidth: '100%',
-                        px: 1.15,
-                        py: 0.55,
-                        borderRadius: 999,
-                        bgcolor: 'background.paper',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        backdropFilter: 'blur(10px)',
-                        WebkitBackdropFilter: 'blur(10px)',
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontWeight: 750,
-                          fontSize: FONT_CAPTION,
-                          color: 'text.primary',
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {companyName}
-                      </Typography>
-                      {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
-                    </Box>
-                    {isNew ? (
-                      <Chip
-                        label="E re"
-                        size="small"
-                        sx={{
-                          ml: 'auto',
-                          flexShrink: 0,
-                          height: 24,
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          color: 'primary.contrastText',
-                          bgcolor: 'rgba(166, 226, 46, 0.78)',
-                          border: '1px solid rgba(255,255,255,0.35)',
-                          backdropFilter: 'blur(14px) saturate(160%)',
-                          WebkitBackdropFilter: 'blur(14px) saturate(160%)',
-                          boxShadow: '0 4px 14px rgba(166, 226, 46, 0.28), inset 0 1px 0 rgba(255,255,255,0.4)',
-                          '& .MuiChip-label': { px: 1.1 },
-                        }}
-                      />
-                    ) : null}
-                  </Stack>
-                </Box>
-              </Stack>
-
+            <Stack spacing={1} sx={{ alignItems: 'flex-start', width: '100%', overflow: 'visible' }}>
               <OwnerEditableSpot
                 field="title"
                 ownerEdit={ownerEdit}

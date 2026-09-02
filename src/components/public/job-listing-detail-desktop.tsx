@@ -9,7 +9,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import TrendingUpOutlined from '@mui/icons-material/TrendingUpOutlined';
 import WorkOutlineOutlined from '@mui/icons-material/WorkOutlineOutlined';
-import { Avatar, Box, ButtonBase, Chip, Container, Grid, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Container, Grid, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Calendar as CalendarIcon } from '@phosphor-icons/react/dist/ssr/Calendar';
@@ -19,10 +19,9 @@ import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
-import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS } from '@/lib/job-constants';
+import { JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
-  isJobListingNew,
   jobDetailMetaRows,
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
@@ -103,9 +102,7 @@ export function JobListingDetailDesktop({
       }),
     [listing.cityName, listing.locationLat, listing.locationLng, listing.mapsUrl]
   );
-  const companyName = listing.seller?.displayName?.trim() || findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const heroImage = jobListingCoverImageUrl(listing);
-  const isNew = isJobListingNew(listing.createdAt);
   const expiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
     : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
@@ -247,26 +244,6 @@ export function JobListingDetailDesktop({
                   pointerEvents: 'none',
                 }}
               >
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                  <Avatar
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      bgcolor: 'background.paper',
-                      color: 'primary.main',
-                      fontWeight: 800,
-                    }}
-                  >
-                    {companyName.charAt(0).toUpperCase()}
-                  </Avatar>
-                  {isNew ? (
-                    <Chip
-                      label="E re"
-                      size="small"
-                      sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}
-                    />
-                  ) : null}
-                </Stack>
                 <Typography
                   component="h1"
                   sx={{
@@ -321,23 +298,6 @@ export function JobListingDetailDesktop({
                       </Typography>
                     </Box>
                   ) : null}
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      px: 1.35,
-                      py: 0.65,
-                      borderRadius: 999,
-                      bgcolor: 'rgba(255,255,255,0.1)',
-                      color: 'rgba(255,255,255,0.9)',
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.8125rem', lineHeight: 1 }}>
-                      {companyName}
-                    </Typography>
-                    {listing.seller?.verified ? <JobVerifiedBadge size={16} /> : null}
-                  </Box>
                 </Stack>
                 <Stack
                   direction="row"

@@ -6,6 +6,11 @@ const { forwardGeocodeQuery } = require('./google-maps-location');
 const { isGoogleMapsUrl, fetchGoogleMapsPlaceSnapshot } = require('./google-maps-place');
 const { VEHICLE_TYPE_VALUES, makesForVehicleType, modelsForMake, isValidVehicleMake } = require('./vehicle-catalog');
 const { normalizeFuelType } = require('./car-field-rules');
+const {
+  inferRequiredRolesFromTitle,
+  normalizeRequiredRolesArray,
+  sanitizeRequiredRoles,
+} = require('./job-required-roles');
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -1427,30 +1432,9 @@ async function applyGeocodedMapLocation(form, interpreted) {
   form.zoneId = '';
 }
 
-function normalizeRequiredRolesArray(raw) {
-  if (Array.isArray(raw)) {
-    return raw
-      .map((role) => String(role ?? '').replace(/\s+/g, ' ').trim())
-      .filter((role) => role.length >= 2 && role.length <= 80)
-      .slice(0, 8);
-  }
-  if (typeof raw === 'string' && raw.trim()) {
-    return raw
-      .split(/\s*(?:\/|,|;|\+|\||\band\b|\bdhe\b)\s*/i)
-      .map((role) => role.replace(/\s+/g, ' ').trim())
-      .filter((role) => role.length >= 2 && role.length <= 80)
-      .slice(0, 8);
-  }
-  return [];
-}
-
 function splitJobRolesFromTitle(title) {
-  const t = String(title || '').trim();
-  if (!t) return [];
-  const hasSeparator = /[/|+&]|(?:\s+dhe\s+)/i.test(t);
-  if (!hasSeparator && t.length > 50) return [];
-  const parts = normalizeRequiredRolesArray(t);
-  return parts.length >= 2 ? parts : [];
+  const roles = inferRequiredRolesFromTitle(title);
+  return roles.length >= 2 ? roles : [];
 }
 
 function extractRequiredRolesFromJobBlob(blob) {
@@ -1472,10 +1456,10 @@ function extractRequiredRolesFromJobBlob(blob) {
 
 function ensureRequiredRolesOnForm(form, interpreted) {
   if (!form || typeof form !== 'object') return;
-  let roles = normalizeRequiredRolesArray(form.requiredRoles);
-  if (!roles.length) roles = normalizeRequiredRolesArray(form.roles);
-  if (!roles.length) roles = normalizeRequiredRolesArray(form.positions);
-  if (!roles.length) roles = normalizeRequiredRolesArray(form.openRoles);
+  let roles = sanitizeRequiredRoles(normalizeRequiredRolesArray(form.requiredRoles));
+  if (!roles.length) roles = sanitizeRequiredRoles(normalizeRequiredRolesArray(form.roles));
+  if (!roles.length) roles = sanitizeRequiredRoles(normalizeRequiredRolesArray(form.positions));
+  if (!roles.length) roles = sanitizeRequiredRoles(normalizeRequiredRolesArray(form.openRoles));
   if (!roles.length) {
     const blob = [form.title, form.description, interpreted?.title, interpreted?.summary]
       .filter(Boolean)
@@ -1857,7 +1841,7 @@ cars: vehicleType (car|suv|van|truck|motorcycle|boat), make, model, variant, des
   - Scooter / maxi-scooter / TMAX → motorcycle.
   - Do NOT classify a vehicle as motorcycle from the word "motor" alone; "motor boat" / "motorboat" is a boat, and car engine text (e.g. "motor 2.0") is not a vehicle type.
 job-listings: title, description, industry, education, experience, jobType (full-time|part-time|remote|internship|freelance), workLocation (onsite|hybrid|remote), preferredGender (male|female|both), preferredAgeMin (18-65), preferredAgeMax (18-65), salary, currency, contactPhone, requiredRoles (string[]), responsibilities (string[]), requirements (string[]), locationAddress (full street/venue address), cityName, zoneName
-  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → requiredRoles ["Kamarier","Banakier"] and title like "Kamarier / Banakier"), street address → form.locationAddress AND description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from address when obvious ("Rruga Pjeter Bogdani, Tirane" → cityName "Tiranë", locationAddress "Rruga Pjeter Bogdani, Tirane").
+  - Job flyers/posters: OCR employer name, ALL open roles (e.g. Kamarier + Banakier → requiredRoles ["Kamarier","Banakier"] and title like "Kamarier / Banakier"). requiredRoles must be job titles only — never employer names, cafe/restaurant names, or "në [venue]" location phrases. Street address → form.locationAddress AND description "• Adresa: …", phone → contactPhone, shifts/hours → description + jobType/workLocation (night/evening shift → usually part-time or full-time + workLocation onsite). Infer cityName from address when obvious ("Rruga Pjeter Bogdani, Tirane" → cityName "Tiranë", locationAddress "Rruga Pjeter Bogdani, Tirane").
   - ALWAYS extract locationAddress, cityName, and zoneName/neighborhood when they appear in the prompt, caption, or image. Put the full readable address in locationAddress — not only in description. Leave zoneName empty when unknown — never default to a random neighborhood like Astir.
   - When a street address is present, set workLocation to onsite unless the post clearly says remote/hybrid.
   - SEO JOB DESCRIPTION: when enough information is available, write a substantial, keyword-rich description (roughly 500–1100 characters) using the exact role, role synonyms, employer, city/zone, work arrangement, salary, responsibilities, requirements, shifts, and benefits. Use natural Albanian search phrases and structured bullets; never invent missing facts just to make it longer.

@@ -10,6 +10,7 @@ import { businessMapLocation } from '@/lib/google-maps-location';
 import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
 import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
+import { inferRequiredRolesFromTitle, sanitizeRequiredRoles } from '@/lib/job-required-roles';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { neutralInk } from '@/styles/theme/colors';
 
@@ -38,6 +39,8 @@ const GOOGLE_NIGHT_LAND = '#242f3e';
 const GOOGLE_NIGHT_FILTER =
   'invert(1) hue-rotate(180deg) saturate(0.62) brightness(1.28) contrast(0.98)';
 
+export type JobListingFallbackVariant = 'default' | 'card';
+
 export type JobListingFallbackProps = {
   title?: string | null;
   industry?: string | null;
@@ -48,30 +51,52 @@ export type JobListingFallbackProps = {
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  /** Larger role text and wider icon column — for browse/home/dashboard cards. */
+  variant?: JobListingFallbackVariant;
 };
 
 function normalizeRequiredRoles(requiredRoles?: string[] | null): string[] {
-  return (requiredRoles ?? []).map((role) => String(role).replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return sanitizeRequiredRoles(requiredRoles);
 }
 
 /** Shrink the profession icon when more roles need room below it. */
-function coverIconScale(roleCount: number): number {
+function coverIconScale(roleCount: number, variant: JobListingFallbackVariant): number {
+  if (variant === 'card') {
+    if (roleCount <= 1) return 0.62;
+    if (roleCount === 2) return 0.5;
+    if (roleCount === 3) return 0.42;
+    return 0.34;
+  }
   if (roleCount <= 1) return 0.72;
   if (roleCount === 2) return 0.58;
   if (roleCount === 3) return 0.5;
   return 0.42;
 }
 
-function coverRoleFontSize(roleCount: number): string {
+function coverRoleFontSize(roleCount: number, variant: JobListingFallbackVariant): string {
+  if (variant === 'card') {
+    if (roleCount <= 2) return '0.94rem';
+    if (roleCount <= 4) return '0.86rem';
+    return '0.8rem';
+  }
   if (roleCount <= 2) return '0.78rem';
   if (roleCount <= 4) return '0.72rem';
   return '0.66rem';
 }
 
-function coverRoleBulletSize(roleCount: number): number {
+function coverRoleBulletSize(roleCount: number, variant: JobListingFallbackVariant): number {
+  if (variant === 'card') {
+    if (roleCount <= 2) return 7;
+    if (roleCount <= 4) return 6.5;
+    return 6;
+  }
   if (roleCount <= 2) return 6;
   if (roleCount <= 4) return 5.5;
   return 5;
+}
+
+function coverLeftPanelWidth(variant: JobListingFallbackVariant): string {
+  return variant === 'card' ? '44%' : LEFT_PANEL_WIDTH;
 }
 
 function JobCoverThemeOverlay() {
@@ -204,12 +229,19 @@ export function JobListingFallback({
   locationAddress,
   locationLat,
   locationLng,
+  variant = 'default',
 }: JobListingFallbackProps) {
-  const roles = normalizeRequiredRoles(requiredRoles);
+  const roles = React.useMemo(() => {
+    const stored = normalizeRequiredRoles(requiredRoles);
+    if (stored.length) return stored;
+    return inferRequiredRolesFromTitle(title);
+  }, [requiredRoles, title]);
   const roleCount = roles.length;
-  const iconScale = coverIconScale(roleCount);
-  const roleFontSize = coverRoleFontSize(roleCount);
-  const roleBulletSize = coverRoleBulletSize(roleCount);
+  const iconScale = coverIconScale(roleCount, variant);
+  const roleFontSize = coverRoleFontSize(roleCount, variant);
+  const roleBulletSize = coverRoleBulletSize(roleCount, variant);
+  const leftPanelWidth = coverLeftPanelWidth(variant);
+  const isCard = variant === 'card';
   const roleHint = roles.join(' / ');
   const CoverIcon = resolveJobCoverIcon(title || roleHint, industry);
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, industry) || 'Punë';
@@ -249,14 +281,14 @@ export function JobListingFallback({
           left: 0,
           top: 0,
           bottom: 0,
-          width: LEFT_PANEL_WIDTH,
+          width: leftPanelWidth,
           zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: roleCount > 0 ? 0.5 : 0,
-          px: 0.5,
+          gap: roleCount > 0 ? (isCard ? 0.35 : 0.5) : 0,
+          px: isCard ? 0.75 : 0.5,
           color: 'primary.main',
           pointerEvents: 'none',
           filter: `drop-shadow(0 2px 10px ${primaryMainAlpha(0.18)})`,
@@ -269,7 +301,7 @@ export function JobListingFallback({
         <Box
           sx={{
             width: `${iconScale * 100}%`,
-            maxWidth: '88%',
+            maxWidth: isCard ? '92%' : '88%',
             aspectRatio: '1',
             display: 'flex',
             alignItems: 'center',
@@ -286,13 +318,26 @@ export function JobListingFallback({
           <CoverIcon weight="duotone" />
         </Box>
         {roleCount > 0 ? (
-          <Stack spacing={0.35} sx={{ width: '100%', maxWidth: '96%', px: 0.25, alignItems: 'center' }}>
+          <Stack
+            spacing={isCard ? 0.28 : 0.35}
+            sx={{
+              width: '100%',
+              maxWidth: isCard ? '100%' : '96%',
+              px: isCard ? 0.15 : 0.25,
+              alignItems: 'center',
+            }}
+          >
             {roles.map((role, index) => (
               <Stack
                 key={`${role}-${index}`}
                 direction="row"
                 spacing={0.55}
-                sx={{ alignItems: 'center', justifyContent: 'center', minWidth: 0, maxWidth: '100%' }}
+                sx={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                }}
               >
                 <Box
                   sx={{

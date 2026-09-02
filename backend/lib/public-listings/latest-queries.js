@@ -123,6 +123,7 @@ const LIST_SELECT_BY_TABLE = {
     'location_address',
     'contact_phone',
     'image_urls',
+    'required_roles',
     'permalink_slug',
     'premium_until',
     'okazion_until',

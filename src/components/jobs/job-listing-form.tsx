@@ -30,7 +30,7 @@ import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
 import { useUser } from '@/hooks/use-user';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import { SearchableSelect } from '@/components/core/searchable-select';
-import { JobFormBenefitsSection } from '@/components/jobs/job-form-benefits-section';
+import { sanitizeRequiredRoles } from '@/lib/job-required-roles';
 import { JobFormEmploymentSection } from '@/components/jobs/job-form-employment-section';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
 import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
@@ -452,7 +452,7 @@ export function JobListingForm({
         contactPhone: form.contactPhone.trim(),
         responsibilities: normalizeLines(form.responsibilities),
         requirements: normalizeLines(form.requirements),
-        requiredRoles: normalizeLines(form.requiredRoles),
+        requiredRoles: sanitizeRequiredRoles(normalizeLines(form.requiredRoles)),
         benefits: buildBenefitsPayload(form),
         imageUrls: form.coverMode === 'image' ? [...existingImageUrls, ...uploaded].slice(0, MAX_JOB_IMAGES) : [],
         coverMode: form.coverMode,

@@ -224,6 +224,7 @@ export function CategoryTopViewedSlider({
                   fallbackContent={
                     isJobMockupSlide ? (
                       <JobListingFallback
+                        variant="card"
                         title={slide.title}
                         industry={slide.fallbackIndustry}
                         requiredRoles={slide.fallbackRequiredRoles}

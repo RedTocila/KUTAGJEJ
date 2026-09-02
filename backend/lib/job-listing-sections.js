@@ -1,5 +1,7 @@
 /** Shared validation for job listing structured sections (responsibilities, requirements, benefits). */
 
+const { sanitizeRequiredRoles } = require('./job-required-roles');
+
 const BENEFIT_ID_VALUES = new Set([
   'pay',
   'negotiable-pay',
@@ -89,6 +91,8 @@ function validateJobSections(body) {
   );
   if (!roles.ok) return { ok: false, message: `Role të kërkuara: ${roles.message}` };
 
+  const requiredRoles = sanitizeRequiredRoles(roles.lines);
+
   const ben = normalizeBenefits(Array.isArray(body?.benefits) ? body.benefits : []);
   if (!ben.ok) return { ok: false, message: ben.message };
 
@@ -96,7 +100,7 @@ function validateJobSections(body) {
     ok: true,
     responsibilities: resp.lines,
     requirements: req.lines,
-    requiredRoles: roles.lines,
+    requiredRoles,
     benefits: ben.benefits,
   };
 }

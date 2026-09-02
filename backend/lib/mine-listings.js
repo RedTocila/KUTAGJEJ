@@ -9,6 +9,7 @@ const { premiumFieldsFromDoc } = require('./premium-listing');
 const { okazionFieldsFromDoc } = require('./okazion-listing');
 const { extractPlaceQueryFromMapsUrl } = require('./google-maps-location');
 const { mapsJsonFromDoc } = require('./listing-maps-fields');
+const { sanitizeRequiredRoles } = require('./job-required-roles');
 
 /** Soft cap so a pathological owner cannot dump unbounded payloads. */
 const DEFAULT_LIMIT_PER_KIND = 200;
@@ -92,6 +93,7 @@ const MINE_SELECT = {
     'currency',
     'contact_phone',
     'image_urls',
+    'required_roles',
     'status',
     'created_at',
     'updated_at',
@@ -252,6 +254,7 @@ function formatMineJob(doc, cityById) {
     preferredAgeMax: doc.preferredAgeMax ?? null,
     salary: doc.salary ?? null,
     currency: doc.currency ?? null,
+    requiredRoles: sanitizeRequiredRoles(doc.requiredRoles ?? []),
     imageUrls: coverImageUrls(doc),
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
@@ -452,7 +455,7 @@ function formatMineJobFull(doc, cityById) {
     contactPhone: doc.contactPhone ?? null,
     responsibilities: doc.responsibilities ?? [],
     requirements: doc.requirements ?? [],
-    requiredRoles: doc.requiredRoles ?? [],
+    requiredRoles: sanitizeRequiredRoles(doc.requiredRoles ?? []),
     benefits: doc.benefits ?? [],
     imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
     status: doc.status || 'pending',

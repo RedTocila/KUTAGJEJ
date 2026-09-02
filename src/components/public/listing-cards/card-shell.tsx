@@ -14,16 +14,20 @@ export function CardShell({
   children,
   mediaSlot,
   compact = false,
+  bare = false,
 }: {
   children: React.ReactNode;
   mediaSlot?: React.ReactNode;
   /** Borderless product-card treatment for dense two-column grids. */
   compact?: boolean;
+  /** Transparent chrome — outer wrapper supplies surface/border (job cards). */
+  bare?: boolean;
   /** @deprecated Ignored — premium is shown via Premium Badge on media. */
   premium?: boolean;
   /** @deprecated Ignored — OKAZION is shown via the media badge / price countdown. */
   okazion?: boolean;
 }) {
+  const frameless = compact || bare;
   return (
     <Box
       className="kutagjej-card-enter"
@@ -34,29 +38,27 @@ export function CardShell({
         height: '100%',
         borderRadius: compact ? 0 : 2,
         overflow: compact ? 'visible' : 'hidden',
-        backgroundColor: compact ? 'transparent' : 'background.paper',
+        backgroundColor: frameless ? 'transparent' : 'background.paper',
         ...theme.applyStyles('dark', {
-          backgroundColor: compact ? 'transparent' : 'var(--mui-palette-background-paper)',
+          backgroundColor: frameless ? 'transparent' : 'var(--mui-palette-background-paper)',
         }),
-        border: compact ? 'none' : '1px solid',
-        borderColor: compact ? 'transparent' : 'divider',
-        boxShadow: compact
+        border: frameless ? 'none' : '1px solid',
+        borderColor: frameless ? 'transparent' : 'divider',
+        boxShadow: frameless
           ? 'none'
-          : (theme) =>
-              theme.palette.mode === 'dark'
-                ? '0 14px 32px rgba(0, 0, 0, 0.42)'
-                : 'none',
+          : theme.palette.mode === 'dark'
+            ? '0 14px 32px rgba(0, 0, 0, 0.42)'
+            : 'none',
         transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
-        '@media (hover: hover) and (pointer: fine)': {
-          '&:hover': {
-            borderColor: compact ? 'transparent' : 'primary.main',
-            transform: 'translateY(-3px)',
-            boxShadow: compact
-              ? 'none'
-              : (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 18px 38px rgba(0, 0, 0, 0.5)'
-                    : 'none',
+          '@media (hover: hover) and (pointer: fine)': {
+            '&:hover': {
+              borderColor: frameless ? 'transparent' : 'primary.main',
+              transform: bare ? 'none' : 'translateY(-3px)',
+              boxShadow: frameless
+                ? 'none'
+                : theme.palette.mode === 'dark'
+                  ? '0 18px 38px rgba(0, 0, 0, 0.5)'
+                  : 'none',
             '& .listing-card-media-image': {
               transform: compact ? 'none' : 'scale(1.045)',
             },

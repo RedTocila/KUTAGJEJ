@@ -23,6 +23,7 @@ export function ListingMediaActionButton({
   surface = 'card',
   accent = 'primary',
   compact = false,
+  sx: sxProp,
   onClick,
 }: {
   'aria-label': string;
@@ -30,16 +31,36 @@ export function ListingMediaActionButton({
   icon: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
-  /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips. */
-  surface?: 'hero' | 'glass' | 'card';
+  /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips; `ghost` — outline only. */
+  surface?: 'hero' | 'glass' | 'card' | 'ghost';
   /** Accent for the active / emphasized state. Bookmark should stay `primary` (green). */
   accent?: 'primary' | 'warning' | 'error';
   compact?: boolean;
+  sx?: SxProps<Theme>;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
   const accentToken = `${accent}.main` as const;
   const surfaceStyles: SxProps<Theme> =
-    surface === 'hero'
+    surface === 'ghost'
+      ? {
+          bgcolor: 'transparent',
+          color: active ? accentToken : 'text.secondary',
+          border: '1px solid',
+          borderColor: active ? accentToken : 'divider',
+          backdropFilter: 'none',
+          textShadow: 'none',
+          '&:hover': {
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+            borderColor: active ? accentToken : 'primary.main',
+            color: active ? accentToken : 'text.primary',
+          },
+          '&.Mui-disabled': {
+            bgcolor: 'transparent',
+            color: 'text.disabled',
+            opacity: 1,
+          },
+        }
+      : surface === 'hero'
       ? {
           bgcolor: alpha('#000', 0.45),
           color: active ? accentToken : '#fff',
@@ -84,20 +105,25 @@ export function ListingMediaActionButton({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
-      sx={{
-        display: 'inline-flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: compact ? 0.35 : 0.5,
-        minWidth: 0,
-        height: compact ? 26 : 32,
-        px: compact ? 0.75 : 1,
-        py: compact ? 0.25 : 0.5,
-        borderRadius: 999,
-        transition: `background-color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
-        '&:active': { transform: 'scale(0.92)', transitionDuration: MOTION.press },
-        ...surfaceStyles,
-      }}
+      sx={
+        [
+          {
+            display: 'inline-flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: compact ? 0.35 : 0.5,
+            minWidth: 0,
+            height: compact ? 26 : 32,
+            px: compact ? 0.75 : 1,
+            py: compact ? 0.25 : 0.5,
+            borderRadius: 999,
+            transition: `background-color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
+            '&:active': { transform: 'scale(0.92)', transitionDuration: MOTION.press },
+          },
+          surfaceStyles,
+          sxProp ?? false,
+        ] as SxProps<Theme>
+      }
     >
       <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
         {icon}

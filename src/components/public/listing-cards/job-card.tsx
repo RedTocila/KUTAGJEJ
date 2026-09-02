@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { Box, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
+import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 
 import { listingJobPublicHref, paths } from '@/paths';
 import { resolveJobCardRoles } from '@/lib/job-card-roles';
+import { resolveJobCardSurface } from '@/lib/job-card-surface';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
 import { nextSaveCount, nextShareCount, toggleListingSave } from '@/lib/listing-metrics';
@@ -49,19 +51,27 @@ const JobListingCountdown = dynamic(
   }
 );
 
-function JobCardTag({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
+function JobCardTag({
+  children,
+  compact = false,
+  tintSx,
+}: {
+  children: React.ReactNode;
+  compact?: boolean;
+  tintSx?: { borderColor?: string; color?: string };
+}) {
   return (
     <Box
       component="span"
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
-        px: compact ? 1 : 1.2,
-        py: compact ? 0.3 : 0.45,
+        px: compact ? 1 : 1.15,
+        py: compact ? 0.25 : 0.35,
         borderRadius: 999,
         border: '1px solid',
         borderColor: 'divider',
-        bgcolor: 'background.paper',
+        bgcolor: 'transparent',
         color: 'text.secondary',
         fontSize: compact ? '0.68rem' : '0.75rem',
         fontWeight: 600,
@@ -70,6 +80,7 @@ function JobCardTag({ children, compact = false }: { children: React.ReactNode; 
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        ...tintSx,
       }}
     >
       {children}
@@ -81,10 +92,12 @@ function JobCardActions({
   listing,
   sharePayload,
   compact = false,
+  ghostSx,
 }: {
   listing: PublicJobListing;
   sharePayload: ListingSharePayload;
   compact?: boolean;
+  ghostSx?: import('@mui/material/styles').SxProps<import('@mui/material/styles').Theme>;
 }) {
   const router = useRouter();
   const { user } = useUser();
@@ -136,7 +149,9 @@ function JobCardActions({
         <ListingMediaActionButton
           aria-label="Ndaj njoftimin"
           count={shareCount}
+          sx={ghostSx}
           compact={compact}
+          surface="ghost"
           icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
           onClick={handleShare}
         />
@@ -145,7 +160,9 @@ function JobCardActions({
           count={saveCount}
           active={saved}
           accent="primary"
+          sx={ghostSx}
           compact={compact}
+          surface="ghost"
           icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
           onClick={handleSave}
         />
@@ -165,12 +182,16 @@ function JobCardActions({
 function JobCardRoleBullets({
   roles,
   fontSize,
-  bulletSize,
+  iconSize,
+  accent,
+  textColor,
   twoColumns = false,
 }: {
   roles: string[];
   fontSize: string;
-  bulletSize: number;
+  iconSize: number;
+  accent: string;
+  textColor: string;
   twoColumns?: boolean;
 }) {
   const items = roles.map((role, index) => (
@@ -178,27 +199,21 @@ function JobCardRoleBullets({
       component="li"
       key={`${role}-${index}`}
       direction="row"
-      spacing={0.65}
+      spacing={0.55}
       sx={{ alignItems: 'flex-start', minWidth: 0 }}
     >
-      <Box
-        aria-hidden
-        sx={{
-          width: bulletSize,
-          height: bulletSize,
-          borderRadius: '50%',
-          bgcolor: 'primary.main',
-          flexShrink: 0,
-          mt: '0.48em',
-          opacity: 0.9,
-        }}
+      <CheckCircleIcon
+        size={iconSize}
+        weight="fill"
+        color={accent}
+        style={{ flexShrink: 0, marginTop: '0.12em', opacity: 0.92 }}
       />
       <Typography
         sx={{
           fontSize,
           lineHeight: 1.35,
           fontWeight: 700,
-          color: 'text.secondary',
+          color: textColor,
           minWidth: 0,
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -322,11 +337,16 @@ export function JobCard({
 
   const eyeSize = homepage ? 13 : carousel ? 12 : compact ? 13 : 14;
   const roleFontSize = homepage ? '0.9rem' : carousel ? '0.82rem' : compact ? '0.84rem' : '0.92rem';
-  const roleBulletSize = homepage ? 6 : carousel ? 5.5 : compact ? 5 : 6;
+  const roleIconSize = homepage ? 16 : carousel ? 14 : compact ? 14 : 17;
   const roleTwoColumns = requiredRoles.length >= 3;
   const jobExpiresAt = listing.isOkazion
     ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
     : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
+  const cardSurface = React.useMemo(
+    () => (compact ? null : resolveJobCardSurface(listing.id)),
+    [compact, listing.id]
+  );
+  const fg = cardSurface?.fg;
 
   return (
     <ListingCardLink
@@ -335,7 +355,30 @@ export function JobCard({
       href={listingJobPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
+      <Box
+        className={compact ? undefined : 'kutagjej-card-enter'}
+        sx={(theme) => ({
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: compact ? 0 : 2,
+          overflow: compact ? 'visible' : 'hidden',
+          border: compact ? 'none' : '1px solid',
+          transition: `border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1)`,
+          ...(cardSurface ? cardSurface.shellSx : { borderColor: 'divider' }),
+          '@media (hover: hover) and (pointer: fine)': cardSurface
+            ? {
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  transform: 'translateY(-3px)',
+                  boxShadow: theme.palette.mode === 'dark' ? '0 18px 38px rgba(0, 0, 0, 0.5)' : 'none',
+                },
+              }
+            : undefined,
+        })}
+      >
       <CardShell
+        bare={Boolean(cardSurface)}
         compact={compact}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
@@ -366,22 +409,24 @@ export function JobCard({
               sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}
             >
               <Box
-                sx={{
+                sx={(theme) => ({
                   width: homepage ? 38 : carousel ? 32 : compact ? 36 : 40,
                   height: homepage ? 38 : carousel ? 32 : compact ? 36 : 40,
                   borderRadius: '50%',
                   flexShrink: 0,
                   display: 'grid',
                   placeItems: 'center',
-                  bgcolor: 'background.paper',
                   border: '1px solid',
-                  borderColor: 'divider',
-                  color: 'primary.main',
+                  ...(cardSurface?.iconSx ?? {
+                    bgcolor: 'background.paper',
+                    borderColor: 'divider',
+                    color: 'primary.main',
+                  }),
                   '& svg': {
                     width: homepage ? 19 : carousel ? 16 : compact ? 18 : 20,
                     height: homepage ? 19 : carousel ? 16 : compact ? 18 : 20,
                   },
-                }}
+                })}
               >
                 <CoverIcon weight="duotone" />
               </Box>
@@ -391,7 +436,7 @@ export function JobCard({
                   sx={{
                     fontWeight: 700,
                     fontSize: homepage ? '0.8rem' : carousel ? '0.74rem' : compact ? '0.78rem' : '0.84rem',
-                    color: 'text.secondary',
+                    color: fg?.secondary ?? 'text.secondary',
                     maxWidth: '100%',
                   }}
                 >
@@ -405,7 +450,12 @@ export function JobCard({
                 ) : null}
               </Stack>
             </Stack>
-            <JobCardActions listing={listing} sharePayload={sharePayload} compact={dense} />
+            <JobCardActions
+              listing={listing}
+              sharePayload={sharePayload}
+              compact={dense}
+              ghostSx={cardSurface?.actionSx}
+            />
           </Stack>
 
           <Typography
@@ -415,7 +465,7 @@ export function JobCard({
               fontSize: homepage ? '0.98rem' : carousel ? '0.88rem' : compact ? '0.95rem' : { xs: '1.08rem', sm: '1.15rem' },
               lineHeight: 1.25,
               letterSpacing: '-0.02em',
-              color: 'text.primary',
+              color: fg?.primary ?? 'text.primary',
               display: '-webkit-box',
               WebkitLineClamp: homepage ? 3 : carousel || compact ? 2 : 3,
               WebkitBoxOrient: 'vertical',
@@ -432,7 +482,11 @@ export function JobCard({
               sx={{ alignItems: 'center', flexWrap: 'wrap', gap: homepage ? 0.65 : 0.55 }}
             >
               {visibleTags.map((tag) => (
-                <JobCardTag key={tag} compact={dense && !homepage}>
+                <JobCardTag
+                  key={tag}
+                  compact={dense && !homepage}
+                  tintSx={cardSurface ? cardSurface.tagSx : undefined}
+                >
                   {tag}
                 </JobCardTag>
               ))}
@@ -441,20 +495,27 @@ export function JobCard({
 
           <Stack spacing={0.75} sx={{ flex: homepage ? '0 0 auto' : carousel ? '1 1 auto' : compact ? '0 0 auto' : '1 1 auto' }}>
             <Box
-              sx={(theme) => ({
+              sx={{
                 p: homepage ? 1.15 : carousel ? 1 : compact ? 1.1 : 1.35,
                 borderRadius: homepage ? 2 : carousel ? 1.5 : 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: theme.palette.mode === 'dark' ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.common.black, 0.02),
                 minHeight: homepage ? 0 : carousel ? 52 : compact ? 0 : 72,
-              })}
+                ...(cardSurface?.insetSx ?? {
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? alpha(theme.palette.common.white, 0.03)
+                      : alpha(theme.palette.common.black, 0.02),
+                }),
+              }}
             >
               {requiredRoles.length > 0 ? (
                 <JobCardRoleBullets
                   roles={requiredRoles}
                   fontSize={roleFontSize}
-                  bulletSize={roleBulletSize}
+                  iconSize={roleIconSize}
+                  accent={cardSurface?.accent ?? 'var(--mui-palette-primary-main)'}
+                  textColor={fg?.primary ?? 'text.primary'}
                   twoColumns={roleTwoColumns}
                 />
               ) : (
@@ -463,7 +524,7 @@ export function JobCard({
                     fontStyle: 'italic',
                     fontSize: roleFontSize,
                     lineHeight: 1.45,
-                    color: 'text.secondary',
+                    color: fg?.secondary ?? 'text.secondary',
                     display: '-webkit-box',
                     WebkitLineClamp: homepage || carousel || compact ? 2 : 3,
                     WebkitBoxOrient: 'vertical',
@@ -487,17 +548,15 @@ export function JobCard({
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
             <Typography
               variant="caption"
-              color="text.disabled"
-              sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.72rem' : undefined }}
+              sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.72rem' : undefined, color: fg?.disabled ?? 'text.disabled' }}
             >
               {postedLabel}
             </Typography>
-            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
+            <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', flexShrink: 0, color: fg?.disabled ?? 'text.disabled' }}>
               <EyeIcon size={eyeSize} weight="regular" />
               <Typography
                 variant="caption"
-                color="text.disabled"
-                sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.7rem' : undefined }}
+                sx={{ fontSize: homepage ? '0.72rem' : carousel ? '0.68rem' : compact ? '0.7rem' : undefined, color: 'inherit' }}
               >
                 {new Intl.NumberFormat('en-GB').format(viewCount)}
               </Typography>
@@ -505,6 +564,7 @@ export function JobCard({
           </Stack>
         </Stack>
       </CardShell>
+      </Box>
     </ListingCardLink>
   );
 }

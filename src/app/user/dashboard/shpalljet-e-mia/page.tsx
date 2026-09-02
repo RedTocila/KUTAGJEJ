@@ -736,9 +736,6 @@ function JobCard({
       fallbackContent={
         showMockup ? (
           <JobListingFallback
-            variant="card"
-            listingId={l.id}
-            posterColorSeed={l.posterColorSeed}
             title={l.title}
             industry={l.industry}
             requiredRoles={l.requiredRoles}
@@ -748,8 +745,6 @@ function JobCard({
             locationAddress={l.locationAddress}
             locationLat={l.locationLat}
             locationLng={l.locationLng}
-            createdAt={l.createdAt}
-            bumpedAt={l.bumpedAt}
           />
         ) : undefined
       }

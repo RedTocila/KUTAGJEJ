@@ -29,9 +29,9 @@ const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 12%, rgba(0,
 const LIGHT_COVER_SOLID = '#ffffff';
 const LIGHT_COVER_FADE = neutralInk[50];
 const LIGHT_COVER_MID = neutralInk[100];
-const DARK_COVER_SOLID = neutralInk[950];
-const DARK_COVER_FADE = neutralInk[900];
-const DARK_COVER_MID = neutralInk[800];
+const DARK_COVER_SOLID = '#000000';
+const DARK_COVER_FADE = '#000000';
+const DARK_COVER_MID = '#000000';
 
 /** Google Maps night land — matches LocationMapEmbed dark styling. */
 const GOOGLE_NIGHT_LAND = '#242f3e';
@@ -105,7 +105,7 @@ function JobCoverThemeOverlay() {
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
             background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_MID} 100%)`,
-            opacity: 0.48,
+            opacity: 0.35,
           }),
         })}
       />
@@ -120,7 +120,7 @@ function JobCoverThemeOverlay() {
           maskImage: GRADIENT_FADE_MASK,
           WebkitMaskImage: GRADIENT_FADE_MASK,
           ...muiTheme.applyStyles('dark', {
-            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 72%)`,
+            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 72%)`,
           }),
         })}
       />

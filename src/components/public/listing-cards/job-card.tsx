@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Typography } from '@mui/material';
+import dynamic from 'next/dynamic';
+import { Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
@@ -14,6 +15,7 @@ import {
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
@@ -21,11 +23,44 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice } from './format-helpers';
+import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import type { ListingCardRatingSummary } from './listing-card-rating';
 import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { type Spec } from './spec-row';
 
 export type JobCardVariant = 'default' | 'cover' | 'compact' | 'carousel' | 'homepage' | 'browse';
+
+const JobListingCountdown = dynamic(
+  () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
+  {
+    ssr: false,
+    loading: () => <JobListingCountdownPlaceholder variant="overlay" bare showClock />,
+  }
+);
+
+/** Full-width expiry strip along the bottom edge of the job card image. */
+function JobExpiryAnnouncementBar({ expiresAt }: { expiresAt: string }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={0.75}
+      sx={{
+        width: '100%',
+        boxSizing: 'border-box',
+        alignItems: 'center',
+        justifyContent: 'center',
+        px: 1.1,
+        py: 0.65,
+        bgcolor: 'rgba(0,0,0,0.72)',
+        borderTop: '1px solid rgba(255,255,255,0.16)',
+        backdropFilter: 'blur(8px)',
+        color: '#fff',
+      }}
+    >
+      <JobListingCountdown expiresAt={expiresAt} variant="overlay" bare showClock />
+    </Stack>
+  );
+}
 
 function SalarySuffix({ salary }: { salary: number | null | undefined }) {
   if (salary == null) return null;
@@ -60,6 +95,9 @@ export function JobCard({
   const CoverIcon = resolveJobCoverIcon(listing.title, listing.industry);
   const usesMockupCover = jobListingUsesMockupCover(listing);
   const displayImageUrl = jobListingCoverImageUrl(listing);
+  const expiresAt = listing.isOkazion
+    ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
+    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
 
   const homepageLike = variant === 'homepage' || variant === 'carousel';
   const squareLike = variant === 'compact';
@@ -158,6 +196,9 @@ export function JobCard({
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
+          bottomOverlay={
+            listing.isOkazion ? undefined : <JobExpiryAnnouncementBar expiresAt={expiresAt} />
+          }
           priority={imagePriority}
           sharePayload={sharePayload}
         />

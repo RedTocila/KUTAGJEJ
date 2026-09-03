@@ -21,6 +21,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { MOTION } from '@/styles/motion';
 
+import { productChromeIdleBg } from './product-browse-chrome';
 import { HomeVerticalIcon } from './home-vertical-icon';
 
 export type HeroCategoryCirclesVariant = 'links' | 'tabs';
@@ -234,7 +235,7 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: selected ? soft : '#2a2a2a',
+                bgcolor: selected ? soft : productChromeIdleBg,
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,

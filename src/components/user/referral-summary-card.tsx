@@ -18,6 +18,14 @@ import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { fetchMyReferralStats } from '@/lib/referrals-client';
+import {
+  PANEL_BG_DARK,
+  PANEL_BG_LIGHT,
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_DARK_HOVER,
+  PANEL_SHADOW_LIGHT,
+  PANEL_SHADOW_LIGHT_HOVER,
+} from '@/styles/product-sx';
 import { paths } from '@/paths';
 
 const GOLD = '#FFC400';
@@ -201,20 +209,22 @@ export function ReferralSummaryCard() {
         borderRadius: 3.25,
         overflow: 'hidden',
         p: { xs: 1.7, sm: 2 },
-        border: '1px solid',
-        borderColor: (theme) =>
-          theme.palette.mode === 'dark' ? alpha('#fff', 0.1) : 'divider',
-        bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#121212' : 'background.paper'),
-        backgroundImage: (theme) =>
-          theme.palette.mode === 'dark'
-            ? `linear-gradient(180deg, ${alpha('#ffffff', 0.05)} 0%, transparent 32%)`
-            : 'none',
-        boxShadow: (theme) =>
-          theme.palette.mode === 'dark' ? `inset 0 1px 0 ${alpha('#ffffff', 0.07)}` : 'none',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        border: 'none',
+        bgcolor: PANEL_BG_LIGHT,
+        backgroundImage: 'none',
+        boxShadow: PANEL_SHADOW_LIGHT,
+        transition: 'box-shadow 0.15s ease, background-color 0.15s ease, transform 0.15s ease',
+        '.dark &': {
+          bgcolor: PANEL_BG_DARK,
+          backgroundImage: `linear-gradient(180deg, ${alpha('#ffffff', 0.05)} 0%, transparent 32%)`,
+          boxShadow: PANEL_SHADOW_DARK,
+        },
         '&:hover': {
-          borderColor: (theme) =>
-            theme.palette.mode === 'dark' ? primaryMainAlpha(0.45) : 'primary.main',
+          transform: 'translateY(-1px)',
+          boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+        },
+        '.dark &:hover': {
+          boxShadow: PANEL_SHADOW_DARK_HOVER,
         },
       }}
     >
@@ -341,11 +351,9 @@ export function ReferralSummaryCard() {
               pr: 0.7,
               py: 0.65,
               borderRadius: 2.25,
-              border: '1px solid',
-              borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? alpha('#fff', 0.12) : 'divider',
+              border: 'none',
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? alpha('#000', 0.28) : 'rgba(0,0,0,0.03)',
+                theme.palette.mode === 'dark' ? alpha('#000', 0.4) : 'rgba(15, 23, 10, 0.05)',
             }}
           >
             <Typography
@@ -375,11 +383,11 @@ export function ReferralSummaryCard() {
                 px: 1.15,
                 py: 0.65,
                 borderRadius: 1.75,
-                border: '1.5px solid',
-                borderColor: 'primary.main',
+                border: 'none',
+                bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.18 : 0.12),
                 color: 'primary.main',
                 '&:hover': {
-                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.08),
+                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.26 : 0.18),
                 },
                 '&.Mui-disabled': { opacity: 0.45 },
               }}
@@ -404,11 +412,9 @@ export function ReferralSummaryCard() {
             px: { xs: 1, sm: 1.35 },
             py: { xs: 1, sm: 1.2 },
             borderRadius: 2.5,
-            border: '1px solid',
-            borderColor: (theme) =>
-              theme.palette.mode === 'dark' ? alpha('#fff', 0.1) : 'divider',
+            border: 'none',
             bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? alpha('#fff', 0.035) : 'rgba(0,0,0,0.025)',
+              theme.palette.mode === 'dark' ? alpha('#fff', 0.06) : 'rgba(15, 23, 10, 0.045)',
           }}
           aria-label={`${streakCurrent}/${required} ${t.streakTitle(required)}`}
         >
@@ -506,9 +512,12 @@ export function ReferralSummaryCard() {
               alignItems: 'center',
               flexShrink: 0,
               pl: { xs: 0.75, sm: 1.15 },
-              borderLeft: '1px solid',
-              borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? alpha('#fff', 0.12) : 'divider',
+              ml: { xs: 0.15, sm: 0.25 },
+              borderLeft: 'none',
+              boxShadow: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'inset 1px 0 0 rgba(255,255,255,0.1)'
+                  : 'inset 1px 0 0 rgba(0,0,0,0.08)',
             }}
           >
             <BoostCoinIcon size={20} />

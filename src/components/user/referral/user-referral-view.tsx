@@ -195,10 +195,9 @@ export function UserReferralView() {
                     px: 1.5,
                     py: 1,
                     borderRadius: 2.5,
-                    border: '1px solid',
-                    borderColor: 'divider',
+                    border: 'none',
                     bgcolor: (t) =>
-                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                   }}
                 >
                   <Typography
@@ -326,8 +325,11 @@ export function UserReferralView() {
                 alignItems: 'center',
                 px: { xs: 2.25, sm: 2.75 },
                 py: 1.35,
-                borderBottom: '1px solid',
-                borderColor: 'divider',
+                borderBottom: 'none',
+                boxShadow: (t) =>
+                  t.palette.mode === 'dark'
+                    ? 'inset 0 -1px 0 rgba(255,255,255,0.08)'
+                    : 'inset 0 -1px 0 rgba(0,0,0,0.06)',
               }}
             >
               <UsersThreeIcon size={18} weight="duotone" color="var(--mui-palette-primary-main)" />

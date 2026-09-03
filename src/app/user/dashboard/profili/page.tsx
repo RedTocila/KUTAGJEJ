@@ -17,6 +17,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { ArrowSquareOut as ArrowSquareOutIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareOut';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Camera as CameraIcon } from '@phosphor-icons/react/dist/ssr/Camera';
@@ -201,13 +202,17 @@ export default function UserProfilePage() {
             spacing={1}
             sx={{
               alignItems: 'center',
-              bgcolor: 'var(--mui-palette-background-paper, #18191b)',
-              border: '1px solid',
-              borderColor: isPrivate ? 'rgba(234, 179, 8, 0.4)' : 'rgba(255, 255, 255, 0.12)',
+              bgcolor: (t) =>
+                isPrivate
+                  ? alpha('#eab308', t.palette.mode === 'dark' ? 0.16 : 0.12)
+                  : t.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.04)',
+              border: 'none',
               borderRadius: '20px',
               py: 0.35,
               px: { xs: 1, sm: 1.5 },
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              boxShadow: 'none',
               userSelect: 'none',
               flexShrink: 0,
             }}
@@ -506,8 +511,7 @@ export default function UserProfilePage() {
                 color: 'primary.main',
                 fontWeight: 800,
                 fontSize: '1.65rem',
-                border: '2px solid',
-                borderColor: 'divider',
+                border: 'none',
               }}
             >
               {initials}
@@ -606,8 +610,7 @@ export default function UserProfilePage() {
                     fontWeight: 700,
                     fontSize: '0.75rem',
                     bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.14)',
-                    border: '1px solid',
-                    borderColor: 'rgba(var(--mui-palette-success-mainChannel) / 0.45)',
+                    border: 'none',
                     color: 'success.main',
                     '& .MuiChip-icon': { color: 'success.main', ml: 0.65 },
                   }}

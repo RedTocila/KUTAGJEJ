@@ -46,6 +46,15 @@ import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { paths } from '@/paths';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productChromeIdleBg } from '@/components/public/product-browse-chrome';
+import {
+  PANEL_BG_DARK,
+  PANEL_BG_LIGHT,
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_DARK_HOVER,
+  PANEL_SHADOW_LIGHT,
+  PANEL_SHADOW_LIGHT_HOVER,
+} from '@/styles/product-sx';
 import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
 import { type BusinessMineListing, type ProfessionalMineListing } from '@/lib/directory-listings-client';
 import { hardNavigate } from '@/lib/hard-navigate';
@@ -390,21 +399,32 @@ function BaseCard({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        border: '1px solid',
-        borderColor: selected ? 'primary.main' : 'divider',
+        border: 'none',
         borderRadius: 2.5,
         overflow: 'hidden',
-        bgcolor: 'background.paper',
+        bgcolor: selected ? primaryMainAlpha(0.1) : PANEL_BG_LIGHT,
         opacity: isPublic ? 1 : 0.94,
-        boxShadow: selected ? (t) => `0 0 0 1px ${t.palette.primary.main}` : 'none',
+        boxShadow: selected
+          ? (t) => `0 0 0 2px ${t.palette.primary.main}, ${PANEL_SHADOW_LIGHT}`
+          : PANEL_SHADOW_LIGHT,
         cursor: selectionMode ? 'pointer' : undefined,
-        transition: 'box-shadow 0.2s, border-color 0.2s',
+        transition: 'box-shadow 0.2s, background-color 0.2s, transform 0.2s',
+        '.dark &': {
+          bgcolor: selected ? primaryMainAlpha(0.18) : PANEL_BG_DARK,
+          boxShadow: selected
+            ? (t) => `0 0 0 2px ${t.palette.primary.main}, ${PANEL_SHADOW_DARK}`
+            : PANEL_SHADOW_DARK,
+        },
         '&:hover': {
-          borderColor: selected ? 'primary.main' : isPublic ? 'primary.main' : 'warning.main',
-          boxShadow: (t) =>
-            selected
-              ? `0 0 0 1px ${t.palette.primary.main}`
-              : `0 8px 22px ${t.palette.mode === 'dark' ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.07)'}`,
+          transform: 'translateY(-1px)',
+          boxShadow: selected
+            ? (t) => `0 0 0 2px ${t.palette.primary.main}, ${PANEL_SHADOW_LIGHT_HOVER}`
+            : PANEL_SHADOW_LIGHT_HOVER,
+        },
+        '.dark &:hover': {
+          boxShadow: selected
+            ? (t) => `0 0 0 2px ${t.palette.primary.main}, ${PANEL_SHADOW_DARK_HOVER}`
+            : PANEL_SHADOW_DARK_HOVER,
         },
       }}
     >
@@ -1697,11 +1717,10 @@ export default function UserMyListingsPage() {
                   width: 40,
                   height: 40,
                   borderRadius: 2.25,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  bgcolor: 'background.paper',
+                  border: 'none',
+                  bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
                   color: 'text.secondary',
-                  '&:hover': { borderColor: 'primary.main', color: 'primary.main' },
+                  '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
                 }}
               >
                 <CheckCircleIcon size={20} weight="bold" />
@@ -1858,7 +1877,7 @@ export default function UserMyListingsPage() {
                     py: 0.85,
                     borderRadius: 999,
                     border: 'none',
-                    bgcolor: active ? primaryMainAlpha(0.12) : '#2a2a2a',
+                    bgcolor: active ? primaryMainAlpha(0.12) : productChromeIdleBg,
                     color: active ? 'primary.main' : 'text.primary',
                     fontSize: '0.8125rem',
                     fontWeight: 600,

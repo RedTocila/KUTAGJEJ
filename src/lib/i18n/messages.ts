@@ -392,7 +392,7 @@ const sq = {
     deleteConfirmManyBody: 'Njoftimet e zgjedhura do të fshihen përgjithmonë dhe nuk do të shfaqen më publikisht.',
     premiumConfirmTitle: 'Aktivizo Premium?',
     premiumConfirmBody:
-      'Njoftimi do të shfaqet me prioritet në krye të listës për 15 ditë. Do të përdoret 1 vend Premium nga paketa juaj (Grow/Elite). Doni të vazhdoni?',
+      'Njoftimi do të shfaqet me prioritet në krye të listës për 30 ditë. Do të përdoret 1 vend Premium nga paketa juaj (Grow/Elite). Doni të vazhdoni?',
     premiumConfirmAction: 'Aktivizo Premium',
     okazionConfirmTitle: 'Aktivizo OKAZION?',
     okazionConfirmBody:
@@ -1213,7 +1213,7 @@ const en: AppMessages = {
     deleteConfirmManyBody: 'Selected listings will be permanently deleted and will no longer appear publicly.',
     premiumConfirmTitle: 'Activate Premium?',
     premiumConfirmBody:
-      'This listing will appear with priority at the top of the feed for 15 days. 1 Premium slot from your plan (Grow/Elite) will be used. Do you want to continue?',
+      'This listing will appear with priority at the top of the feed for 30 days. 1 Premium slot from your plan (Grow/Elite) will be used. Do you want to continue?',
     premiumConfirmAction: 'Activate Premium',
     okazionConfirmTitle: 'Activate OKAZION?',
     okazionConfirmBody:

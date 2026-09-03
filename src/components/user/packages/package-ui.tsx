@@ -16,6 +16,14 @@ import { Trophy as TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_RED } from '@/lib/home-categories';
 import { applyLifetimeDiscount } from '@/hooks/use-lifetime-package-discount';
+import {
+  PANEL_BG_DARK,
+  PANEL_BG_LIGHT,
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_DARK_HOVER,
+  PANEL_SHADOW_LIGHT,
+  PANEL_SHADOW_LIGHT_HOVER,
+} from '@/styles/product-sx';
 
 /** Theme palette key or raw CSS color (hex / rgb). */
 export type PlanAccent = 'primary' | 'warning' | 'error' | 'success' | 'info' | (string & {});
@@ -32,17 +40,24 @@ export function resolveAccent(theme: Theme, accent: PlanAccent = 'primary'): str
 
 export function packageAccentWash(theme: Theme, accent: PlanAccent, highlighted = false) {
   const a = resolveAccent(theme, accent);
-  const dark = theme.palette.mode === 'dark';
-  return `linear-gradient(135deg, ${alpha(a, dark ? (highlighted ? 0.18 : 0.1) : highlighted ? 0.1 : 0.05)} 0%, transparent 58%)`;
+  // Keep wash subtle; do not gate on palette.mode (unreliable under CssVars).
+  return `linear-gradient(135deg, ${alpha(a, highlighted ? 0.14 : 0.08)} 0%, transparent 58%)`;
 }
 
-/** Accent border + inner wash — no outer glow. */
-export function packageAccentSurfaceSx(accent: PlanAccent = 'primary', highlighted = false) {
+/**
+ * Borderless elevated surface.
+ * Uses `.dark &` — `theme.palette.mode` stays on the default scheme with CssVars
+ * and would paint non-highlighted cards solid white in dark mode.
+ */
+export function packageAccentSurfaceSx(_accent: PlanAccent = 'primary', _highlighted = false) {
   return {
-    border: '1px solid',
-    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), highlighted ? 0.78 : 0.42),
-    bgcolor: 'background.paper',
-    boxShadow: 'none',
+    border: 'none',
+    bgcolor: PANEL_BG_LIGHT,
+    boxShadow: PANEL_SHADOW_LIGHT,
+    '.dark &': {
+      bgcolor: PANEL_BG_DARK,
+      boxShadow: PANEL_SHADOW_DARK,
+    },
   } as const;
 }
 
@@ -166,14 +181,20 @@ export function PlanCard({
         flexDirection: 'column',
         p: compact ? { xs: 1.5, sm: 1.75 } : { xs: 2.25, sm: 2.5 },
         borderRadius: compact ? 2.5 : 3.5,
-        border: '1px solid',
-        borderColor: highlighted ? (t) => alpha(resolveAccent(t, accent), 0.55) : 'divider',
-        bgcolor: 'background.paper',
-        boxShadow: 'none',
-        transition: 'transform 0.15s ease, border-color 0.15s ease',
+        border: 'none',
+        bgcolor: PANEL_BG_LIGHT,
+        boxShadow: PANEL_SHADOW_LIGHT,
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease',
+        '.dark &': {
+          bgcolor: PANEL_BG_DARK,
+          boxShadow: PANEL_SHADOW_DARK,
+        },
         '&:hover': {
           transform: 'translateY(-2px)',
-          borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
+          boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+        },
+        '.dark &:hover': {
+          boxShadow: PANEL_SHADOW_DARK_HOVER,
         },
       }}
     >
@@ -450,9 +471,8 @@ export function PurchasedVoucherStack<T extends PurchasedVoucher>({
             alignItems: 'center',
             p: 1,
             borderRadius: 2,
-            border: '1px dashed',
-            borderColor: (theme) => alpha(resolveAccent(theme, accent), 0.6),
-            bgcolor: (theme) => alpha(resolveAccent(theme, accent), theme.palette.mode === 'dark' ? 0.12 : 0.06),
+            border: 'none',
+            bgcolor: (theme) => alpha(resolveAccent(theme, accent), theme.palette.mode === 'dark' ? 0.14 : 0.08),
           }}
         >
           <Box sx={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
@@ -461,9 +481,8 @@ export function PurchasedVoucherStack<T extends PurchasedVoucher>({
                 position: 'absolute',
                 inset: '4px 0 0 4px',
                 borderRadius: 1,
-                border: '1px solid',
-                borderColor: (theme) => alpha(resolveAccent(theme, accent), 0.35),
-                bgcolor: 'background.paper',
+                border: 'none',
+                bgcolor: (theme) => alpha(resolveAccent(theme, accent), theme.palette.mode === 'dark' ? 0.2 : 0.12),
               }}
             />
             <Box
@@ -471,9 +490,8 @@ export function PurchasedVoucherStack<T extends PurchasedVoucher>({
                 position: 'absolute',
                 inset: '1px 4px 3px 1px',
                 borderRadius: 1,
-                border: '1px solid',
-                borderColor: (theme) => resolveAccent(theme, accent),
-                bgcolor: 'background.paper',
+                border: 'none',
+                bgcolor: (theme) => alpha(resolveAccent(theme, accent), theme.palette.mode === 'dark' ? 0.28 : 0.16),
                 display: 'grid',
                 placeItems: 'center',
                 color: (theme) => resolveAccent(theme, accent),
@@ -604,15 +622,20 @@ export function PackageOfferRow({
         px: { xs: 1.5, sm: 1.75 },
         py: { xs: 1.25, sm: 1.35 },
         borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: highlighted ? (t) => alpha(resolveAccent(t, accent), 0.55) : 'divider',
-        bgcolor: highlighted
-          ? (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.1 : 0.04)
-          : 'background.paper',
-        boxShadow: 'none',
-        transition: 'border-color 0.15s ease',
+        border: 'none',
+        bgcolor: PANEL_BG_LIGHT,
+        boxShadow: PANEL_SHADOW_LIGHT,
+        transition: 'box-shadow 0.15s ease, background-color 0.15s ease, transform 0.15s ease',
+        '.dark &': {
+          bgcolor: PANEL_BG_DARK,
+          boxShadow: PANEL_SHADOW_DARK,
+        },
         '&:hover': {
-          borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
+          transform: 'translateY(-1px)',
+          boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+        },
+        '.dark &:hover': {
+          boxShadow: PANEL_SHADOW_DARK_HOVER,
         },
       }}
     >
@@ -784,6 +807,7 @@ export function PackageCheckoutCard({
               fontSize: '0.66rem',
               lineHeight: 1.3,
               flexShrink: 0,
+              border: 'none',
               ...(selected
                 ? {
                     bgcolor: (t: Theme) => resolveAccent(t, accent),
@@ -792,8 +816,6 @@ export function PackageCheckoutCard({
                 : {
                     bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.25 : 0.14),
                     color: (t: Theme) => resolveAccent(t, accent),
-                    border: '1px solid',
-                    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.45),
                   }),
             }}
           >
@@ -805,17 +827,12 @@ export function PackageCheckoutCard({
   );
 
   const interactiveSx = {
-    borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.55),
-    bgcolor: (t: Theme) =>
-      t.palette.mode === 'dark' ? alpha(resolveAccent(t, accent), 0.12) : alpha(resolveAccent(t, accent), 0.06),
+    bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.12),
   };
 
   const selectedSx = selected
     ? {
-        borderColor: (t: Theme) => resolveAccent(t, accent),
-        borderWidth: '1.5px',
-        bgcolor: (t: Theme) =>
-          t.palette.mode === 'dark' ? alpha(resolveAccent(t, accent), 0.1) : alpha(resolveAccent(t, accent), 0.05),
+        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.14),
       }
     : null;
 
@@ -922,13 +939,25 @@ export function PackageCheckoutCard({
         position: 'relative',
         borderRadius: 3,
         overflow: 'visible',
-        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+        transition: 'box-shadow 0.15s ease, background-color 0.15s ease, transform 0.15s ease',
         cursor: onClick ? 'pointer' : undefined,
         ...packageAccentSurfaceSx(accent, selected),
         ...selectedSx,
         ...(onClick || actions
           ? {
-              '&:hover': selected ? undefined : interactiveSx,
+              '&:hover': selected
+                ? undefined
+                : {
+                    ...interactiveSx,
+                    transform: 'translateY(-1px)',
+                    boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+                  },
+              '.dark &:hover': selected
+                ? undefined
+                : {
+                    ...interactiveSx,
+                    boxShadow: PANEL_SHADOW_DARK_HOVER,
+                  },
               '&:has(:active)': selected ? undefined : interactiveSx,
               '&:has(.Mui-focusVisible)': selected ? undefined : interactiveSx,
             }
@@ -984,18 +1013,17 @@ export function PackageCheckoutCard({
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                border: '1.5px solid',
-                borderColor: (t) => resolveAccent(t, accent),
+                border: 'none',
                 bgcolor: (t) =>
                   alpha(
                     resolveAccent(t, accent),
                     t.palette.mode === 'dark'
                       ? accent === 'warning'
                         ? 0.28
-                        : 0.12
+                        : 0.16
                       : accent === 'warning'
                         ? 0.18
-                        : 0.08
+                        : 0.1
                   ),
                 color: (t) => resolveAccent(t, accent),
               }}
@@ -1130,9 +1158,8 @@ export function ExtraPackageCard({
                 display: 'grid',
                 placeItems: 'center',
                 flexShrink: 0,
-                border: '1.5px solid',
-                borderColor: (t) => resolveAccent(t, accent),
-                bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.16 : 0.1),
+                border: 'none',
+                bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.2 : 0.12),
                 color: (t) => resolveAccent(t, accent),
               }}
             >
@@ -1391,11 +1418,14 @@ export function SectionBlock({
     <Box
       sx={{
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        border: 'none',
         overflow: 'hidden',
-        boxShadow: (t) => (t.palette.mode === 'dark' ? 'none' : `0 1px 0 ${alpha(t.palette.common.black, 0.03)}`),
+        bgcolor: PANEL_BG_LIGHT,
+        boxShadow: PANEL_SHADOW_LIGHT,
+        '.dark &': {
+          bgcolor: PANEL_BG_DARK,
+          boxShadow: PANEL_SHADOW_DARK,
+        },
       }}
     >
       <Box

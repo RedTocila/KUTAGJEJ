@@ -8,20 +8,28 @@ import type { SystemStyleObject } from '@mui/system';
 import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/CaretRight';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { productPanelSx } from '@/styles/product-sx';
+import { primaryMainAlpha, warningMainAlpha } from '@/lib/css-var-alpha';
+import {
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_DARK_HOVER,
+  PANEL_SHADOW_LIGHT,
+  PANEL_SHADOW_LIGHT_HOVER,
+  productPanelSx,
+} from '@/styles/product-sx';
 
-/** Shared surface used by portal link rows and content sections. */
-export const portalCardSx = productPanelSx;
+/** Borderless portal surface — white in light, elevated dark via `.dark` class. */
+export const portalCardSx: SystemStyleObject<Theme> = {
+  ...productPanelSx,
+};
 
 /** Two-option pill toggle used in dashboard settings rows (language, theme, …). */
 export const portalToggleGroupSx: SystemStyleObject<Theme> = {
   flexShrink: 0,
-  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+  bgcolor: 'light-dark(rgba(0,0,0,0.08), rgba(255,255,255,0.14))',
   borderRadius: 999,
   p: 0.35,
-  border: '1px solid',
-  borderColor: 'divider',
+  border: 'none',
+  boxShadow: 'inset 0 0 0 1px light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
   '& .MuiToggleButtonGroup-grouped': {
     border: 0,
     mx: 0,
@@ -69,10 +77,7 @@ export function PortalIconBox({
         display: 'grid',
         placeItems: 'center',
         flexShrink: 0,
-        bgcolor: (t) =>
-          amber
-            ? alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.28 : 0.18)
-            : primaryMainAlpha(t.palette.mode === 'dark' ? 0.16 : 0.12),
+        bgcolor: amber ? warningMainAlpha(0.26) : primaryMainAlpha(0.22),
         color: amber ? 'warning.main' : 'primary.main',
       }}
     >
@@ -113,30 +118,35 @@ export function PortalLinkCard({
         ...(grouped ? null : portalCardSx),
         transition: grouped
           ? 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)'
-          : 'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
-        '&:hover': {
-          ...(grouped
-            ? {
-                bgcolor: (t: Theme) =>
-                  t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover',
-              }
-            : {
-                borderColor: (t: Theme) => alpha(t.palette.primary.main, 0.45),
-                bgcolor: (t: Theme) =>
-                  t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover',
+          : 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+        ...(grouped
+          ? {
+              '&:hover': { bgcolor: 'action.hover' },
+              '.dark &:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+            }
+          : {
+              '&:hover': {
+                bgcolor: 'action.hover',
                 transform: 'translateY(-2px)',
-                boxShadow: (t: Theme) =>
-                  t.palette.mode === 'dark'
-                    ? '0 10px 24px rgba(0,0,0,0.28)'
-                    : '0 10px 24px rgba(15, 23, 10, 0.08)',
-              }),
-          '& .portal-link-caret': {
-            transform: 'translateX(3px)',
-            color: 'primary.main',
-            opacity: 1,
-          },
+                boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+              },
+              '.dark &:hover': {
+                bgcolor: 'rgba(255,255,255,0.04)',
+                boxShadow: PANEL_SHADOW_DARK_HOVER,
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+                boxShadow: PANEL_SHADOW_LIGHT,
+              },
+              '.dark &:active': {
+                boxShadow: PANEL_SHADOW_DARK,
+              },
+            }),
+        '&:hover .portal-link-caret': {
+          transform: 'translateX(3px)',
+          color: 'primary.main',
+          opacity: 1,
         },
-        '&:active': grouped ? undefined : { transform: 'translateY(0)', boxShadow: 'none' },
       }}
     >
       <Stack direction="row" spacing={1.75} sx={{ alignItems: 'center' }}>

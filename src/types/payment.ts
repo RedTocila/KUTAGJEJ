@@ -52,7 +52,7 @@ export interface PremiumVoucher {
   createdAt: string;
 }
 
-/** Grow/Elite included Premium Listing slots (always 15 days when applied). */
+/** Grow/Elite included Premium Listing slots (always 30 days when applied). */
 export interface PremiumPlanQuota {
   max: number;
   used: number;

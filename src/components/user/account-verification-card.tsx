@@ -275,8 +275,7 @@ export function AccountVerificationCard() {
                   aspectRatio: `${85.6} / ${53.98}`,
                   borderRadius: 2,
                   overflow: 'hidden',
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: 'none',
                   bgcolor: 'action.hover',
                 }}
               >

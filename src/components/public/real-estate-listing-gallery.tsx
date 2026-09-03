@@ -694,7 +694,7 @@ export function RealEstateListingGallery(props: {
                       aria-label="Ndaj njoftimin"
                       count={shareCount}
                       surface={mediaActionSurface}
-                      icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
+                      icon={<PaperPlaneTiltIcon size={17} weight="bold" color="#fff" />}
                       onClick={handleShare}
                     />
                   </Box>
@@ -711,7 +711,7 @@ export function RealEstateListingGallery(props: {
                       surface={mediaActionSurface}
                       active={bookmark?.saved}
                       disabled={!bookmark}
-                      icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'bold'} />}
+                      icon={<BookmarkSimpleIcon size={17} weight={bookmark?.saved ? 'fill' : 'bold'} color="#fff" />}
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();

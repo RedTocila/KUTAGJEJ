@@ -3,13 +3,30 @@ import type { Theme } from '@mui/material/styles';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { MOTION } from '@/styles/motion';
 
-/** Bordered paper panel — portal cards, listing detail sections, dialogs. */
+/** Light-mode elevated panel fill (pure white on sage page). */
+export const PANEL_BG_LIGHT = '#ffffff';
+/** Dark-mode elevated panel — relies on CssVars `.dark` class, not `palette.mode`. */
+export const PANEL_BG_DARK = 'var(--mui-palette-background-level1)';
+export const PANEL_SHADOW_LIGHT = '0 2px 4px rgba(15, 23, 10, 0.05), 0 10px 28px rgba(15, 23, 10, 0.12)';
+export const PANEL_SHADOW_DARK = '0 8px 28px rgba(0,0,0,0.55)';
+export const PANEL_SHADOW_LIGHT_HOVER = '0 4px 8px rgba(15, 23, 10, 0.06), 0 14px 32px rgba(15, 23, 10, 0.16)';
+export const PANEL_SHADOW_DARK_HOVER = '0 14px 32px rgba(0,0,0,0.55)';
+
+/**
+ * Borderless elevated panel.
+ * Use `.dark &` (colorSchemeSelector: class) — `theme.palette.mode` stays on the
+ * default scheme under CssVars and would leave cards white in dark mode.
+ */
 export const productPanelSx = {
   borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
+  border: 'none',
   overflow: 'hidden',
+  bgcolor: PANEL_BG_LIGHT,
+  boxShadow: PANEL_SHADOW_LIGHT,
+  '.dark &': {
+    bgcolor: PANEL_BG_DARK,
+    boxShadow: PANEL_SHADOW_DARK,
+  },
 } as const;
 
 /** Shared outlined field chrome — forms, filters, reservation, dialogs. */
@@ -41,8 +58,7 @@ export const productButtonSx = {
 /** Shared black paper surface for dark-mode menus / dialogs. */
 export const productSurfacePaperSx = (theme: Theme) => ({
   borderRadius: 3,
-  border: '1px solid',
-  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'divider',
+  border: 'none',
   bgcolor: theme.palette.mode === 'dark' ? '#0c0c0c' : 'background.paper',
   backgroundImage: 'none',
   color: 'text.primary',

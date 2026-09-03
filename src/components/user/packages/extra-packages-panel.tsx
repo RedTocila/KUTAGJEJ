@@ -513,8 +513,7 @@ function PremiumListingSection() {
                         flexShrink: 0,
                         bgcolor: (theme) =>
                           theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                        border: '1px solid',
-                        borderColor: 'divider',
+                        border: 'none',
                         display: 'grid',
                         placeItems: 'center',
                         color: 'primary.main',
@@ -657,9 +656,8 @@ function ConvertListingSection() {
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            border: '1.5px solid',
-            borderColor: 'warning.main',
-            bgcolor: (theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.16 : 0.1),
+            border: 'none',
+            bgcolor: (theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.2 : 0.12),
             color: 'warning.main',
           }}
         >
@@ -833,8 +831,7 @@ export function BoostBalanceChip({ balance }: { balance: number }) {
         py: 0.55,
         borderRadius: 999,
         bgcolor: (t) => alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.16 : 0.12),
-        border: '1px solid',
-        borderColor: (t) => alpha(t.palette.warning.main, 0.4),
+        border: 'none',
         flexShrink: 0,
       }}
     >
@@ -915,9 +912,8 @@ export function ExtraPackagesPanel() {
           px: 1.6,
           py: 1.35,
           borderRadius: 3,
-          border: '1px solid',
-          borderColor: (theme) => alpha(theme.palette.primary.main, 0.35),
-          bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.1 : 0.05),
+          border: 'none',
+          bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.12 : 0.07),
         }}
       >
         <Box

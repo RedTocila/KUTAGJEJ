@@ -33,7 +33,7 @@ export function ListingMediaActionButton({
   disabled?: boolean;
   /** `hero` — solid dark glass; `glass` — softer dark transparent; `card` — listing card chips; `ghost` — outline only. */
   surface?: 'hero' | 'glass' | 'card' | 'ghost';
-  /** Accent for the active / emphasized state. Bookmark should stay `primary` (green). */
+  /** Accent for the active state on `ghost` surfaces only. Media overlays stay white when saved. */
   accent?: 'primary' | 'warning' | 'error';
   compact?: boolean;
   sx?: SxProps<Theme>;
@@ -63,10 +63,11 @@ export function ListingMediaActionButton({
       : surface === 'hero'
       ? {
           bgcolor: alpha('#000', 0.45),
-          color: active ? accentToken : '#fff',
+          color: '#fff',
           backdropFilter: 'blur(10px)',
           border: '1px solid',
-          borderColor: active ? accentToken : alpha('#fff', 0.18),
+          borderColor: alpha('#fff', 0.18),
+          '& svg': { color: '#fff', fill: 'currentColor' },
           '&:hover': { bgcolor: alpha('#000', 0.62) },
           '&.Mui-disabled': {
             bgcolor: alpha('#000', 0.45),
@@ -77,10 +78,11 @@ export function ListingMediaActionButton({
       : surface === 'glass'
         ? {
             bgcolor: alpha('#000', 0.28),
-            color: active ? accentToken : '#fff',
+            color: '#fff',
             backdropFilter: 'blur(12px)',
             border: '1px solid',
-            borderColor: active ? accentToken : alpha('#fff', 0.14),
+            borderColor: alpha('#fff', 0.14),
+            '& svg': { color: '#fff', fill: 'currentColor' },
             '&:hover': { bgcolor: alpha('#000', 0.38) },
             '&.Mui-disabled': {
               bgcolor: alpha('#000', 0.28),
@@ -90,11 +92,12 @@ export function ListingMediaActionButton({
           }
         : {
             bgcolor: alpha('#000', 0.42),
-            color: active || accent === 'warning' ? accentToken : '#fff',
+            color: '#fff',
             backdropFilter: 'blur(10px)',
             border: '1px solid',
             borderColor: alpha('#fff', 0.18),
-            textShadow: '0 1px 5px rgba(0, 0, 0, 0.65)',
+            textShadow: '0 1px 3px rgba(0, 0, 0, 0.55)',
+            '& svg': { color: '#fff', fill: 'currentColor' },
             '&:hover': {
               bgcolor: alpha('#000', 0.56),
             },
@@ -125,7 +128,21 @@ export function ListingMediaActionButton({
         ] as SxProps<Theme>
       }
     >
-      <Box component="span" aria-hidden sx={{ display: 'inline-flex', flexShrink: 0, lineHeight: 0 }}>
+      <Box
+        component="span"
+        aria-hidden
+        sx={{
+          display: 'inline-flex',
+          flexShrink: 0,
+          lineHeight: 0,
+          // SVG icons ignore textShadow — drop-shadow keeps them readable on bright photos.
+          ...(surface !== 'ghost'
+            ? {
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.65))',
+              }
+            : null),
+        }}
+      >
         {icon}
       </Box>
       <Typography

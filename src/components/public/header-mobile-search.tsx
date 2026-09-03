@@ -5,7 +5,12 @@ import { Box, Stack, Typography } from '@mui/material';
 
 import { useSearchOverlay } from '@/contexts/search-overlay-context';
 import { useCopy } from '@/hooks/use-copy';
-import { ProductSearchIcon, productSearchBarSx } from '@/components/public/product-browse-chrome';
+import {
+  ProductSearchIcon,
+  productChromeIdleBg,
+  productChromeIdleHoverBg,
+  productSearchBarSx,
+} from '@/components/public/product-browse-chrome';
 
 const HEADER_SEARCH_HEIGHT = 42;
 
@@ -34,8 +39,8 @@ export function HeaderMobileSearch() {
         cursor: 'pointer',
         font: 'inherit',
         textAlign: 'left',
-        bgcolor: '#2a2a2a',
-        '&:hover': { bgcolor: '#333333' },
+        bgcolor: productChromeIdleBg,
+        '&:hover': { bgcolor: productChromeIdleHoverBg },
       }}
     >
       <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>
@@ -43,7 +48,12 @@ export function HeaderMobileSearch() {
         <Typography
           component="span"
           noWrap
-          sx={{ fontSize: '0.9rem', fontWeight: 500, color: 'rgba(255,255,255,0.72)' }}
+          sx={{
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            color: (theme) =>
+              theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.72)' : 'text.secondary',
+          }}
         >
           {t.chrome.searchPlaceholder}
         </Typography>

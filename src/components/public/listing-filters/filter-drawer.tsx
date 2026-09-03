@@ -591,7 +591,9 @@ export function FilterDrawerPanel({
           bgcolor: 'background.default',
           borderRight: '1px solid',
           borderColor: 'divider',
-          boxShadow: '32px 0 80px rgba(0,0,0,0.45)',
+          // Shadow only while open — a closed off-screen drawer still bled its
+          // blur onto the left edge of every browse page.
+          boxShadow: open ? '32px 0 80px rgba(0,0,0,0.45)' : 'none',
           transform: open ? 'translateX(0)' : 'translateX(-105%)',
           pointerEvents: open ? 'auto' : 'none',
           transition: 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',

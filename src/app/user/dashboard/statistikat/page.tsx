@@ -28,6 +28,12 @@ import { portalToggleGroupSx } from '@/components/user/portal-cards';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
 import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
+import {
+  PANEL_BG_DARK,
+  PANEL_BG_LIGHT,
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_LIGHT,
+} from '@/styles/product-sx';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { listMyBusinessListings, listMyProfessionalListings } from '@/lib/directory-listings-client';
@@ -95,9 +101,13 @@ function TotalCard({
         p: { xs: 1.25, sm: 2 },
         height: '100%',
         borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        border: 'none',
+        bgcolor: PANEL_BG_LIGHT,
+        boxShadow: PANEL_SHADOW_LIGHT,
+        '.dark &': {
+          bgcolor: PANEL_BG_DARK,
+          boxShadow: PANEL_SHADOW_DARK,
+        },
       }}
     >
       <Stack
@@ -509,8 +519,7 @@ export default function UserStatisticsPage() {
                           borderRadius: 1.75,
                           overflow: 'hidden',
                           flexShrink: 0,
-                          border: '1px solid',
-                          borderColor: 'divider',
+                          border: 'none',
                           bgcolor: 'action.hover',
                           display: 'grid',
                           placeItems: 'center',

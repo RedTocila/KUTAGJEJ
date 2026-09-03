@@ -11,6 +11,7 @@ import { BusinessOwnerReservations } from '@/components/businesses/business-owne
 import { BusinessListingForm } from '@/components/businesses/business-listing-form';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
+import { portalCardSx } from '@/components/user/portal-cards';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
@@ -24,13 +25,14 @@ const tabBtnSx = (active: boolean) => ({
   fontWeight: 800,
   borderRadius: 2.5,
   boxShadow: 'none',
-  border: '1.5px solid',
-  borderColor: active ? 'primary.main' : 'divider',
-  bgcolor: active ? 'primary.main' : 'transparent',
+  border: 'none',
+  bgcolor: active
+    ? 'primary.main'
+    : (theme: { palette: { mode: string } }) =>
+        theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
   color: active ? 'primary.contrastText' : 'text.secondary',
   '&:hover': {
     boxShadow: 'none',
-    borderColor: 'primary.main',
     bgcolor: active ? 'primary.dark' : 'action.hover',
     color: active ? 'primary.contrastText' : 'text.primary',
   },
@@ -58,10 +60,9 @@ export default function UserBusinessesDashboardPage() {
           gap: 1,
           p: 0.75,
           borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
+          border: 'none',
           bgcolor: (theme) =>
-            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'action.hover',
+            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.045)',
         }}
       >
         <Button
@@ -95,7 +96,7 @@ export default function UserBusinessesDashboardPage() {
       </Box>
 
       {tab === 'post' ? (
-        <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+        <Card sx={portalCardSx}>
           <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
             <Stack spacing={2.25}>
               <ListingFormSnapshotProvider>

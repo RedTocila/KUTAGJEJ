@@ -66,12 +66,28 @@ import { useUser } from '@/hooks/use-user';
 import { ImageLightbox } from '@/components/common/image-lightbox';
 import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
+import {
+  AI_BUILD_INPUT_BG_LIGHT,
+  AI_BUILD_MUTED_TEXT_LIGHT,
+  AI_BUILD_PANEL_BG_LIGHT,
+  AiBuildTheme,
+} from '@/components/user/ai-build-theme';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
 import { MOTION } from '@/styles/motion';
-import { productButtonSx, productPanelSx } from '@/styles/product-sx';
+import { productButtonSx } from '@/styles/product-sx';
 
 const MAX_AI_IMAGES = 6;
+
+/** Borderless AI Build panels — explicit purple fill (CssVars keep brand-green paper). */
+const aiPanelSx = {
+  borderRadius: 3,
+  border: 'none',
+  boxShadow: 'none',
+  bgcolor: (theme: { palette: { mode: string } }) =>
+    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : AI_BUILD_PANEL_BG_LIGHT,
+  overflow: 'hidden',
+} as const;
 
 const aiButtonSx = {
   ...productButtonSx,
@@ -373,8 +389,7 @@ function DraftImageThumb({
           height: '100%',
           borderRadius: 1.5,
           overflow: 'hidden',
-          border: '1px solid',
-          borderColor: 'divider',
+          border: 'none',
           padding: 0,
           cursor: 'pointer',
           bgcolor: 'action.hover',
@@ -1191,6 +1206,7 @@ export default function AiImportListingsPage() {
   const canAnalyze = Boolean(text.trim() || files.length > 0 || pendingImageUrls.length > 0);
 
   return (
+    <AiBuildTheme>
     <Stack spacing={1.75}>
       <PostListingHeader
         icon={SparkleIcon}
@@ -1204,7 +1220,7 @@ export default function AiImportListingsPage() {
           component="form"
           onSubmit={handleAnalyze}
           sx={{
-            ...productPanelSx,
+            ...aiPanelSx,
             p: { xs: 1.25, sm: 1.5 },
           }}
         >
@@ -1248,7 +1264,6 @@ export default function AiImportListingsPage() {
                       color: 'inherit',
                       transition: `transform ${MOTION.release} ${MOTION.ease}`,
                       '&:hover .ai-cat-circle': {
-                        borderColor: AI_SEARCH_BLUE,
                         bgcolor: selected ? AI_SEARCH_BLUE : `${AI_SEARCH_BLUE}22`,
                       },
                       '&:hover .ai-cat-label': { color: AI_SEARCH_BLUE },
@@ -1266,10 +1281,10 @@ export default function AiImportListingsPage() {
                         borderRadius: '50%',
                         display: 'grid',
                         placeItems: 'center',
-                        bgcolor: selected ? AI_SEARCH_BLUE : 'action.hover',
-                        border: '1.5px solid',
-                        borderColor: selected ? AI_SEARCH_BLUE : 'divider',
-                        transition: `border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}`,
+                        bgcolor: selected ? AI_SEARCH_BLUE : (theme) =>
+                          theme.palette.mode === 'dark' ? 'action.hover' : AI_BUILD_INPUT_BG_LIGHT,
+                        border: 'none',
+                        transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                       }}
                     >
                       <HomeVerticalIcon
@@ -1326,17 +1341,20 @@ export default function AiImportListingsPage() {
                       pointerEvents: loading ? 'none' : undefined,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2.5,
-                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'action.hover' : 'background.default'),
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark' ? 'action.hover' : AI_BUILD_INPUT_BG_LIGHT,
                         pb: 5,
-                        '& fieldset': { borderWidth: 1.5, borderColor: 'divider' },
-                        '&:hover fieldset': { borderColor: 'text.secondary' },
-                        '&.Mui-focused fieldset': {
-                          borderWidth: 1.5,
-                          borderColor: AI_SEARCH_BLUE,
-                        },
+                        '& fieldset': { border: 'none' },
+                        '&:hover fieldset': { border: 'none' },
+                        '&.Mui-focused fieldset': { border: 'none' },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: (theme) =>
+                          theme.palette.mode === 'dark' ? 'text.primary' : '#1c1630',
                       },
                       '& .MuiInputBase-input::placeholder': {
-                        color: 'text.disabled',
+                        color: (theme) =>
+                          theme.palette.mode === 'dark' ? 'text.disabled' : AI_BUILD_MUTED_TEXT_LIGHT,
                         opacity: 1,
                       },
                     }}
@@ -1435,8 +1453,8 @@ export default function AiImportListingsPage() {
                             height: '100%',
                             borderRadius: 1.5,
                             overflow: 'hidden',
-                            border: '1px solid',
-                            borderColor: 'divider',
+                            border: 'none',
+                            bgcolor: 'action.hover',
                           }}
                         >
                           <Box
@@ -1539,10 +1557,10 @@ export default function AiImportListingsPage() {
                   width: 36,
                   height: 36,
                   borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: 'none',
+                  bgcolor: 'action.hover',
                   color: 'text.secondary',
-                  '&:hover': { color: 'error.main', borderColor: 'error.main', bgcolor: 'action.hover' },
+                  '&:hover': { color: 'error.main', bgcolor: 'action.selected' },
                 }}
               >
                 <TrashIcon size={16} weight="bold" />
@@ -1568,10 +1586,12 @@ export default function AiImportListingsPage() {
               <Box
                 key={draft.id}
                 sx={{
-                  ...productPanelSx,
+                  ...aiPanelSx,
                   p: 1.25,
                   borderRadius: 2.25,
-                  borderColor: mismatch || restricted || failed ? 'error.main' : 'divider',
+                  ...(mismatch || restricted || failed
+                    ? { border: '1px solid', borderColor: 'error.main' }
+                    : null),
                 }}
               >
                 <Stack spacing={0.85}>
@@ -1774,5 +1794,6 @@ export default function AiImportListingsPage() {
         onIndexChange={(index) => setPreview((current) => (current ? { ...current, index } : current))}
       />
     </Stack>
+    </AiBuildTheme>
   );
 }

@@ -622,7 +622,16 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               paneIndex={3}
               active={index === 3}
               layoutActive={layoutIndex === 3}
-              contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+              contentSx={{
+                px: 2,
+                pt: 3,
+                pb: MOBILE_CONTENT_BOTTOM_PADDING,
+                bgcolor: 'background.paper',
+                minHeight: '100%',
+                '.dark &': {
+                  bgcolor: 'background.default',
+                },
+              }}
               onPaneRef={setPaneRef}
             >
               {shouldMountPane(3, index, visited) ? (

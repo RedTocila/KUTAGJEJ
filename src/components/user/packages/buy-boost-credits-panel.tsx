@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { useCopy } from '@/hooks/use-copy';
@@ -159,9 +160,8 @@ function BalanceChip({ balance, label }: { balance: number; label: string }) {
         px: 1.75,
         py: 0.85,
         borderRadius: 999,
-        border: '1px solid',
-        borderColor: (theme) => `${theme.palette.warning.main}55`,
-        bgcolor: (theme) => `${theme.palette.warning.main}14`,
+        border: 'none',
+        bgcolor: (theme) => alpha(theme.palette.warning.main, 0.18),
         color: 'warning.main',
       }}
     >

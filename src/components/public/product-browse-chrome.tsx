@@ -128,6 +128,16 @@ export type ProductTagAccent = {
   soft: string;
 };
 
+/** Idle fill for pills, search bars, filter circles — dark on dark, soft neutral on light. */
+export function productChromeIdleBg(_theme?: Theme): string {
+  // Prefer `light-dark()` over `palette.mode` — CssVars class scheme can leave mode stale.
+  return 'light-dark(#e4e4e4, #2a2a2a)';
+}
+
+export function productChromeIdleHoverBg(_theme?: Theme): string {
+  return 'light-dark(#d6d6d6, #333333)';
+}
+
 /** Pill tag chrome — subcategory pills, filter chips, service tags. */
 export function productTagSx(active = false, accent?: ProductTagAccent): SxProps<Theme> {
   const accentColor = accent?.color ?? 'primary.main';
@@ -141,7 +151,7 @@ export function productTagSx(active = false, accent?: ProductTagAccent): SxProps
     py: 0.75,
     borderRadius: 999,
     border: 'none',
-    bgcolor: active ? accentSoft : '#2a2a2a',
+    bgcolor: active ? accentSoft : productChromeIdleBg,
     color: active ? accentColor : 'text.primary',
     textDecoration: 'none',
     whiteSpace: 'nowrap',
@@ -282,7 +292,7 @@ export function productSearchBarSx(active = false, accent?: ProductSearchAccent)
     py: 0.75,
     borderRadius: 999,
     border: 'none',
-    bgcolor: active ? accentSoft : '#2a2a2a',
+    bgcolor: active ? accentSoft : productChromeIdleBg,
     overflow: 'hidden',
     boxSizing: 'border-box',
     textDecoration: 'none',
@@ -317,12 +327,12 @@ export function productFilterButtonSx(active = false): SxProps<Theme> {
     borderRadius: '50%',
     border: 'none',
     color: active ? 'primary.contrastText' : 'text.primary',
-    bgcolor: active ? 'primary.main' : '#2a2a2a',
+    bgcolor: active ? 'primary.main' : productChromeIdleBg,
     boxShadow: 'none',
     transition:
       'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
-      bgcolor: active ? 'primary.dark' : '#333333',
+      bgcolor: active ? 'primary.dark' : productChromeIdleHoverBg,
     },
     '&:active': {
       transform: 'scale(0.94)',

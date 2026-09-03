@@ -278,7 +278,7 @@ export async function fetchPremiumPlanQuota(): Promise<{
         max: Number(data.max) || 0,
         used: Number(data.used) || 0,
         remaining: Number(data.remaining) || 0,
-        days: Number(data.days) || 15,
+        days: Number(data.days) || 30,
       },
     };
   } catch {
@@ -337,7 +337,7 @@ export async function applyPremiumFromPlan(params: { kind: string; listingId: st
             max: Number(data.quota.max) || 0,
             used: Number(data.quota.used) || 0,
             remaining: Number(data.quota.remaining) || 0,
-            days: Number(data.quota.days) || 15,
+            days: Number(data.quota.days) || 30,
           }
         : undefined,
       message: typeof data.message === 'string' ? data.message : undefined,

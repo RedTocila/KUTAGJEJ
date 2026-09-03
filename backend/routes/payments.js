@@ -709,7 +709,7 @@ router.get('/premium/vouchers', async (req, res) => {
   }
 });
 
-/** Grow/Elite Premium Listing quota (15-day slots included with the plan). */
+/** Grow/Elite Premium Listing quota (30-day slots included with the plan). */
 router.get('/premium/quota', async (req, res) => {
   try {
     const quota = await getPremiumQuotaSnapshot(req.user.id);
@@ -748,7 +748,7 @@ router.post('/premium/apply', async (req, res) => {
   }
 });
 
-/** Spend one plan Premium slot (15 days) on a listing. */
+/** Spend one plan Premium slot (30 days) on a listing. */
 router.post('/premium/apply-from-plan', async (req, res) => {
   try {
     const kind = String(req.body?.kind || '').trim();
@@ -770,7 +770,7 @@ router.post('/premium/apply-from-plan', async (req, res) => {
       quota: result.quota,
       message: result.alreadyActive
         ? 'Ky njoftim është tashmë Premium.'
-        : 'Njoftimi u bë Premium për 15 ditë nga paketa.',
+        : 'Njoftimi u bë Premium për 30 ditë nga paketa.',
     });
   } catch (error) {
     console.error('POST /payments/premium/apply-from-plan:', error?.message || error);

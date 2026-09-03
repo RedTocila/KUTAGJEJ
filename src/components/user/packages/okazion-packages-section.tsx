@@ -344,9 +344,9 @@ export function OkazionPackagesSection() {
               sx={{
                 alignItems: 'center',
                 borderRadius: 999,
-                border: '1px solid',
-                borderColor: `${OKAZION_ACCENT}55`,
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                border: 'none',
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? `${OKAZION_ACCENT}28` : `${OKAZION_ACCENT}14`,
                 overflow: 'hidden',
               }}
             >
@@ -505,8 +505,7 @@ export function OkazionPackagesSection() {
                         flexShrink: 0,
                         bgcolor: (theme) =>
                           theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                        border: '1px solid',
-                        borderColor: 'divider',
+                        border: 'none',
                         display: 'grid',
                         placeItems: 'center',
                         color: OKAZION_ACCENT,

@@ -19,6 +19,7 @@ import { SteeringWheel as SteeringWheelIcon } from '@phosphor-icons/react/dist/s
 
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productChromeIdleBg, productChromeIdleHoverBg } from '@/components/public/product-browse-chrome';
 
 type Option = { value: string; label: string; Icon?: PhosphorIcon; hint?: string };
 
@@ -212,7 +213,7 @@ export function FilterOptionTiles({
                 py: 0.75,
                 borderRadius: 2,
                 border: 'none',
-                bgcolor: active ? primaryMainAlpha(0.14) : '#2a2a2a',
+                bgcolor: active ? primaryMainAlpha(0.14) : productChromeIdleBg,
                 color: active ? 'primary.main' : 'text.primary',
                 fontWeight: 600,
                 fontSize: '0.78rem',
@@ -264,7 +265,7 @@ export function FilterPresetChips({
                 py: 0.55,
                 borderRadius: 999,
                 border: 'none',
-                bgcolor: active ? 'primary.main' : '#2a2a2a',
+                bgcolor: active ? 'primary.main' : productChromeIdleBg,
                 color: active ? 'primary.contrastText' : 'text.secondary',
                 fontWeight: 700,
                 fontSize: '0.72rem',
@@ -273,7 +274,7 @@ export function FilterPresetChips({
                 transition: 'all 0.15s ease',
                 '&:hover': {
                   color: active ? 'primary.contrastText' : 'primary.main',
-                  bgcolor: active ? 'primary.main' : '#333333',
+                  bgcolor: active ? 'primary.main' : productChromeIdleHoverBg,
                 },
               }}
             >
@@ -336,14 +337,14 @@ export function FilterBedroomPicker({
                 px: 0.5,
                 borderRadius: 999,
                 border: 'none',
-                bgcolor: active ? 'primary.main' : '#2a2a2a',
+                bgcolor: active ? 'primary.main' : productChromeIdleBg,
                 color: active ? 'primary.contrastText' : 'text.primary',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 boxShadow: 'none',
                 transition: 'background-color 0.15s, color 0.15s',
                 '&:hover': {
-                  bgcolor: active ? 'primary.main' : '#333333',
+                  bgcolor: active ? 'primary.main' : productChromeIdleHoverBg,
                 },
               }}
             >

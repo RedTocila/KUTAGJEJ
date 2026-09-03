@@ -8,6 +8,7 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { ProfessionalListingForm } from '@/components/professionals/professional-listing-form';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
+import { portalCardSx } from '@/components/user/portal-cards';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
@@ -25,7 +26,7 @@ export default function UserProfessionalsDashboardPage() {
         </Typography>
       </Stack>
 
-      <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+      <Card sx={portalCardSx}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Stack
             direction="row"

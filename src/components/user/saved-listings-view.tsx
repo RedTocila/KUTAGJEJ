@@ -7,6 +7,7 @@ import { BookmarkSimple as BookmarkIcon } from '@phosphor-icons/react/dist/ssr/B
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { productChromeIdleBg } from '@/components/public/product-browse-chrome';
 import {
   fetchSavedListings,
   getCachedSavedListings,
@@ -202,7 +203,7 @@ export function SavedListingsView() {
                   py: 0.85,
                   borderRadius: 999,
                   border: 'none',
-                  bgcolor: active ? primaryMainAlpha(0.12) : '#2a2a2a',
+                  bgcolor: active ? primaryMainAlpha(0.12) : productChromeIdleBg,
                   color: active ? 'primary.main' : 'text.primary',
                   fontSize: '0.8125rem',
                   fontWeight: 600,

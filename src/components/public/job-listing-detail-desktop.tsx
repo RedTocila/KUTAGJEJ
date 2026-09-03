@@ -211,7 +211,7 @@ export function JobListingDetailDesktop({
                         aria-label="Ndaj njoftimin"
                         count={shareCount}
                         surface="glass"
-                        icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
+                        icon={<PaperPlaneTiltIcon size={17} weight="bold" color="#fff" />}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -225,7 +225,7 @@ export function JobListingDetailDesktop({
                         count={saveCount}
                         surface="glass"
                         active={saved}
-                        icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
+                        icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} color="#fff" />}
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();

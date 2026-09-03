@@ -62,6 +62,14 @@ import { ThemeSwitchRow } from '@/components/user/theme-switch-row';
 import { formatBc, planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
+import {
+  PANEL_BG_DARK,
+  PANEL_BG_LIGHT,
+  PANEL_SHADOW_DARK,
+  PANEL_SHADOW_DARK_HOVER,
+  PANEL_SHADOW_LIGHT,
+  PANEL_SHADOW_LIGHT_HOVER,
+} from '@/styles/product-sx';
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
@@ -114,13 +122,24 @@ function ActionTile({
     cursor: 'pointer',
     width: '100%',
     font: 'inherit',
-    borderColor: accentAlpha(0.32, 0.28),
-    bgcolor: accentAlpha(0.12, 0.08),
-    transition: 'transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
+    border: 'none',
+    bgcolor: PANEL_BG_LIGHT,
+    boxShadow: PANEL_SHADOW_LIGHT,
+    backgroundImage: `linear-gradient(180deg, ${accentAlpha(0.1, 0.08)({ palette: { mode: 'light' } })} 0%, transparent 70%)`,
+    transition: 'transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
+    '.dark &': {
+      bgcolor: PANEL_BG_DARK,
+      backgroundImage: 'none',
+      boxShadow: PANEL_SHADOW_DARK,
+    },
     '&:hover': {
       transform: 'translateY(-2px)',
-      borderColor: isAmber ? '#F5A623' : 'primary.main',
-      bgcolor: accentAlpha(0.18, 0.12),
+      bgcolor: PANEL_BG_LIGHT,
+      boxShadow: PANEL_SHADOW_LIGHT_HOVER,
+    },
+    '.dark &:hover': {
+      bgcolor: PANEL_BG_DARK,
+      boxShadow: PANEL_SHADOW_DARK_HOVER,
     },
   } as const;
 
@@ -203,8 +222,11 @@ function QuotaStat({
           display: 'grid',
           placeItems: 'center',
           flexShrink: 0,
-          bgcolor: `${tone}18`,
+          bgcolor: `color-mix(in srgb, ${tone} 22%, transparent)`,
           color: tone,
+          '.dark &': {
+            bgcolor: `color-mix(in srgb, ${tone} 32%, transparent)`,
+          },
         }}
       >
         {React.createElement(Icon, { size: 18, weight: 'bold' })}
@@ -214,7 +236,7 @@ function QuotaStat({
         <Stack
           direction="row"
           spacing={1}
-          sx={{ alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mb: 0.55 }}
+          sx={{ alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mb: 0.6 }}
         >
           <Typography
             sx={{
@@ -260,11 +282,12 @@ function QuotaStat({
           variant={loading ? 'indeterminate' : 'determinate'}
           value={max <= 0 ? 0 : barPercent}
           sx={{
-            height: 4,
-            borderRadius: 2,
-            bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
+            height: 6,
+            borderRadius: 999,
+            bgcolor: 'light-dark(rgba(15, 23, 10, 0.1), rgba(255,255,255,0.16))',
+            boxShadow: 'inset 0 0 0 1px light-dark(rgba(15, 23, 10, 0.06), rgba(255,255,255,0.08))',
             '& .MuiLinearProgress-bar': {
-              borderRadius: 2,
+              borderRadius: 999,
               bgcolor: loading || max <= 0 ? 'text.disabled' : tone,
             },
           }}
@@ -514,17 +537,21 @@ export function UserDashboardHome() {
               pr: 1.25,
               py: 0.55,
               borderRadius: 999,
-              border: '1px solid',
-              borderColor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.28)' : 'rgba(212, 160, 23, 0.35)',
+              border: 'none',
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.08)' : 'rgba(232, 185, 35, 0.1)',
-              transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.12)' : 'rgba(232, 185, 35, 0.14)',
+              boxShadow: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? '0 2px 10px rgba(0,0,0,0.28)'
+                  : '0 2px 10px rgba(212, 160, 23, 0.16)',
+              transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
               '&:hover': {
-                borderColor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.5)' : 'rgba(212, 160, 23, 0.55)',
                 bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.14)' : 'rgba(232, 185, 35, 0.16)',
+                  theme.palette.mode === 'dark' ? 'rgba(232, 185, 35, 0.18)' : 'rgba(232, 185, 35, 0.2)',
+                boxShadow: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? '0 4px 14px rgba(0,0,0,0.34)'
+                    : '0 4px 14px rgba(212, 160, 23, 0.22)',
               },
             }}
           >
@@ -615,12 +642,12 @@ export function UserDashboardHome() {
                 px: 1.25,
                 minHeight: 32,
                 color: 'text.secondary',
-                border: '1px solid',
-                borderColor: 'divider',
+                border: 'none',
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.045)',
                 '&:hover': {
                   color: 'primary.main',
-                  borderColor: 'primary.main',
-                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.12 : 0.08),
+                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.14 : 0.1),
                 },
               }}
             >
@@ -632,14 +659,12 @@ export function UserDashboardHome() {
             spacing={0}
             sx={{
               borderRadius: 2.25,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+              border: 'none',
+              bgcolor: 'light-dark(rgba(15, 23, 10, 0.05), rgba(255,255,255,0.07))',
               px: { xs: 1.25, sm: 1.5 },
               '& > *:not(:last-child)': {
                 borderBottom: '1px solid',
-                borderColor: 'divider',
+                borderColor: 'light-dark(rgba(15, 23, 10, 0.08), rgba(255,255,255,0.1))',
               },
             }}
           >

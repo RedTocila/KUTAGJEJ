@@ -18,7 +18,6 @@ import { listingCardImageUrl, storageImageOriginalUrl } from '@/lib/storage-imag
 import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
-import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
@@ -34,13 +33,13 @@ function CardMediaOverlayAction({
   'aria-label': ariaLabel,
   count,
   icon,
-  active = false,
   showCount = false,
   onClick,
 }: {
   'aria-label': string;
   count: number;
   icon: React.ReactNode;
+  /** Kept for call-site compatibility; saved state is shown via filled icon weight. */
   active?: boolean;
   showCount?: boolean;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -61,19 +60,35 @@ function CardMediaOverlayAction({
         gap: showCount ? 0.3 : 0,
         borderRadius: 0,
         bgcolor: 'transparent',
-        color: active ? 'primary.main' : '#fff',
+        // Force white — parent ListingCardLink color must not tint saved icons green.
+        color: '#fff !important',
         overflow: 'visible',
         flexDirection: 'row',
         alignItems: 'center',
         boxShadow: 'none',
-        textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+        textShadow: '0 1px 3px rgba(0,0,0,0.55)',
         transition: 'color 0.15s ease, transform 0.1s ease',
-        '&:hover': { bgcolor: 'transparent' },
+        '&:hover': { bgcolor: 'transparent', color: '#fff' },
         '&:focus-visible': { outline: 'none' },
         '&:active': { transform: 'scale(0.92)' },
+        '& svg': { color: '#fff', fill: 'currentColor' },
+        '& .MuiTypography-root': { color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.55)' },
       }}
     >
-      {icon}
+      <Box
+        component="span"
+        aria-hidden
+        sx={{
+          display: 'inline-flex',
+          flexShrink: 0,
+          lineHeight: 0,
+          color: '#fff',
+          // SVG icons ignore textShadow — drop-shadow keeps them readable on bright photos.
+          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.65))',
+        }}
+      >
+        {icon}
+      </Box>
       {showCount ? (
         <Typography
           component="span"
@@ -81,7 +96,7 @@ function CardMediaOverlayAction({
             fontWeight: 700,
             fontSize: '0.66rem',
             lineHeight: 1,
-            color: 'inherit',
+            color: '#fff',
             pointerEvents: 'none',
           }}
         >
@@ -438,64 +453,34 @@ export function CardMedia({
         </Stack>
       ) : null}
 
-      {compact ? (
-        <Stack
-          direction="row"
-          sx={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            alignItems: 'center',
-            zIndex: 3,
-            gap: 0.35,
-          }}
-        >
-          <CardMediaOverlayAction
-            aria-label="Ndaj njoftimin"
-            count={shareCount}
-            showCount={showActionCounts}
-            icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
-            onClick={handleShare}
-          />
-          <CardMediaOverlayAction
-            aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-            count={saveCount}
-            showCount={showActionCounts}
-            active={saved}
-            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
-            onClick={handleSave}
-          />
-        </Stack>
-      ) : (
-        <Stack
-          direction="row"
-          spacing={compact ? 0.35 : 0.75}
-          sx={{
-            position: 'absolute',
-            top: compact ? 6 : 8,
-            right: compact ? 6 : 8,
-            alignItems: 'center',
-            zIndex: 3,
-          }}
-        >
-          <ListingMediaActionButton
-            aria-label="Ndaj njoftimin"
-            count={shareCount}
-            icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
-            onClick={handleShare}
-            compact={compact}
-          />
-          <ListingMediaActionButton
-            aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
-            count={saveCount}
-            active={saved}
-            accent="primary"
-            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
-            onClick={handleSave}
-            compact={compact}
-          />
-        </Stack>
-      )}
+      <Stack
+        direction="row"
+        spacing={compact ? 0.35 : 0.75}
+        sx={{
+          position: 'absolute',
+          top: compact ? 6 : 8,
+          right: compact ? 6 : 8,
+          alignItems: 'center',
+          zIndex: 3,
+          gap: compact ? 0.35 : undefined,
+        }}
+      >
+        <CardMediaOverlayAction
+          aria-label="Ndaj njoftimin"
+          count={shareCount}
+          showCount={compact ? showActionCounts : true}
+          icon={<PaperPlaneTiltIcon size={17} weight="bold" color="#fff" />}
+          onClick={handleShare}
+        />
+        <CardMediaOverlayAction
+          aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+          count={saveCount}
+          showCount={compact ? showActionCounts : true}
+          active={saved}
+          icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} color="#fff" />}
+          onClick={handleSave}
+        />
+      </Stack>
 
       {shareOpen ? (
         <ListingSharePage

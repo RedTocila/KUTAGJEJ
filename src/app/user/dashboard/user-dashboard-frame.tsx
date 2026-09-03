@@ -172,11 +172,14 @@ function UserDashboardFrameInner({
       />
       <Box
         sx={{
-          bgcolor: 'var(--mui-palette-background-default)',
+          bgcolor: 'var(--mui-palette-background-paper)',
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
           minHeight: '100dvh',
+          '.dark &': {
+            bgcolor: 'var(--mui-palette-background-default)',
+          },
           ...(isPackagesHub
             ? {
                 minHeight: '100dvh',

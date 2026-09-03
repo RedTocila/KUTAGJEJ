@@ -8,9 +8,9 @@ const { applyListingBump } = require('./listing-bump');
 const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
 const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
-/** Premium slots included with Grow / Elite stay featured for 15 days. */
+/** Premium slots included with Grow / Elite stay featured for 30 days. */
 const PLAN_PREMIUM_PACKAGE_ID = 'plan-premium';
-const PLAN_PREMIUM_DAYS = 15;
+const PLAN_PREMIUM_DAYS = 30;
 
 function premiumFieldsFromDoc(doc) {
   const until = doc?.premiumUntil ?? doc?.premium_until ?? null;
@@ -440,7 +440,7 @@ async function applyPremiumVoucher({ userId, voucherId, kind, listingId }) {
 }
 
 /**
- * Spend one Grow/Elite Premium Listing slot: feature the post for 15 days.
+ * Spend one Grow/Elite Premium Listing slot: feature the post for 30 days.
  */
 async function applyPremiumFromPlan({ userId, kind, listingId }) {
   if (!userId || !isUuid(String(userId))) {

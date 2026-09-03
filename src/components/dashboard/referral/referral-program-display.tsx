@@ -95,8 +95,21 @@ function TierLine({
         size="small"
         label={reward}
         color={accent}
-        variant={done ? 'filled' : 'outlined'}
-        sx={{ height: 22, fontWeight: 800, fontSize: '0.68rem', flexShrink: 0, mt: showProgress ? 0.1 : 0 }}
+        variant={done ? 'filled' : 'filled'}
+        sx={{
+          height: 22,
+          fontWeight: 800,
+          fontSize: '0.68rem',
+          flexShrink: 0,
+          mt: showProgress ? 0.1 : 0,
+          border: 'none',
+          ...(done
+            ? null
+            : {
+                bgcolor: (t) => alpha(main, t.palette.mode === 'dark' ? 0.18 : 0.1),
+                color: main,
+              }),
+        }}
       />
     </Stack>
   );
@@ -124,9 +137,13 @@ function MiniBadge({
         mt: 0.85,
         p: 1,
         borderRadius: 1.5,
-        border: '1px solid',
-        borderColor: earned ? 'primary.main' : 'divider',
-        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)'),
+        border: 'none',
+        bgcolor: (t) =>
+          earned
+            ? alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.16 : 0.1)
+            : t.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.06)'
+              : 'rgba(0,0,0,0.04)',
       }}
     >
       <MemberBadgeEmblem kind={kind} level={level} earned={earned} size={40} />
@@ -193,8 +210,11 @@ function GroupCard({
         sx={{
           px: 1.5,
           py: 1.25,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          borderBottom: 'none',
+          boxShadow: (t) =>
+            t.palette.mode === 'dark'
+              ? 'inset 0 -1px 0 rgba(255,255,255,0.08)'
+              : 'inset 0 -1px 0 rgba(0,0,0,0.06)',
           bgcolor: (t) =>
             accent === 'warning'
               ? t.palette.mode === 'dark'
@@ -214,9 +234,9 @@ function GroupCard({
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
+              bgcolor: (t) =>
+                t.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.85)',
+              border: 'none',
               color: accent === 'warning' ? 'warning.main' : 'primary.main',
             }}
           >
@@ -228,14 +248,22 @@ function GroupCard({
                 size="small"
                 label={kindLabel}
                 color={accent}
-                variant="outlined"
-                sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem', letterSpacing: 0.2 }}
+                variant="filled"
+                sx={{
+                  height: 20,
+                  fontWeight: 800,
+                  fontSize: '0.62rem',
+                  letterSpacing: 0.2,
+                  border: 'none',
+                  bgcolor: (t) => alpha(t.palette[accent].main, t.palette.mode === 'dark' ? 0.22 : 0.14),
+                  color: `${accent}.main`,
+                }}
               />
               <Chip
                 size="small"
                 label={done ? 'Kompletuar' : `${achieved}/${total}`}
                 color={done ? 'success' : 'default'}
-                sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem' }}
+                sx={{ height: 20, fontWeight: 800, fontSize: '0.62rem', border: 'none' }}
               />
             </Stack>
             <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', mt: 0.45, lineHeight: 1.25 }}>

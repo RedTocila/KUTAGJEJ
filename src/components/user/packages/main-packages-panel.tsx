@@ -48,7 +48,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
     t.packages.productListings(plan.maxProductListings),
   ];
   if (plan.maxPremiumListings > 0) {
-    lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 15));
+    lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 30));
   }
   if (plan.maxOkazionListings > 0) {
     lines.push(t.packages.okazionListingDays(plan.maxOkazionListings, 5));
@@ -156,14 +156,13 @@ function BillingPeriodPillBar({
         p: `${PILL_INSET_PX}px`,
         overflow: 'hidden',
         borderRadius: 999,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
+        border: 'none',
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.055)'),
         backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
         boxShadow: 'none',
         ...theme.applyStyles('dark', {
-          bgcolor: 'rgb(var(--mui-palette-background-paperChannel) / 0.94)',
+          bgcolor: 'rgba(255,255,255,0.08)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           boxShadow: 'none',

@@ -25,6 +25,7 @@ import {
   type PlanAccent,
 } from '@/components/user/packages/package-ui';
 import { portalCardSx } from '@/components/user/portal-cards';
+import { PANEL_SHADOW_DARK_HOVER, PANEL_SHADOW_LIGHT_HOVER } from '@/styles/product-sx';
 
 function categoryCardSx(accent: PlanAccent = 'primary') {
   return {
@@ -41,15 +42,19 @@ function categoryCardSx(accent: PlanAccent = 'primary') {
     gap: { xs: 1.5, sm: 2 },
     cursor: 'pointer',
     WebkitTapHighlightColor: 'transparent',
-    transition: 'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+    transition: 'box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
-      borderColor: (t: Theme) => alpha(resolveAccent(t, accent), 0.72),
+      transform: 'translateY(-1px)',
+      boxShadow: PANEL_SHADOW_LIGHT_HOVER,
       '& .packages-hub-cta': {
         color: (th: Theme) => resolveAccent(th, accent),
       },
       '& .packages-hub-caret': {
         transform: 'translateX(3px)',
       },
+    },
+    '.dark &:hover': {
+      boxShadow: PANEL_SHADOW_DARK_HOVER,
     },
   } as const;
 }
@@ -89,8 +94,7 @@ function ClusterIcon({ icon: Icon, accent }: { icon: PhosphorIcon; accent: PlanA
         flexShrink: 0,
         bgcolor: (t) => alpha(resolveAccent(t, accent), t.palette.mode === 'dark' ? 0.28 : 0.18),
         color: (t) => resolveAccent(t, accent),
-        border: '1px solid',
-        borderColor: (t) => alpha(resolveAccent(t, accent), 0.45),
+        border: 'none',
       }}
     >
       <Icon size={15} weight="bold" />

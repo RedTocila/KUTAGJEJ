@@ -139,7 +139,7 @@ const labeledBtnSx = {
   lineHeight: 1,
   gap: 0,
   boxShadow: 'none',
-  border: '1px solid',
+  border: 'none',
   '&:hover': { boxShadow: 'none' },
   '& .MuiButton-startIcon': { mr: 0, ml: 0 },
 };
@@ -163,13 +163,14 @@ const menuActionBtnSx = {
 
 function fadedToneSx(_bg: string, _hoverBg: string, color: string): Record<string, unknown> {
   return {
-    bgcolor: 'transparent',
+    bgcolor: (t: { palette: { mode: string } }) =>
+      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
     color,
-    borderColor: 'divider',
+    border: 'none',
     boxShadow: 'none',
     '&:hover': {
-      bgcolor: 'transparent',
-      borderColor: 'divider',
+      bgcolor: (t: { palette: { mode: string } }) =>
+        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
       boxShadow: 'none',
     },
   };

@@ -288,9 +288,8 @@ export function AiUsageChart({
           px: 1.5,
           py: 1.2,
           borderRadius: 2.25,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+          border: 'none',
+          bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.7 }}>

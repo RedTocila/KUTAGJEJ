@@ -16,19 +16,22 @@ import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 /** Shared height for browse search bars, filter buttons, and back buttons. */
 export const PRODUCT_BROWSE_CONTROL_HEIGHT = 36;
 
-/** Circular back control — browse headers, detail toolbars. */
+/** Bare back control — icon only, no circular chrome. */
 export const productBackButtonSx = {
-  width: PRODUCT_BROWSE_CONTROL_HEIGHT,
-  height: PRODUCT_BROWSE_CONTROL_HEIGHT,
+  width: 'auto',
+  height: 'auto',
+  minWidth: 0,
+  p: 0.5,
   flexShrink: 0,
   color: 'text.primary',
-  border: '1px solid',
-  borderColor: 'divider',
-  bgcolor: 'background.paper',
-  borderRadius: '50%',
+  border: 'none',
+  bgcolor: 'transparent',
+  borderRadius: 0,
+  boxShadow: 'none',
+  overflow: 'visible',
   transition:
-    'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
-  '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main' },
+    'color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+  '&:hover': { bgcolor: 'transparent', color: 'primary.main' },
   '&:active': { transform: 'scale(0.94)' },
 } as const;
 
@@ -61,6 +64,8 @@ export function ProductBackButton({
         aria-label={ariaLabel}
         onClick={onClick}
         size="small"
+        disableRipple
+        disableFocusRipple
         sx={buttonSx}
         disabled={disabled}
         type={type}
@@ -77,6 +82,8 @@ export function ProductBackButton({
       href={historyBack.href}
       aria-label={ariaLabel}
       size="small"
+      disableRipple
+      disableFocusRipple
       sx={buttonSx}
       disabled={disabled}
       data-history-back=""
@@ -133,9 +140,8 @@ export function productTagSx(active = false, accent?: ProductTagAccent): SxProps
     px: 1.25,
     py: 0.75,
     borderRadius: 999,
-    border: '1px solid',
-    borderColor: active ? accentColor : 'divider',
-    bgcolor: active ? accentSoft : 'background.paper',
+    border: 'none',
+    bgcolor: active ? accentSoft : '#2a2a2a',
     color: active ? accentColor : 'text.primary',
     textDecoration: 'none',
     whiteSpace: 'nowrap',
@@ -145,9 +151,8 @@ export function productTagSx(active = false, accent?: ProductTagAccent): SxProps
     fontFamily: 'inherit',
     cursor: 'pointer',
     transition:
-      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+      'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
-      borderColor: accentColor,
       color: accentColor,
       bgcolor: hoverSoft,
     },
@@ -267,7 +272,6 @@ export type ProductSearchAccent = {
 
 /** Pill search bar shell — keyword search, mobile header search. */
 export function productSearchBarSx(active = false, accent?: ProductSearchAccent): SystemStyleObject<Theme> {
-  const accentColor = accent?.color ?? 'primary.main';
   const accentSoft = accent?.soft ?? primaryMainAlpha(0.08);
   return {
     height: PRODUCT_BROWSE_CONTROL_HEIGHT,
@@ -277,15 +281,14 @@ export function productSearchBarSx(active = false, accent?: ProductSearchAccent)
     px: 1.25,
     py: 0.75,
     borderRadius: 999,
-    border: '1px solid',
-    borderColor: active ? accentColor : 'divider',
-    bgcolor: active ? accentSoft : 'background.paper',
+    border: 'none',
+    bgcolor: active ? accentSoft : '#2a2a2a',
     overflow: 'hidden',
     boxSizing: 'border-box',
     textDecoration: 'none',
     color: 'inherit',
-    transition:
-      'border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+    boxShadow: 'none',
+    transition: 'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1)',
   };
 }
 
@@ -312,16 +315,14 @@ export function productFilterButtonSx(active = false): SxProps<Theme> {
     width: PRODUCT_BROWSE_CONTROL_HEIGHT,
     height: PRODUCT_BROWSE_CONTROL_HEIGHT,
     borderRadius: '50%',
-    border: '1px solid',
-    borderColor: active ? 'primary.main' : 'divider',
+    border: 'none',
     color: active ? 'primary.contrastText' : 'text.primary',
-    bgcolor: active ? 'primary.main' : 'background.paper',
-    boxShadow: active ? `0 2px 10px ${primaryMainAlpha(0.4)}` : 'none',
+    bgcolor: active ? 'primary.main' : '#2a2a2a',
+    boxShadow: 'none',
     transition:
-      'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), border-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+      'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
-      bgcolor: active ? 'primary.dark' : primaryMainAlpha(0.1),
-      borderColor: 'primary.main',
+      bgcolor: active ? 'primary.dark' : '#333333',
     },
     '&:active': {
       transform: 'scale(0.94)',

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Box, Paper } from '@mui/material';
+import { Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import { MOTION } from '@/styles/motion';
@@ -24,7 +24,7 @@ export function searchHitListTextSx(divider: boolean): SxProps<Theme> {
   };
 }
 
-/** Compact search-result shell — card on browse/home, flat row on /kerko. */
+/** Compact search-result shell — borderless card on browse/home, flat row on /kerko. */
 export function SearchHitCard({
   href,
   children,
@@ -64,52 +64,40 @@ export function SearchHitCard({
   }
 
   return (
-    <Paper
+    <Box
       component={Link}
       href={href}
-      sx={(theme) => ({
+      sx={{
         height: '100%',
-        borderRadius: 2.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        backgroundColor: 'background.paper',
-        ...theme.applyStyles('dark', {
-          backgroundColor: 'var(--mui-palette-background-paper)',
-        }),
-        p: { xs: 2, sm: 2.5 },
+        borderRadius: 0,
+        border: 'none',
+        backgroundColor: 'transparent',
+        p: { xs: 0.25, sm: 0.4 },
         display: 'flex',
         flexDirection: 'column',
         textDecoration: 'none',
         color: 'inherit',
         cursor: 'pointer',
-        boxShadow: (paletteTheme) =>
-          paletteTheme.palette.mode === 'dark'
-            ? '0 14px 32px rgba(0, 0, 0, 0.42)'
-            : 'none',
-        transition: `border-color ${MOTION.base} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}, box-shadow ${MOTION.base} ${MOTION.ease}`,
+        boxShadow: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        transition: `transform ${MOTION.release} ${MOTION.ease}`,
         '@media (hover: hover) and (pointer: fine)': {
           '&:hover': {
-            borderColor: 'primary.main',
             transform: 'translateY(-3px)',
-            boxShadow: (paletteTheme) =>
-              paletteTheme.palette.mode === 'dark'
-                ? '0 18px 38px rgba(0, 0, 0, 0.5)'
-                : 'none',
           },
         },
         '&:active': {
           transform: 'scale(0.985)',
-          boxShadow: 'none',
           transitionDuration: MOTION.press,
         },
         '@media (prefers-reduced-motion: reduce)': {
           transition: 'none',
-          '&:hover': { transform: 'none', boxShadow: 'none' },
+          '&:hover': { transform: 'none' },
           '&:active': { transform: 'none' },
         },
-      })}
+      }}
     >
       {children}
-    </Paper>
+    </Box>
   );
 }

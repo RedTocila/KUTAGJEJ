@@ -16,25 +16,30 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
-import { CardMedia } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatKilometers, formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
+import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
+
+export type CarCardVariant = 'default' | 'compact' | 'homepage' | 'browse';
 
 export function CarCard({
   listing,
   sellerRating = null,
   imagePriority = false,
   variant = 'default',
+  hideOkazionBadge = false,
 }: {
   listing: PublicCarListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
-  /** 'compact' is used on 2-column mobile category browse page. 'default' is classic full-detail card. */
-  variant?: 'default' | 'compact';
+  /** 'compact' = browse 2-col grid. 'homepage' = homepage carousel. */
+  variant?: CarCardVariant;
+  hideOkazionBadge?: boolean;
 }) {
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
@@ -42,6 +47,8 @@ export function CarCard({
   const transmissionLabel = findOptionLabel(TRANSMISSION_OPTIONS, listing.transmission);
   const colourLabel = findOptionLabel(CAR_COLOUR_OPTIONS, listing.color);
   const cardRating = resolveListingCardRating(null, sellerRating);
+
+  const isDense = variant !== 'default';
 
   const fullSpecs: Spec[] = [
     ...(listing.year != null ? [{ Icon: CalendarIcon, label: String(listing.year), title: 'Viti' }] : []),
@@ -61,7 +68,7 @@ export function CarCard({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={isDense}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -71,14 +78,20 @@ export function CarCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={CarIcon}
           alt={title}
-          aspectRatio={variant === 'compact' ? '1 / 1' : '4 / 3'}
-          compact={variant === 'compact'}
+          height={variant === 'browse' ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
+          aspectRatio={
+            variant === 'homepage' ? '6 / 5' : variant === 'compact' ? '1 / 1' : variant === 'browse' ? undefined : '4 / 3'
+          }
+          compact={isDense}
+          showActionCounts={variant === 'homepage' || variant === 'browse'}
+          okazionCountdownCompact={variant === 'homepage' || variant === 'browse' ? false : undefined}
           topLeftBadge={`${listing.year}`}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
+          hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
@@ -105,7 +118,30 @@ export function CarCard({
             url: listingCarPublicHref(listing),
           }}
         />
-        {variant === 'compact' ? (
+        {variant === 'homepage' ? (
+          <ListingCardHomepageBody
+            title={title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            location={listing.cityName}
+            specs={fullSpecs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'browse' ? (
+          <ListingCardHomepageBody
+            title={title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            density="compact"
+            location={listing.cityName}
+            specs={fullSpecs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}

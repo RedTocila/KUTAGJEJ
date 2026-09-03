@@ -223,7 +223,7 @@ export function CategoryBrowseControls({
           </Badge>
         </Box>
 
-        <Box sx={{ '& > [role=navigation]': { mt: { xs: 1.25, md: 1.5 }, mb: 0 } }}>
+        <Box sx={{ '& > [role=navigation]': { mt: { xs: 2, md: 2.5 }, mb: 0 } }}>
           <SubcategoryPills verticalId={verticalId} />
         </Box>
 

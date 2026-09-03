@@ -27,6 +27,7 @@ import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useUser } from '@/hooks/use-user';
 import { TransientNotification } from '@/components/core/transient-success-alert';
 import { CarCard } from '@/components/public/listing-cards/car-card';
+import { LISTING_CARD_BROWSE_MEDIA_HEIGHT } from '@/components/public/listing-cards/card-media';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
@@ -39,16 +40,22 @@ function SavedListingCard({ item }: { item: SavedListingItem }) {
   const listing = item.listing;
   switch (item.kind) {
     case 'real-estate':
-      return <RealEstateCard listing={listing as unknown as PublicRealEstateListing} />;
+      return <RealEstateCard listing={listing as unknown as PublicRealEstateListing} variant="browse" />;
     case 'car':
-      return <CarCard listing={listing as unknown as PublicCarListing} />;
+      return <CarCard listing={listing as unknown as PublicCarListing} variant="browse" />;
     case 'job':
-      return <JobCard listing={listing as unknown as PublicJobListing} />;
+      return <JobCard listing={listing as unknown as PublicJobListing} variant="browse" />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing as unknown as PublicMarketplaceListing} />;
+      return <MarketplaceCard listing={listing as unknown as PublicMarketplaceListing} variant="browse" />;
     case 'businesses':
     case 'professionals':
-      return <DirectoryListingCard listing={listing as unknown as PublicDirectoryListing} />;
+      return (
+        <DirectoryListingCard
+          listing={listing as unknown as PublicDirectoryListing}
+          variant="browse"
+          showActionCounts
+        />
+      );
     default:
       return null;
   }
@@ -194,9 +201,8 @@ export function SavedListingsView() {
                   px: 1.5,
                   py: 0.85,
                   borderRadius: 999,
-                  border: '1px solid',
-                  borderColor: active ? 'primary.main' : 'divider',
-                  bgcolor: active ? primaryMainAlpha(0.12) : 'background.paper',
+                  border: 'none',
+                  bgcolor: active ? primaryMainAlpha(0.12) : '#2a2a2a',
                   color: active ? 'primary.main' : 'text.primary',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
@@ -204,9 +210,8 @@ export function SavedListingsView() {
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   whiteSpace: 'nowrap',
-                  transition: 'border-color 0.15s, background-color 0.15s, color 0.15s',
+                  transition: 'background-color 0.15s, color 0.15s',
                   '&:hover': {
-                    borderColor: 'primary.main',
                     color: 'primary.main',
                     bgcolor: primaryMainAlpha(0.08),
                   },
@@ -240,10 +245,16 @@ export function SavedListingsView() {
       </Box>
 
       {loading ? (
-        <Grid container spacing={2}>
+        <Grid container spacing={{ xs: 2, md: 2.5 }}>
           {[0, 1, 2].map((k) => (
             <Grid size={{ xs: 12, md: 6, lg: 4 }} key={k}>
-              <Skeleton variant="rounded" height={280} sx={{ borderRadius: 2 }} />
+              <Skeleton
+                variant="rounded"
+                height={LISTING_CARD_BROWSE_MEDIA_HEIGHT.xs}
+                sx={{ borderRadius: 1.5, mb: 1 }}
+              />
+              <Skeleton variant="text" width="70%" />
+              <Skeleton variant="text" width="40%" />
             </Grid>
           ))}
         </Grid>
@@ -283,10 +294,23 @@ export function SavedListingsView() {
         </Card>
       ) : (
         <Stack spacing={2}>
-          <Grid container spacing={2}>
+          <Grid
+            container
+            spacing={{ xs: 2, md: 2.5 }}
+            sx={{
+              // Mixed verticals (e.g. property vs cars) share one media height.
+              '& .listing-card-media': {
+                height: LISTING_CARD_BROWSE_MEDIA_HEIGHT,
+                minHeight: 0,
+                aspectRatio: 'auto',
+              },
+            }}
+          >
             {filtered.map((item) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={`${item.kind}-${item.listingId}`}>
-                <SavedListingCard item={item} />
+              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={`${item.kind}-${item.listingId}`} sx={{ display: 'flex' }}>
+                <Box sx={{ width: '100%', height: '100%' }}>
+                  <SavedListingCard item={item} />
+                </Box>
               </Grid>
             ))}
           </Grid>

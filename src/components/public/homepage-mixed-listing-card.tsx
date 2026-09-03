@@ -11,13 +11,19 @@ export function HomepageMixedListingCard({
   sellerRating = null,
   imagePriority = false,
   compact = false,
+  homepage = false,
 }: {
   item: HomepageMixedListing;
   /** Shown on profile listing grids (falls back when the listing has no own reviews). */
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
+  /** Dense browse-style cards (e.g. member profile grid). */
   compact?: boolean;
+  /** Homepage carousel layout with specs, posted date, and views. */
+  homepage?: boolean;
 }) {
+  const sellableVariant = homepage ? 'homepage' : compact ? 'compact' : 'default';
+
   switch (item.kind) {
     case 'real-estate':
       return (
@@ -25,7 +31,7 @@ export function HomepageMixedListingCard({
           listing={item.listing}
           sellerRating={sellerRating}
           imagePriority={imagePriority}
-          variant={compact ? 'compact' : 'default'}
+          variant={sellableVariant}
         />
       );
     case 'cars':
@@ -34,7 +40,7 @@ export function HomepageMixedListingCard({
           listing={item.listing}
           sellerRating={sellerRating}
           imagePriority={imagePriority}
-          variant={compact ? 'compact' : 'default'}
+          variant={sellableVariant}
         />
       );
     case 'jobs':
@@ -43,7 +49,7 @@ export function HomepageMixedListingCard({
           listing={item.listing}
           sellerRating={sellerRating}
           imagePriority={imagePriority}
-          variant={compact ? 'compact' : 'homepage'}
+          variant={sellableVariant}
         />
       );
     case 'marketplace':
@@ -52,7 +58,7 @@ export function HomepageMixedListingCard({
           listing={item.listing}
           sellerRating={sellerRating}
           imagePriority={imagePriority}
-          variant={compact ? 'compact' : 'default'}
+          variant={sellableVariant}
         />
       );
     case 'businesses':
@@ -61,7 +67,8 @@ export function HomepageMixedListingCard({
         <DirectoryListingCard
           listing={item.listing}
           sellerRating={sellerRating}
-          variant={compact ? 'compact' : 'default'}
+          variant={homepage ? 'homepage' : compact ? 'compact' : 'default'}
+          showActionCounts={homepage}
         />
       );
     default:

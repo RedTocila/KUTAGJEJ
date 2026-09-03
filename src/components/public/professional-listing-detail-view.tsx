@@ -526,7 +526,7 @@ export function ProfessionalListingDetailView({
                 <Box sx={{ mx: -2, '& > div > div': { py: '8px 0 0 !important' } }}>
                   <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
                     {similar.map((item) => (
-                      <DirectoryListingCard key={item.id} listing={item} />
+                      <DirectoryListingCard key={item.id} listing={item} variant="compact" showActionCounts />
                     ))}
                   </ListingsCarousel>
                 </Box>

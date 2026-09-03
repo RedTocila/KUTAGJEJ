@@ -26,11 +26,12 @@ import {
   type JobDetailBenefit,
 } from '@/lib/job-listing-detail-content';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
+import { JOB_LISTING_COVER_ASPECT_RATIO, jobListingCoverImageUrl } from '@/lib/job-listing-cover';
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { listingHeroImageUrl } from '@/lib/storage-image';
-import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -165,9 +166,11 @@ export function JobListingDetailDesktop({
                 />
               ) : (
                 <JobListingFallback
+                  listingId={listing.id}
                   title={listing.title}
                   industry={listing.industry}
                   requiredRoles={listing.requiredRoles}
+                  description={listing.description}
                   cityName={listing.cityName}
                   zoneName={listing.zoneName}
                   mapsUrl={listing.mapsUrl}
@@ -645,7 +648,7 @@ export function JobListingDetailDesktop({
                     </Typography>
                     <ListingsCarousel slotWidth={{ md: 300 }}>
                       {similar.map((item) => (
-                        <JobCard key={item.id} listing={item} variant="carousel" />
+                        <JobCard key={item.id} listing={item} variant="browse" />
                       ))}
                     </ListingsCarousel>
                   </Stack>

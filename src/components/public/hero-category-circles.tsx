@@ -145,7 +145,7 @@ export function HeroCategoryCircles({
     return undefined;
   })();
 
-  /** Soft tint on hover; selected never goes solid-fill. */
+  /** Soft fill on hover; selected uses an accent wash, never a ring. */
   const itemSx = (mode: AccentMode) => {
     const accent = accentColor(mode);
     const soft = accentSoft(mode);
@@ -161,7 +161,6 @@ export function HeroCategoryCircles({
       WebkitTapHighlightColor: 'transparent',
       touchAction: 'manipulation',
       '&:hover .hero-cat-tile': {
-        borderColor: accent,
         bgcolor: soft,
       },
       '&:hover .hero-cat-label': {
@@ -172,7 +171,6 @@ export function HeroCategoryCircles({
         transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-tile': {
-        borderColor: accent,
         bgcolor: soft,
         transitionDuration: MOTION.press,
       },
@@ -236,10 +234,10 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: selected ? soft : 'action.hover',
-                border: '1.5px solid',
-                borderColor: selected ? accent : 'divider',
-                transition: `border-color ${MOTION.fast} ${MOTION.ease}, background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
+                bgcolor: selected ? soft : '#2a2a2a',
+                border: 'none',
+                boxShadow: 'none',
+                transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
               }}
             >
               <Box

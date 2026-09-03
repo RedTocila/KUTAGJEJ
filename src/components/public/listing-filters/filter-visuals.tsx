@@ -211,9 +211,8 @@ export function FilterOptionTiles({
                 px: 1.2,
                 py: 0.75,
                 borderRadius: 2,
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? primaryMainAlpha(0.14) : 'transparent',
+                border: 'none',
+                bgcolor: active ? primaryMainAlpha(0.14) : '#2a2a2a',
                 color: active ? 'primary.main' : 'text.primary',
                 fontWeight: 600,
                 fontSize: '0.78rem',
@@ -221,7 +220,6 @@ export function FilterOptionTiles({
                 fontFamily: 'inherit',
                 transition: 'all 0.15s ease',
                 '&:hover': {
-                  borderColor: 'primary.main',
                   bgcolor: primaryMainAlpha(0.08),
                 },
               }}
@@ -265,9 +263,8 @@ export function FilterPresetChips({
                 px: 1.15,
                 py: 0.55,
                 borderRadius: 999,
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? 'primary.main' : 'transparent',
+                border: 'none',
+                bgcolor: active ? 'primary.main' : '#2a2a2a',
                 color: active ? 'primary.contrastText' : 'text.secondary',
                 fontWeight: 700,
                 fontSize: '0.72rem',
@@ -275,8 +272,8 @@ export function FilterPresetChips({
                 fontFamily: 'inherit',
                 transition: 'all 0.15s ease',
                 '&:hover': {
-                  borderColor: 'primary.main',
                   color: active ? 'primary.contrastText' : 'primary.main',
+                  bgcolor: active ? 'primary.main' : '#333333',
                 },
               }}
             >
@@ -338,17 +335,15 @@ export function FilterBedroomPicker({
                 minHeight: 44,
                 px: 0.5,
                 borderRadius: 999,
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? 'primary.main' : 'transparent',
+                border: 'none',
+                bgcolor: active ? 'primary.main' : '#2a2a2a',
                 color: active ? 'primary.contrastText' : 'text.primary',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 boxShadow: 'none',
-                transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
+                transition: 'background-color 0.15s, color 0.15s',
                 '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: active ? 'primary.main' : primaryMainAlpha(0.1),
+                  bgcolor: active ? 'primary.main' : '#333333',
                 },
               }}
             >

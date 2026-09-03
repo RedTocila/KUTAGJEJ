@@ -19,7 +19,14 @@ export function ListingCardRating({
   showWhenEmpty = false,
   singleStar = false,
   onMedia = false,
-}: ListingCardRatingSummary & { showWhenEmpty?: boolean; singleStar?: boolean; onMedia?: boolean }) {
+  size = 'default',
+}: ListingCardRatingSummary & {
+  showWhenEmpty?: boolean;
+  singleStar?: boolean;
+  onMedia?: boolean;
+  /** `compact` matches dense browse/homepage title rows. */
+  size?: 'default' | 'compact';
+}) {
   const count = reviewCount ?? 0;
   if (
     !showWhenEmpty &&
@@ -35,11 +42,12 @@ export function ListingCardRating({
       : formatRatingDisplay(0);
 
   if (singleStar) {
+    const compact = size === 'compact';
     return (
-      <Stack direction="row" spacing={0.35} sx={{ alignItems: 'center', flexShrink: 0 }}>
+      <Stack direction="row" spacing={compact ? 0.25 : 0.35} sx={{ alignItems: 'center', flexShrink: 0 }}>
         <Typography
           sx={{
-            fontSize: '0.85rem',
+            fontSize: compact ? '0.72rem' : '0.85rem',
             fontWeight: 800,
             lineHeight: 1.25,
             color: onMedia ? '#fff' : undefined,
@@ -48,14 +56,23 @@ export function ListingCardRating({
         >
           {rating}
         </Typography>
-        <StarIcon size={18} weight="fill" color="var(--mui-palette-warning-main)" aria-hidden />
+        <StarIcon
+          size={compact ? 13 : 18}
+          weight="fill"
+          color="var(--mui-palette-warning-main)"
+          aria-hidden
+        />
       </Stack>
     );
   }
 
   return (
-    <Box sx={{ minWidth: 0 }}>
-      <ProfessionalRatingSummary rating={rating} reviewCount={count} starSize={18} />
+    <Box sx={{ minWidth: 0, flexShrink: 0 }}>
+      <ProfessionalRatingSummary
+        rating={rating}
+        reviewCount={count}
+        starSize={size === 'compact' ? 12 : 18}
+      />
     </Box>
   );
 }

@@ -18,11 +18,13 @@ import { BusinessOpenStatusLine } from '@/components/public/business-open-status
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { BusinessPromoBanner } from './business-promo-banner';
-import { CardMedia } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatBusinessOpeningHoursForCard, listingPriceAccentColor } from './format-helpers';
+import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
+import { OkazionCountdownBody } from './okazion-countdown';
 import { SpecRow, type Spec } from './spec-row';
 
 function conditionIcon(condition: string | null) {
@@ -30,18 +32,58 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
-export type DirectoryListingCardVariant = 'default' | 'cover' | 'compact';
+export type DirectoryListingCardVariant = 'default' | 'cover' | 'compact' | 'homepage' | 'browse';
+
+function DirectoryLeadingLabel({
+  label,
+  density = 'compact',
+}: {
+  label: string;
+  density?: 'carousel' | 'compact';
+}) {
+  return (
+    <Typography
+      noWrap
+      sx={{
+        fontWeight: 800,
+        fontSize: density === 'compact' ? '0.9rem' : '0.92rem',
+        color: 'var(--mui-palette-primary-main)',
+        lineHeight: 1.2,
+        minWidth: 0,
+      }}
+    >
+      {label}
+    </Typography>
+  );
+}
+
+function directoryPromoOverlay(listing: PublicDirectoryListing) {
+  if (!listing.announcementTitle?.trim()) return undefined;
+  return (
+    <BusinessPromoBanner
+      title={listing.announcementTitle}
+      subtitle={listing.announcementSubtitle}
+      bannerUrl={listing.announcementBannerUrl}
+      variant="card"
+      overlay
+    />
+  );
+}
 
 /** Biznese = venues (eat, drink, reserve) — minimal card layout. */
 function BusinessVenueCardBody({
   listing,
   sellerRating = null,
   variant = 'default',
+  hideOkazionBadge = false,
+  showActionCounts = false,
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
   /** `'cover'` is the square crop used on category browse pages. Homepage stays `'default'`. */
   variant?: DirectoryListingCardVariant;
+  hideOkazionBadge?: boolean;
+  showActionCounts?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(listing, sellerRating);
@@ -52,6 +94,10 @@ function BusinessVenueCardBody({
     (listing.openingHours ? formatBusinessOpeningHoursForCard(listing.openingHours) : null);
 
   const topBadge = listing.reservationsEnabled ? 'Rezervim' : undefined;
+  const isDense = variant !== 'default';
+  const isBrowseLike = variant === 'browse' || variant === 'homepage';
+  const bodyDensity = variant === 'homepage' ? 'carousel' : 'compact';
+  const leadingLabel = listing.servicesHighlight?.trim() || listing.categoryLabel;
 
   return (
     <ListingCardLink
@@ -61,7 +107,7 @@ function BusinessVenueCardBody({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={isDense}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -71,15 +117,30 @@ function BusinessVenueCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={StorefrontIcon}
           alt={listing.title}
-          height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
-          compact={variant === 'compact'}
+          height={
+            variant === 'browse'
+              ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
+              : variant === 'homepage' || variant === 'compact' || variant === 'cover'
+                ? undefined
+                : { xs: 185, md: 200 }
+          }
+          aspectRatio={
+            variant === 'homepage'
+              ? '6 / 5'
+              : variant === 'cover' || variant === 'compact'
+                ? '1 / 1'
+                : undefined
+          }
+          compact={isDense}
+          showActionCounts={showActionCounts || isBrowseLike}
+          okazionCountdownCompact={isBrowseLike ? false : undefined}
           topLeftBadge={topBadge}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
+          hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
@@ -101,19 +162,33 @@ function BusinessVenueCardBody({
             contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingBusinessPublicHref(listing),
           }}
-          bottomOverlay={
-            listing.announcementTitle?.trim() ? (
-              <BusinessPromoBanner
-                title={listing.announcementTitle}
-                subtitle={listing.announcementSubtitle}
-                bannerUrl={listing.announcementBannerUrl}
-                variant="card"
-                overlay
-              />
-            ) : undefined
-          }
+          bottomOverlay={directoryPromoOverlay(listing)}
         />
-        {variant === 'compact' ? (
+        {isBrowseLike ? (
+          <ListingCardHomepageBody
+            title={listing.title}
+            titleTrailing={
+              cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar={variant !== 'browse'}
+                  size="compact"
+                />
+              ) : null
+            }
+            leading={<DirectoryLeadingLabel label={leadingLabel} density={bodyDensity} />}
+            location={location}
+            specsSlot={
+              openingHoursLabel ? (
+                <BusinessOpenStatusLine statusLine={openingHoursLabel} fontSize="0.75rem" />
+              ) : null
+            }
+            listing={listing}
+            viewCount={viewCount}
+            density={bodyDensity}
+          />
+        ) : variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}
@@ -149,6 +224,9 @@ function BusinessVenueCardBody({
                 {listing.categoryLabel}
               </Typography>
             </Stack>
+            {hideOkazionBadge && listing.isOkazion ? (
+              <OkazionCountdownBody expiresAt={listing.okazionUntil} />
+            ) : null}
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
@@ -233,10 +311,14 @@ function ProfessionalListingCardBody({
   listing,
   sellerRating = null,
   variant = 'default',
+  hideOkazionBadge = false,
+  showActionCounts = false,
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
   variant?: DirectoryListingCardVariant;
+  hideOkazionBadge?: boolean;
+  showActionCounts?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
@@ -269,6 +351,10 @@ function ProfessionalListingCardBody({
       : []),
   ];
 
+  const isDense = variant !== 'default';
+  const isBrowseLike = variant === 'browse' || variant === 'homepage';
+  const bodyDensity = variant === 'homepage' ? 'carousel' : 'compact';
+
   return (
     <ListingCardLink
       listingKind="professionals"
@@ -277,7 +363,7 @@ function ProfessionalListingCardBody({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={isDense}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -287,14 +373,29 @@ function ProfessionalListingCardBody({
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
           alt={listing.title}
-          height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'cover' || variant === 'compact' ? '1 / 1' : undefined}
-          compact={variant === 'compact'}
+          height={
+            variant === 'browse'
+              ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
+              : variant === 'homepage' || variant === 'compact' || variant === 'cover'
+                ? undefined
+                : { xs: 185, md: 200 }
+          }
+          aspectRatio={
+            variant === 'homepage'
+              ? '6 / 5'
+              : variant === 'cover' || variant === 'compact'
+                ? '1 / 1'
+                : undefined
+          }
+          compact={isDense}
+          showActionCounts={showActionCounts || isBrowseLike}
+          okazionCountdownCompact={isBrowseLike ? false : undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
+          hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
@@ -337,19 +438,29 @@ function ProfessionalListingCardBody({
             contactPhone: listing.contactPhone?.trim() || undefined,
             url: listingProfessionalPublicHref(listing),
           }}
-          bottomOverlay={
-            listing.announcementTitle?.trim() ? (
-              <BusinessPromoBanner
-                title={listing.announcementTitle}
-                subtitle={listing.announcementSubtitle}
-                bannerUrl={listing.announcementBannerUrl}
-                variant="card"
-                overlay
-              />
-            ) : undefined
-          }
+          bottomOverlay={directoryPromoOverlay(listing)}
         />
-        {variant === 'compact' ? (
+        {isBrowseLike ? (
+          <ListingCardHomepageBody
+            title={listing.title}
+            titleTrailing={
+              cardRating ? (
+                <ListingCardRating
+                  ratingAverage={cardRating.ratingAverage}
+                  reviewCount={cardRating.reviewCount}
+                  singleStar={variant !== 'browse'}
+                  size="compact"
+                />
+              ) : null
+            }
+            leading={<DirectoryLeadingLabel label={listing.categoryLabel} density={bodyDensity} />}
+            location={location}
+            specs={specs}
+            listing={listing}
+            viewCount={viewCount}
+            density={bodyDensity}
+          />
+        ) : variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}
@@ -385,6 +496,9 @@ function ProfessionalListingCardBody({
                 {listing.categoryLabel}
               </Typography>
             </Stack>
+            {hideOkazionBadge && listing.isOkazion ? (
+              <OkazionCountdownBody expiresAt={listing.okazionUntil} />
+            ) : null}
           </Stack>
         ) : (
           <Stack className="listing-card-body" spacing={1} sx={{ p: 1.75 }}>
@@ -451,14 +565,34 @@ export function DirectoryListingCard({
   listing,
   sellerRating = null,
   variant = 'default',
+  hideOkazionBadge = false,
+  showActionCounts = false,
 }: {
   listing: PublicDirectoryListing;
   sellerRating?: ListingCardRatingSummary | null;
   /** `'cover'` is the square crop used on category browse pages. Homepage stays `'default'`. */
   variant?: DirectoryListingCardVariant;
+  hideOkazionBadge?: boolean;
+  showActionCounts?: boolean;
 }) {
   if (listing.kind === 'businesses') {
-    return <BusinessVenueCardBody listing={listing} sellerRating={sellerRating} variant={variant} />;
+    return (
+      <BusinessVenueCardBody
+        listing={listing}
+        sellerRating={sellerRating}
+        variant={variant}
+        hideOkazionBadge={hideOkazionBadge}
+        showActionCounts={showActionCounts}
+      />
+    );
   }
-  return <ProfessionalListingCardBody listing={listing} sellerRating={sellerRating} variant={variant} />;
+  return (
+    <ProfessionalListingCardBody
+      listing={listing}
+      sellerRating={sellerRating}
+      variant={variant}
+      hideOkazionBadge={hideOkazionBadge}
+      showActionCounts={showActionCounts}
+    />
+  );
 }

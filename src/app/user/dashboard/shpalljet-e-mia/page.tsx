@@ -51,7 +51,7 @@ import { type BusinessMineListing, type ProfessionalMineListing } from '@/lib/di
 import { hardNavigate } from '@/lib/hard-navigate';
 import { JOB_INDUSTRY_OPTIONS, JOB_TYPE_OPTIONS, WORK_LOCATION_OPTIONS } from '@/lib/job-constants';
 import { isJobListingActive } from '@/lib/job-listing-expiry';
-import { jobListingUsesMockupCover } from '@/lib/job-listing-cover';
+import { JOB_LISTING_COVER_ASPECT_RATIO, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { BusinessAnnouncement } from '@/lib/listing-announcement-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
 import { normalizeListingModerationStatus } from '@/lib/listing-moderation-status';
@@ -78,7 +78,7 @@ import {
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
 import { TransientNotification } from '@/components/core/transient-success-alert';
-import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { BusinessPromoBanner } from '@/components/public/listing-cards/business-promo-banner';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
@@ -736,6 +736,7 @@ function JobCard({
       fallbackContent={
         showMockup ? (
           <JobListingFallback
+            listingId={l.id}
             title={l.title}
             industry={l.industry}
             requiredRoles={l.requiredRoles}
@@ -1856,9 +1857,8 @@ export default function UserMyListingsPage() {
                     px: 1.5,
                     py: 0.85,
                     borderRadius: 999,
-                    border: '1px solid',
-                    borderColor: active ? 'primary.main' : 'divider',
-                    bgcolor: active ? primaryMainAlpha(0.12) : 'background.paper',
+                    border: 'none',
+                    bgcolor: active ? primaryMainAlpha(0.12) : '#2a2a2a',
                     color: active ? 'primary.main' : 'text.primary',
                     fontSize: '0.8125rem',
                     fontWeight: 600,
@@ -1866,9 +1866,8 @@ export default function UserMyListingsPage() {
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     whiteSpace: 'nowrap',
-                    transition: 'border-color 0.15s, background-color 0.15s, color 0.15s',
+                    transition: 'background-color 0.15s, color 0.15s',
                     '&:hover': {
-                      borderColor: 'primary.main',
                       color: 'primary.main',
                       bgcolor: primaryMainAlpha(0.08),
                     },

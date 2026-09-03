@@ -40,7 +40,7 @@ function CarouselSkeleton() {
     <Stack direction="row" spacing={2} sx={{ overflow: 'hidden', px: { xs: 2, md: 0 } }}>
       {Array.from({ length: 4 }).map((_, i) => (
         <Box key={i} sx={{ minWidth: 260, flex: '0 0 auto' }}>
-          <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+          <Skeleton variant="rounded" height={217} sx={{ borderRadius: 1.25 }} />
           <Skeleton width="70%" sx={{ mt: 1.5 }} />
           <Skeleton width="40%" />
         </Box>
@@ -52,16 +52,27 @@ function CarouselSkeleton() {
 function renderListingCard(verticalId: HomepageLatestVerticalId, listing: HomeListing) {
   switch (verticalId) {
     case 'real-estate':
-      return <RealEstateCard key={listing.id} listing={listing as PublicRealEstateListing} />;
+      return (
+        <RealEstateCard key={listing.id} listing={listing as PublicRealEstateListing} variant="homepage" />
+      );
     case 'cars':
-      return <CarCard key={listing.id} listing={listing as PublicCarListing} />;
+      return <CarCard key={listing.id} listing={listing as PublicCarListing} variant="homepage" />;
     case 'jobs':
-      return <JobCard key={listing.id} listing={listing as PublicJobListing} variant="carousel" />;
+      return <JobCard key={listing.id} listing={listing as PublicJobListing} variant="homepage" />;
     case 'marketplace':
-      return <MarketplaceCard key={listing.id} listing={listing as PublicMarketplaceListing} />;
+      return (
+        <MarketplaceCard key={listing.id} listing={listing as PublicMarketplaceListing} variant="homepage" />
+      );
     case 'businesses':
     case 'professionals':
-      return <DirectoryListingCard key={listing.id} listing={listing as PublicDirectoryListing} />;
+      return (
+        <DirectoryListingCard
+          key={listing.id}
+          listing={listing as PublicDirectoryListing}
+          variant="homepage"
+          showActionCounts
+        />
+      );
     default:
       return null;
   }
@@ -193,7 +204,7 @@ export function LazyHomeSection({
         {!loaded && listings.length === 0 ? (
           <CarouselSkeleton />
         ) : (
-          <ListingsCarousel equalMediaHeight>
+          <ListingsCarousel>
             {listings.map((listing) => renderListingCard(verticalId, listing))}
           </ListingsCarousel>
         )}

@@ -14,10 +14,11 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
-import { CardMedia } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
+import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
@@ -27,22 +28,28 @@ function conditionIcon(condition: string | null) {
   return CheckCircleIcon;
 }
 
+export type MarketplaceCardVariant = 'default' | 'compact' | 'homepage' | 'browse';
+
 export function MarketplaceCard({
   listing,
   sellerRating = null,
   imagePriority = false,
   variant = 'default',
+  hideOkazionBadge = false,
 }: {
   listing: PublicMarketplaceListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
-  /** 'compact' is used on 2-column mobile category browse page. 'default' is classic full-detail card. */
-  variant?: 'default' | 'compact';
+  /** 'compact' = browse 2-col grid. 'homepage' = homepage carousel. */
+  variant?: MarketplaceCardVariant;
+  hideOkazionBadge?: boolean;
 }) {
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
   const cardRating = resolveListingCardRating(null, sellerRating);
+
+  const isDense = variant !== 'default';
 
   const fullSpecs: Spec[] = [
     { Icon: TagIcon, label: categoryLabel, title: 'Kategoria' },
@@ -57,7 +64,7 @@ export function MarketplaceCard({
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={isDense}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -67,14 +74,20 @@ export function MarketplaceCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={ShoppingBagIcon}
           alt={listing.title}
-          aspectRatio={variant === 'compact' ? '1 / 1' : '4 / 3'}
-          compact={variant === 'compact'}
+          height={variant === 'browse' ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
+          aspectRatio={
+            variant === 'homepage' ? '6 / 5' : variant === 'compact' ? '1 / 1' : variant === 'browse' ? undefined : '4 / 3'
+          }
+          compact={isDense}
+          showActionCounts={variant === 'homepage' || variant === 'browse'}
+          okazionCountdownCompact={variant === 'homepage' || variant === 'browse' ? false : undefined}
           topLeftBadge={conditionLabel ?? undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
+          hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
@@ -106,7 +119,30 @@ export function MarketplaceCard({
             url: listingMarketplacePublicHref(listing),
           }}
         />
-        {variant === 'compact' ? (
+        {variant === 'homepage' ? (
+          <ListingCardHomepageBody
+            title={listing.title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            location={listing.cityName}
+            specs={fullSpecs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'browse' ? (
+          <ListingCardHomepageBody
+            title={listing.title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            density="compact"
+            location={listing.cityName}
+            specs={fullSpecs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}

@@ -16,7 +16,7 @@ function CarouselSkeleton() {
     <Stack direction="row" spacing={2} sx={{ overflow: 'hidden', px: { xs: 2, md: 0 } }}>
       {Array.from({ length: 4 }).map((_, i) => (
         <Box key={i} sx={{ minWidth: 260, flex: '0 0 auto' }}>
-          <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+          <Skeleton variant="rounded" height={217} sx={{ borderRadius: 1.25 }} />
           <Skeleton width="70%" sx={{ mt: 1.5 }} />
           <Skeleton width="40%" />
         </Box>
@@ -86,12 +86,13 @@ export function HomepageRecommendedSection({
       {loading && items.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel equalMediaHeight>
+        <ListingsCarousel>
           {items.map((item, index) => (
             <HomepageMixedListingCard
               key={mixedListingKey(item)}
               item={item}
               imagePriority={index === 0}
+              homepage
             />
           ))}
         </ListingsCarousel>

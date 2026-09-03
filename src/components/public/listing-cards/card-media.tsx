@@ -4,7 +4,7 @@ import * as React from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Box, Chip, IconButton, Stack } from '@mui/material';
+import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
@@ -29,6 +29,72 @@ const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) =>
   ssr: false,
   loading: () => <OkazionCountdownPlaceholder />,
 });
+
+function CardMediaOverlayAction({
+  'aria-label': ariaLabel,
+  count,
+  icon,
+  active = false,
+  showCount = false,
+  onClick,
+}: {
+  'aria-label': string;
+  count: number;
+  icon: React.ReactNode;
+  active?: boolean;
+  showCount?: boolean;
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <IconButton
+      aria-label={ariaLabel}
+      disableRipple
+      disableFocusRipple
+      onClick={onClick}
+      size="small"
+      sx={{
+        display: 'inline-flex',
+        width: 'auto',
+        height: 28,
+        minWidth: 28,
+        p: 0,
+        gap: showCount ? 0.3 : 0,
+        borderRadius: 0,
+        bgcolor: 'transparent',
+        color: active ? 'primary.main' : '#fff',
+        overflow: 'visible',
+        flexDirection: 'row',
+        alignItems: 'center',
+        boxShadow: 'none',
+        textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+        transition: 'color 0.15s ease, transform 0.1s ease',
+        '&:hover': { bgcolor: 'transparent' },
+        '&:focus-visible': { outline: 'none' },
+        '&:active': { transform: 'scale(0.92)' },
+      }}
+    >
+      {icon}
+      {showCount ? (
+        <Typography
+          component="span"
+          sx={{
+            fontWeight: 700,
+            fontSize: '0.66rem',
+            lineHeight: 1,
+            color: 'inherit',
+            pointerEvents: 'none',
+          }}
+        >
+          {count}
+        </Typography>
+      ) : null}
+    </IconButton>
+  );
+}
+
+/** Shared image height for mixed browse grids (properties + OKAZION). */
+export const LISTING_CARD_BROWSE_MEDIA_HEIGHT = { xs: 215, md: 232 } as const;
+
 export interface CardMediaProps {
   listingKind: ListingMetricKind;
   listingId: string;
@@ -48,6 +114,10 @@ export interface CardMediaProps {
   aspectRatio?: string | { xs?: string; sm?: string; md?: string; lg?: string };
   /** Compact mode for 2-column mobile grids (smaller action buttons, mini okazion discount icon + short days timer). */
   compact?: boolean;
+  /** Show share/save counts on compact media (homepage + properties browse). */
+  showActionCounts?: boolean;
+  /** When set, overrides countdown chip density separately from `compact` (homepage uses full timer). */
+  okazionCountdownCompact?: boolean;
   bottomOverlay?: React.ReactNode;
   /** Bottom-right chip (e.g. job expiry). */
   bottomRightOverlay?: React.ReactNode;
@@ -58,6 +128,8 @@ export interface CardMediaProps {
   premium?: boolean;
   /** OKAZION listing — red badge / countdown (bookmark stays primary green). */
   okazion?: boolean;
+  /** Hide OKAZION countdown on homepage-style compact cards. */
+  hideOkazionBadge?: boolean;
   /** When OKAZION ends (ISO). Countdown falls back to 7 days if omitted. */
   okazionUntil?: string | null;
   /** Seller verification status. Rendered at bottom-right of the image. */
@@ -83,6 +155,8 @@ export function CardMedia({
   height,
   aspectRatio,
   compact = false,
+  showActionCounts = false,
+  okazionCountdownCompact,
   bottomOverlay,
   bottomRightOverlay,
   shareCount: initialShareCount = 0,
@@ -90,6 +164,7 @@ export function CardMedia({
   saved: initialSaved,
   premium = false,
   okazion = false,
+  hideOkazionBadge = false,
   okazionUntil = null,
   sellerVerified = false,
   sharePayload,
@@ -185,8 +260,10 @@ export function CardMedia({
     [listingKind, listingId, router, saveCount, saved, savedCtx, user]
   );
 
+  const showOkazionBadge = okazion && !hideOkazionBadge;
+  const countdownCompact = okazionCountdownCompact ?? compact;
   // OKAZION badge wins when both are active (same priority as before for chrome).
-  const showPremiumBadge = premium && !okazion;
+  const showPremiumBadge = premium && !showOkazionBadge;
   // Keep the OKAZION countdown in the media badge so it remains visible without
   // competing with the listing price.
   const showBottomRight = Boolean(bottomRightOverlay);
@@ -245,7 +322,7 @@ export function CardMedia({
         </Stack>
       )}
 
-      {okazion || showPremiumBadge || (!compact && (topLeftOverlay || topLeftBadge)) ? (
+      {showOkazionBadge || showPremiumBadge || (!compact && (topLeftOverlay || topLeftBadge)) ? (
         <Stack
           spacing={0.6}
           sx={{
@@ -257,8 +334,8 @@ export function CardMedia({
             maxWidth: compact ? 'calc(100% - 72px)' : 'calc(100% - 88px)',
           }}
         >
-          {okazion ? (
-            <OkazionCountdown expiresAt={okazionUntil} compact={compact} />
+          {showOkazionBadge ? (
+            <OkazionCountdown expiresAt={okazionUntil} compact={countdownCompact} />
           ) : showPremiumBadge ? (
             <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
           ) : topLeftOverlay ? (
@@ -370,75 +447,33 @@ export function CardMedia({
             right: 6,
             alignItems: 'center',
             zIndex: 3,
-            height: 'auto',
-            gap: 0.25,
+            gap: 0.35,
           }}
         >
-          <IconButton
+          <CardMediaOverlayAction
             aria-label="Ndaj njoftimin"
+            count={shareCount}
+            showCount={showActionCounts}
+            icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
             onClick={handleShare}
-            size="small"
-            sx={{
-              width: 28,
-              height: 28,
-              p: 0,
-              color: '#fff',
-              position: 'relative',
-              overflow: 'visible',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                inset: -5,
-                borderRadius: '50%',
-                background:
-                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
-                pointerEvents: 'none',
-              },
-              '& > svg': { position: 'relative', zIndex: 1 },
-              transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
-              '&:hover': { bgcolor: alpha('#fff', 0.14) },
-              '&:active': { transform: 'scale(0.92)' },
-            }}
-          >
-            <PaperPlaneTiltIcon size={17} weight="bold" />
-          </IconButton>
-          <IconButton
+          />
+          <CardMediaOverlayAction
             aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
+            count={saveCount}
+            showCount={showActionCounts}
+            active={saved}
+            icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
             onClick={handleSave}
-            size="small"
-            sx={{
-              width: 28,
-              height: 28,
-              p: 0,
-              color: saved ? 'primary.main' : '#fff',
-              position: 'relative',
-              overflow: 'visible',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                inset: -5,
-                borderRadius: '50%',
-                background:
-                  'radial-gradient(circle, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.14) 38%, rgba(0,0,0,0) 70%)',
-                pointerEvents: 'none',
-              },
-              '& > svg': { position: 'relative', zIndex: 1 },
-              transition: 'color 0.15s ease, transform 0.1s ease, background-color 0.15s ease',
-              '&:hover': { bgcolor: alpha('#fff', 0.14) },
-              '&:active': { transform: 'scale(0.92)' },
-            }}
-          >
-            <BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />
-          </IconButton>
+          />
         </Stack>
       ) : (
         <Stack
           direction="row"
-          spacing={0.75}
+          spacing={compact ? 0.35 : 0.75}
           sx={{
             position: 'absolute',
-            top: 8,
-            right: 8,
+            top: compact ? 6 : 8,
+            right: compact ? 6 : 8,
             alignItems: 'center',
             zIndex: 3,
           }}
@@ -448,6 +483,7 @@ export function CardMedia({
             count={shareCount}
             icon={<PaperPlaneTiltIcon size={17} weight="bold" />}
             onClick={handleShare}
+            compact={compact}
           />
           <ListingMediaActionButton
             aria-label={saved ? 'Hiq nga të ruajturat' : 'Ruaj njoftimin'}
@@ -456,6 +492,7 @@ export function CardMedia({
             accent="primary"
             icon={<BookmarkSimpleIcon size={17} weight={saved ? 'fill' : 'bold'} />}
             onClick={handleSave}
+            compact={compact}
           />
         </Stack>
       )}

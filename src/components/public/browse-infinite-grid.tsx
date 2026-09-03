@@ -54,13 +54,13 @@ function listingKey(listing: BrowseListing) {
 function OkazionCard({ listing, imagePriority = false }: { listing: PublicOkazionListing; imagePriority?: boolean }) {
   switch (listing.kind) {
     case 'real-estate':
-      return <RealEstateCard listing={listing} imagePriority={imagePriority} />;
+      return <RealEstateCard listing={listing} imagePriority={imagePriority} variant="browse" />;
     case 'car':
-      return <CarCard listing={listing} imagePriority={imagePriority} variant="default" />;
+      return <CarCard listing={listing} imagePriority={imagePriority} variant="browse" />;
     case 'job':
-      return <JobCard listing={listing} imagePriority={imagePriority} />;
+      return <JobCard listing={listing} imagePriority={imagePriority} variant="browse" />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing} imagePriority={imagePriority} variant="default" />;
+      return <MarketplaceCard listing={listing} imagePriority={imagePriority} variant="browse" />;
     default:
       return null;
   }
@@ -70,12 +70,12 @@ function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseL
   switch (verticalId) {
     case 'real-estate':
       return (
-        <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} locationInPriceRow />
+        <RealEstateCard listing={listing as PublicRealEstateListing} imagePriority={imagePriority} variant="browse" />
       );
     case 'cars':
       return <CarCard listing={listing as PublicCarListing} imagePriority={imagePriority} variant="compact" />;
     case 'jobs':
-      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} locationInPriceRow />;
+      return <JobCard listing={listing as PublicJobListing} imagePriority={imagePriority} variant="browse" />;
     case 'marketplace':
       return (
         <MarketplaceCard
@@ -86,7 +86,9 @@ function renderBrowseCard(verticalId: BrowseInfiniteVerticalId, listing: BrowseL
       );
     case 'businesses':
     case 'professionals':
-      return <DirectoryListingCard listing={listing as PublicDirectoryListing} />;
+      return (
+        <DirectoryListingCard listing={listing as PublicDirectoryListing} variant="browse" showActionCounts />
+      );
     case 'okazion':
       return <OkazionCard listing={listing as PublicOkazionListing} imagePriority={imagePriority} />;
     default:

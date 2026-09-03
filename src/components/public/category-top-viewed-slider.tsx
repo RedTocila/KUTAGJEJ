@@ -1,16 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Container, Stack, Typography } from '@mui/material';
+import { Box, Container, Typography } from '@mui/material';
 
-import {
-  listingBusinessPublicHref,
-  listingCarPublicHref,
-  listingJobPublicHref,
-  listingMarketplacePublicHref,
-  listingProfessionalPublicHref,
-  listingRealEstatePublicHref,
-} from '@/paths';
 import type { HomeVerticalId } from '@/lib/home-categories';
 import type {
   PublicCarListing,
@@ -20,138 +12,45 @@ import type {
   PublicRealEstateListing,
   TopViewedListing,
 } from '@/lib/public-listings-client';
-import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
-import { useBannerSlider } from '@/hooks/use-banner-slider';
 import { useCopy } from '@/hooks/use-copy';
+import { CarCard } from '@/components/public/listing-cards/car-card';
+import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
-import { ListingCardRating } from '@/components/public/listing-cards/listing-card-rating';
+import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
+import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
-import { BANNER_SLIDE_VISUALS, BannerSlideCard } from '@/components/public/banner-slide-card';
-import { BannerSliderPager } from '@/components/public/banner-slider-pager';
-import { BannerSliderViewport } from '@/components/public/banner-slider-viewport';
-import { formatPrice } from '@/components/public/listing-cards/format-helpers';
-
-const SLIDE_MS = 320;
-
-type SlideModel = {
-  id: string;
-  title: string;
-  subtitle: string | null;
-  bottomRightLabel?: string | null;
-  fallbackSalary?: string | null;
-  fallbackLocation?: string | null;
-  fallbackIndustry?: string | null;
-  fallbackRequiredRoles?: string[] | null;
-  fallbackCityName?: string | null;
-  fallbackZoneName?: string | null;
-  fallbackMapsUrl?: string | null;
-  fallbackLocationAddress?: string | null;
-  fallbackLocationLat?: number | null;
-  fallbackLocationLng?: number | null;
-  imageUrl: string | null;
-  href: string;
-  ratingAverage?: number | null;
-  reviewCount?: number;
-};
 
 function isRatingFeaturedVertical(verticalId: HomeVerticalId): boolean {
   return verticalId === 'businesses' || verticalId === 'professionals';
 }
 
-function toSlide(verticalId: HomeVerticalId, listing: TopViewedListing, perMonthLabel: string): SlideModel {
+function TopViewedCard({ verticalId, listing }: { verticalId: HomeVerticalId; listing: TopViewedListing }) {
   switch (verticalId) {
-    case 'real-estate': {
-      const l = listing as PublicRealEstateListing;
-      return {
-        id: l.id,
-        title: l.title,
-        subtitle: formatPrice(l.price, l.currency) + (l.transactionType === 'rent' ? ` ${perMonthLabel}` : ''),
-        imageUrl: l.imageUrl,
-        href: listingRealEstatePublicHref(l),
-      };
-    }
-    case 'cars': {
-      const l = listing as PublicCarListing;
-      const title = [l.make, l.model, l.variant].filter(Boolean).join(' ');
-      return {
-        id: l.id,
-        title,
-        subtitle: formatPrice(l.price, l.currency),
-        imageUrl: l.imageUrl,
-        href: listingCarPublicHref(l),
-      };
-    }
-    case 'jobs': {
-      const l = listing as PublicJobListing;
-      const salaryLabel = l.salary != null ? `${formatPrice(l.salary, l.currency)} / muaj` : 'Pagë e diskutueshme';
-      const locationLabel = [l.zoneName, l.cityName].filter(Boolean).join(', ') || null;
-      return {
-        id: l.id,
-        title: l.title,
-        subtitle: l.title || null,
-        bottomRightLabel: [salaryLabel, locationLabel].filter(Boolean).join(' • '),
-        fallbackSalary: salaryLabel,
-        fallbackLocation: locationLabel,
-        fallbackIndustry: l.industry,
-        fallbackRequiredRoles: l.requiredRoles ?? [],
-        fallbackCityName: l.cityName,
-        fallbackZoneName: l.zoneName ?? null,
-        fallbackMapsUrl: l.mapsUrl ?? null,
-        fallbackLocationAddress: l.locationAddress ?? null,
-        fallbackLocationLat: l.locationLat ?? null,
-        fallbackLocationLng: l.locationLng ?? null,
-        imageUrl: jobListingCoverImageUrl(l),
-        href: listingJobPublicHref(l),
-      };
-    }
-    case 'marketplace': {
-      const l = listing as PublicMarketplaceListing;
-      return {
-        id: l.id,
-        title: l.title,
-        subtitle: formatPrice(l.price, l.currency),
-        imageUrl: l.imageUrl,
-        href: listingMarketplacePublicHref(l),
-      };
-    }
-    case 'businesses': {
-      const l = listing as PublicDirectoryListing;
-      return {
-        id: l.id,
-        title: l.title,
-        subtitle: l.categoryLabel || l.cityName || null,
-        imageUrl: l.imageUrl,
-        href: listingBusinessPublicHref(l),
-        ratingAverage: l.ratingAverage,
-        reviewCount: l.reviewCount ?? 0,
-      };
-    }
-    case 'professionals': {
-      const l = listing as PublicDirectoryListing;
-      return {
-        id: l.id,
-        title: l.title,
-        subtitle: l.categoryLabel || l.cityName || null,
-        imageUrl: l.imageUrl,
-        href: listingProfessionalPublicHref(l),
-        ratingAverage: l.ratingAverage,
-        reviewCount: l.reviewCount ?? 0,
-      };
-    }
+    case 'real-estate':
+      return <RealEstateCard listing={listing as PublicRealEstateListing} variant="homepage" />;
+    case 'cars':
+      return <CarCard listing={listing as PublicCarListing} variant="homepage" />;
+    case 'jobs':
+      return <JobCard listing={listing as PublicJobListing} variant="homepage" />;
+    case 'marketplace':
+      return <MarketplaceCard listing={listing as PublicMarketplaceListing} variant="homepage" />;
+    case 'businesses':
+    case 'professionals':
+      return (
+        <DirectoryListingCard
+          listing={listing as PublicDirectoryListing}
+          variant="homepage"
+          showActionCounts
+        />
+      );
     default:
-      return {
-        id: listing.id,
-        title: 'Njoftim',
-        subtitle: null,
-        imageUrl: null,
-        href: '/',
-      };
+      return null;
   }
 }
 
 /**
- * Contained banner slider for the most-viewed listings on a category page —
- * same chrome as the home promo banners.
+ * Most-viewed (or highest-rated) row on category browse pages —
+ * same borderless ListingsCarousel card style as the jobs page.
  */
 export function CategoryTopViewedSlider({
   verticalId,
@@ -162,61 +61,19 @@ export function CategoryTopViewedSlider({
 }) {
   const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
-  const slides = React.useMemo(
-    () => listings.map((listing) => toSlide(verticalId, listing, t.browse.perMonth)),
-    [listings, t.browse.perMonth, verticalId]
-  );
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const total = listings.length;
 
-  const { idx, slideBasis, trackRef, suppressNavRef, goToSlide, autoplay, toggleAutoplay, touchHandlers, trackSx } =
-    useBannerSlider({
-      slideCount: slides.length,
-      slideMs: SLIDE_MS,
-    });
+  if (total === 0) return null;
 
-  if (slides.length === 0) return null;
-
-  if (verticalId === 'jobs') {
-    return (
-      <Box
-        component="section"
-        aria-label={t.browse.mostViewedAria}
-        sx={{
-          pt: 0,
-          pb: 0,
-          width: '100%',
-          maxWidth: '100%',
-          minWidth: 0,
-          overflowX: 'hidden',
-        }}
-      >
-        <Container maxWidth="xl" sx={{ minWidth: 0, px: { xs: 2, md: 3, lg: 4 } }}>
-          <Typography
-            component="h2"
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: '0.95rem', md: '1.05rem' },
-              letterSpacing: '-0.01em',
-              mb: { xs: 0.5, md: 0.75 },
-            }}
-          >
-            {t.browse.mostViewed}
-          </Typography>
-          <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
-            {(listings as PublicJobListing[]).map((listing) => (
-              <JobCard key={listing.id} listing={listing} variant="carousel" />
-            ))}
-          </ListingsCarousel>
-        </Container>
-      </Box>
-    );
-  }
+  const slideLabel = `${Math.min(activeIndex + 1, total)}-${total}`;
 
   return (
     <Box
       component="section"
       aria-label={byRating ? t.browse.highestRatedAria : t.browse.mostViewedAria}
       sx={{
-        pt: 0,
+        pt: { xs: 2, md: 2.5 },
         pb: 0,
         width: '100%',
         maxWidth: '100%',
@@ -225,80 +82,51 @@ export function CategoryTopViewedSlider({
       }}
     >
       <Container maxWidth="xl" sx={{ minWidth: 0, px: { xs: 2, md: 3, lg: 4 } }}>
-        <Typography
-          component="h2"
+        <Box
           sx={{
-            fontWeight: 700,
-            fontSize: { xs: '0.95rem', md: '1.05rem' },
-            letterSpacing: '-0.01em',
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: 1.5,
             mb: { xs: 0.5, md: 0.75 },
           }}
         >
-          {byRating ? t.browse.highestRated : t.browse.mostViewed}
-        </Typography>
-
-        <Stack spacing={0.5} sx={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
-          <BannerSliderViewport
-            idx={idx}
-            slideCount={slides.length}
-            slideBasis={slideBasis}
-            trackRef={trackRef}
-            trackSx={trackSx}
-            touchHandlers={touchHandlers}
-            variant="contained"
+          <Typography
+            component="h2"
+            sx={{
+              fontWeight: 700,
+              fontSize: { xs: '0.95rem', md: '1.05rem' },
+              letterSpacing: '-0.01em',
+            }}
           >
-            {slides.map((slide, i) => {
-              const dist = Math.abs(i - idx);
-              const wrapDist = Math.min(dist, slides.length - dist);
-              const eager = wrapDist <= 1;
-              return (
-                <BannerSlideCard
-                  key={slide.id}
-                  href={slide.href}
-                  suppressNavRef={suppressNavRef}
-                  imageUrl={slide.imageUrl}
-                  fallbackBg={BANNER_SLIDE_VISUALS[i % BANNER_SLIDE_VISUALS.length].bg}
-                  eager={eager}
-                  title={slide.title}
-                  topRightLabel={(listings[i]?.viewCount ?? 0).toLocaleString('en-GB')}
-                  bottomLeftLabel={byRating ? null : slide.subtitle}
-                  bottomRightLabel={
-                    byRating &&
-                    slide.ratingAverage != null &&
-                    Number.isFinite(slide.ratingAverage) &&
-                    (slide.reviewCount ?? 0) > 0
-                      ? (
-                          <ListingCardRating
-                            ratingAverage={slide.ratingAverage}
-                            reviewCount={slide.reviewCount ?? 0}
-                            singleStar
-                            onMedia
-                          />
-                        )
-                      : slide.bottomRightLabel
-                  }
-                  showNavigationArrow={false}
-                  contentPlacement="below"
-                  inlineImageFooter={byRating}
-                  hideTitleBelowImage
-                  titleMaxLines={1}
-                />
-              );
-            })}
-          </BannerSliderViewport>
-
-          <BannerSliderPager
-            slideCount={slides.length}
-            idx={idx}
-            autoplay={autoplay}
-            goToSlide={goToSlide}
-            toggleAutoplay={toggleAutoplay}
-            tablistLabel={t.browse.listingSlidesAria}
-            pauseLabel={t.browse.slidesPause}
-            playLabel={t.browse.slidesPlay}
-            slideLabel={(i) => t.browse.slideN(i + 1)}
-          />
-        </Stack>
+            {byRating ? t.browse.highestRated : t.browse.mostViewed}
+          </Typography>
+          {total > 1 ? (
+            <Typography
+              component="span"
+              aria-live="polite"
+              aria-atomic="true"
+              sx={{
+                flexShrink: 0,
+                fontWeight: 600,
+                fontSize: { xs: '0.8rem', md: '0.85rem' },
+                fontVariantNumeric: 'tabular-nums',
+                color: 'text.secondary',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {slideLabel}
+            </Typography>
+          ) : null}
+        </Box>
+        <ListingsCarousel
+          slotWidth={{ xs: 260, sm: 280, md: 300 }}
+          onActiveIndexChange={setActiveIndex}
+        >
+          {listings.map((listing) => (
+            <TopViewedCard key={listing.id} verticalId={verticalId} listing={listing} />
+          ))}
+        </ListingsCarousel>
       </Container>
     </Box>
   );

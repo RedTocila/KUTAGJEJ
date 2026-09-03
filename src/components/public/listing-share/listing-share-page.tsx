@@ -828,12 +828,7 @@ export function ListingSharePage({
           aria-label="Prapa"
           onClick={onClose}
           disabled={Boolean(busy)}
-          sx={{
-            color: '#fff',
-            borderColor: 'rgba(255,255,255,0.18)',
-            bgcolor: 'rgba(255,255,255,0.06)',
-            '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
-          }}
+          sx={{ color: '#fff' }}
         />
         <Typography
           sx={{

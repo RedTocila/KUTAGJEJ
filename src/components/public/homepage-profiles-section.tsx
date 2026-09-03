@@ -23,9 +23,14 @@ function CarouselSkeleton() {
   return (
     <Stack direction="row" spacing={2} sx={{ overflow: 'hidden', px: { xs: 2, md: 0 } }}>
       {Array.from({ length: 4 }).map((_, i) => (
-        <Box key={i} sx={{ minWidth: 280, flex: '0 0 auto' }}>
-          <Skeleton variant="rounded" height={104} sx={{ borderRadius: 2.5 }} />
-        </Box>
+        <Stack key={i} direction="row" spacing={2} sx={{ minWidth: 280, flex: '0 0 auto', alignItems: 'center' }}>
+          <Skeleton variant="circular" width={72} height={72} />
+          <Stack spacing={0.6} sx={{ flex: 1, minWidth: 0 }}>
+            <Skeleton variant="text" width="72%" height={22} />
+            <Skeleton variant="text" width="38%" height={16} />
+            <Skeleton variant="text" width="54%" height={16} />
+          </Stack>
+        </Stack>
       ))}
     </Stack>
   );

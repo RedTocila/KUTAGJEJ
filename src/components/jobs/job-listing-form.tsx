@@ -33,7 +33,9 @@ import { SearchableSelect } from '@/components/core/searchable-select';
 import { JobFormBenefitsSection } from '@/components/jobs/job-form-benefits-section';
 import { JobFormEmploymentSection } from '@/components/jobs/job-form-employment-section';
 import { JobFormStringList } from '@/components/jobs/job-form-string-list';
-import { JOB_LISTING_COVER_ASPECT_RATIO, JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
+import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
+
 import {
   exclusiveLocationPayload,
   inferListingLocationMode,
@@ -549,9 +551,11 @@ export function JobListingForm({
               }}
             >
               <JobListingFallback
+                listingId={initialListing?.id}
                 title={form.title}
                 industry={form.industry}
                 requiredRoles={form.requiredRoles}
+                description={form.description}
                 cityName={previewCity?.name}
                 zoneName={previewZone?.name}
                 mapsUrl={form.locationMode === 'map' ? form.mapsUrl : undefined}

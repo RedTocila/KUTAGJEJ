@@ -69,6 +69,8 @@ export function UserDashboardCloseButton({
         productBackButtonSx,
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
+      disableRipple
+      disableFocusRipple
     >
       <XIcon size={20} weight="bold" />
     </IconButton>

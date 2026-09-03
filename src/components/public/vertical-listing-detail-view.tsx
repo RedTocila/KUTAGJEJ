@@ -711,7 +711,11 @@ export function VerticalListingDetailView(props: {
                 >
                   <ListingsCarousel>
                     {similar.map((s) =>
-                      s.kind === 'car' ? <CarCard key={s.id} listing={s} /> : <MarketplaceCard key={s.id} listing={s} />
+                      s.kind === 'car' ? (
+                        <CarCard key={s.id} listing={s} variant="homepage" />
+                      ) : (
+                        <MarketplaceCard key={s.id} listing={s} variant="homepage" />
+                      )
                     )}
                   </ListingsCarousel>
                 </Box>

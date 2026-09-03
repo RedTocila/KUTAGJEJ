@@ -30,15 +30,41 @@ export interface ListingsCarouselProps {
    * Omitted keys fall back to the homepage defaults.
    */
   slotWidth?: Partial<Record<keyof typeof DEFAULT_SLOT_WIDTH, number>>;
+  /** Fires when the nearest snap-aligned slide changes (0-based). */
+  onActiveIndexChange?: (index: number) => void;
 }
 
-export function ListingsCarousel({ children, slotWidth, equalMediaHeight = false }: ListingsCarouselProps) {
+function nearestSlideIndex(el: HTMLDivElement): number {
+  const slots = el.children;
+  if (slots.length === 0) return 0;
+  const target = el.scrollLeft;
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < slots.length; i++) {
+    const dist = Math.abs((slots[i] as HTMLElement).offsetLeft - target);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  return best;
+}
+
+export function ListingsCarousel({
+  children,
+  slotWidth,
+  equalMediaHeight = false,
+  onActiveIndexChange,
+}: ListingsCarouselProps) {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
   const [canScrollNext, setCanScrollNext] = React.useState(false);
   const rafRef = React.useRef(0);
   const canPrevRef = React.useRef(false);
   const canNextRef = React.useRef(false);
+  const activeIndexRef = React.useRef(0);
+  const onActiveIndexChangeRef = React.useRef(onActiveIndexChange);
+  onActiveIndexChangeRef.current = onActiveIndexChange;
 
   const widths = { ...DEFAULT_SLOT_WIDTH, ...slotWidth };
 
@@ -49,11 +75,18 @@ export function ListingsCarousel({ children, slotWidth, equalMediaHeight = false
     // 1px tolerance to avoid float-rounding edge cases.
     const nextPrev = el.scrollLeft > 1;
     const nextNext = el.scrollLeft < max - 1;
-    if (nextPrev === canPrevRef.current && nextNext === canNextRef.current) return;
-    canPrevRef.current = nextPrev;
-    canNextRef.current = nextNext;
-    setCanScrollPrev(nextPrev);
-    setCanScrollNext(nextNext);
+    if (nextPrev !== canPrevRef.current || nextNext !== canNextRef.current) {
+      canPrevRef.current = nextPrev;
+      canNextRef.current = nextNext;
+      setCanScrollPrev(nextPrev);
+      setCanScrollNext(nextNext);
+    }
+
+    const nextIndex = nearestSlideIndex(el);
+    if (nextIndex !== activeIndexRef.current) {
+      activeIndexRef.current = nextIndex;
+      onActiveIndexChangeRef.current?.(nextIndex);
+    }
   }, []);
 
   const scheduleRefresh = React.useCallback(() => {

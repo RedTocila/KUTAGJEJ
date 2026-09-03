@@ -813,7 +813,7 @@ export function CarListingDetailView({
                   >
                     <ListingsCarousel>
                       {similar.map((s) => (
-                        <CarCard key={s.id} listing={s} />
+                        <CarCard key={s.id} listing={s} variant="homepage" />
                       ))}
                     </ListingsCarousel>
                   </Box>

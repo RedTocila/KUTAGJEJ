@@ -354,7 +354,7 @@ export function BusinessListingDetailDesktop({
                 <Typography sx={{ fontWeight: 800, fontSize: '1.05rem' }}>Biznese të ngjashme</Typography>
                 <ListingsCarousel slotWidth={{ md: 300 }}>
                   {similar.map((item) => (
-                    <DirectoryListingCard key={item.id} listing={item} />
+                    <DirectoryListingCard key={item.id} listing={item} variant="compact" showActionCounts />
                   ))}
                 </ListingsCarousel>
               </Stack>

@@ -248,9 +248,11 @@ export function JobListingDetailView({
             placeholderIcon={listingDetailGalleryPlaceholder(listing)}
             placeholderContent={
               <JobListingFallback
+                listingId={listing.id}
                 title={listing.title}
                 industry={listing.industry}
                 requiredRoles={listing.requiredRoles}
+                description={listing.description}
                 cityName={listing.cityName}
                 zoneName={listing.zoneName}
                 mapsUrl={listing.mapsUrl}
@@ -904,7 +906,7 @@ export function JobListingDetailView({
                 >
                   <ListingsCarousel slotWidth={{ xs: 260, sm: 280, md: 300 }}>
                     {similar.map((item) => (
-                      <JobCard key={item.id} listing={item} variant="carousel" />
+                      <JobCard key={item.id} listing={item} variant="browse" />
                     ))}
                   </ListingsCarousel>
                 </Box>

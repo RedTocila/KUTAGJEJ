@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Chip } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 
@@ -148,4 +148,19 @@ export function OkazionCountdown({
   const label = compact ? formatCompactCountdown(until, new Date(nowMs)) : formatCountdown(until, new Date(nowMs));
 
   return <OkazionCountdownChip label={label} live compact={compact} />;
+}
+
+/** Countdown below card details when the media overlay badge is hidden (homepage). */
+export function OkazionCountdownBody({
+  expiresAt,
+  compact = false,
+}: {
+  expiresAt?: string | null;
+  compact?: boolean;
+}) {
+  return (
+    <Box sx={{ lineHeight: 0, alignSelf: 'flex-start' }}>
+      <OkazionCountdown expiresAt={expiresAt} compact={compact} />
+    </Box>
+  );
 }

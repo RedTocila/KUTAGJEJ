@@ -16,13 +16,13 @@ import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
   switch (listing.kind) {
     case 'real-estate':
-      return <RealEstateCard listing={listing} />;
+      return <RealEstateCard listing={listing} variant="homepage" />;
     case 'car':
-      return <CarCard listing={listing} />;
+      return <CarCard listing={listing} variant="homepage" />;
     case 'job':
       return <JobCard listing={listing} variant="homepage" />;
     case 'marketplace':
-      return <MarketplaceCard listing={listing} />;
+      return <MarketplaceCard listing={listing} variant="homepage" />;
     default:
       return null;
   }
@@ -33,7 +33,7 @@ function CarouselSkeleton() {
     <Stack direction="row" spacing={2} sx={{ overflow: 'hidden', px: { xs: 2, md: 0 } }}>
       {Array.from({ length: 4 }).map((_, i) => (
         <Box key={i} sx={{ minWidth: 260, flex: '0 0 auto' }}>
-          <Skeleton variant="rounded" height={180} sx={{ borderRadius: 3 }} />
+          <Skeleton variant="rounded" height={217} sx={{ borderRadius: 1.25 }} />
           <Skeleton width="70%" sx={{ mt: 1.5 }} />
           <Skeleton width="40%" />
         </Box>
@@ -110,7 +110,7 @@ export function HomepageOkazionSection({
       {loading && listings.length === 0 ? (
         <CarouselSkeleton />
       ) : (
-        <ListingsCarousel equalMediaHeight>
+        <ListingsCarousel>
           {listings.map((listing) => (
             <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
           ))}

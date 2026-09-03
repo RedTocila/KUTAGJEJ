@@ -114,7 +114,7 @@ export function CategoryBrowseLayout({
             <Container
               maxWidth="xl"
               sx={{
-                pt: showTopViewed ? 0 : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
+                pt: showTopViewed ? { xs: 2, md: 2.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
                 pb: { xs: 4, md: 6 },
                 position: 'relative',
               }}

@@ -2,360 +2,366 @@
 
 import * as React from 'react';
 import { Box, Stack, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
-import { findOptionLabel } from '@/lib/find-option-label';
-import { businessMapLocation } from '@/lib/google-maps-location';
-import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
-import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
-import { resolveJobCoverIcon } from '@/lib/job-industry-icons';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { neutralInk } from '@/styles/theme/colors';
+import { resolveJobCardRoles } from '@/lib/job-card-roles';
 
-export { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
+type JobListingTheme = {
+  background: string;
+  gradient: string;
+  board: string;
+  accent: string;
+  panel: string;
+  panelLabel: string;
+};
 
-/** Theme wash fades out softly into the map; map pin centered in the right 62% zone. */
-const LEFT_PANEL_WIDTH = '38%';
-/** 38% left + half of 62% right = 69% */
-const MAP_CENTER_X = '69%';
-
-const MAP_TOP_CLIP_PX = 48;
-const MAP_BOTTOM_CLIP_PX = 72;
-/** Soft horizontal fade — wider than before for a blurrier blend into the map. */
-const GRADIENT_FADE_MASK = `linear-gradient(to right, #000 0%, #000 12%, rgba(0, 0, 0, 0.72) 28%, rgba(0, 0, 0, 0.28) 44%, rgba(0, 0, 0, 0) 62%)`;
-
-/** Cover palette — literal hex so masked gradients stay stable (no CSS var / oklab wash-out). */
-const LIGHT_COVER_SOLID = '#ffffff';
-const LIGHT_COVER_FADE = neutralInk[50];
-const LIGHT_COVER_MID = neutralInk[100];
-const DARK_COVER_SOLID = '#000000';
-const DARK_COVER_FADE = '#000000';
-const DARK_COVER_MID = '#000000';
-
-/** Google Maps night land — matches LocationMapEmbed dark styling. */
-const GOOGLE_NIGHT_LAND = '#242f3e';
-const GOOGLE_NIGHT_FILTER =
-  'invert(1) hue-rotate(180deg) saturate(0.62) brightness(1.28) contrast(0.98)';
+const THEMES: readonly JobListingTheme[] = [
+  {
+    background: '#ee8b17',
+    gradient:
+      'radial-gradient(circle at 50% 43%, rgba(255,237,171,0.55), transparent 35%), linear-gradient(135deg, #e77d0e 0%, #f19a1c 52%, #d96e0d 100%)',
+    board: '#080808',
+    accent: '#ffea00',
+    panel: '#fff7dc',
+    panelLabel: '#7a4a08',
+  },
+  {
+    background: '#1976d2',
+    gradient:
+      'radial-gradient(circle at 50% 38%, rgba(164,224,255,0.5), transparent 37%), linear-gradient(135deg, #0754ae 0%, #2386df 54%, #153c91 100%)',
+    board: '#07152e',
+    accent: '#d8ff38',
+    panel: '#f4ffe8',
+    panelLabel: '#31550d',
+  },
+  {
+    background: '#8145c6',
+    gradient:
+      'radial-gradient(circle at 50% 38%, rgba(255,198,239,0.42), transparent 37%), linear-gradient(135deg, #5f269d 0%, #914bd0 52%, #482077 100%)',
+    board: '#201033',
+    accent: '#ffdc3e',
+    panel: '#fff5d6',
+    panelLabel: '#704c00',
+  },
+  {
+    background: '#0d9d98',
+    gradient:
+      'radial-gradient(circle at 50% 40%, rgba(186,255,226,0.46), transparent 37%), linear-gradient(135deg, #08716f 0%, #12b8a7 52%, #075354 100%)',
+    board: '#062e36',
+    accent: '#ffe13b',
+    panel: '#effffb',
+    panelLabel: '#075c5b',
+  },
+  {
+    background: '#e65045',
+    gradient:
+      'radial-gradient(circle at 50% 42%, rgba(255,224,175,0.5), transparent 36%), linear-gradient(135deg, #b92e39 0%, #ed5a45 54%, #8c1f32 100%)',
+    board: '#321318',
+    accent: '#f5ff69',
+    panel: '#fff0de',
+    panelLabel: '#8a2a24',
+  },
+  {
+    background: '#83b51d',
+    gradient:
+      'radial-gradient(circle at 50% 42%, rgba(244,255,164,0.5), transparent 36%), linear-gradient(135deg, #4c7810 0%, #94c52d 52%, #315c0b 100%)',
+    board: '#13210b',
+    accent: '#f5f23a',
+    panel: '#fffde8',
+    panelLabel: '#48620a',
+  },
+  {
+    background: '#d84791',
+    gradient:
+      'radial-gradient(circle at 50% 40%, rgba(255,208,235,0.48), transparent 36%), linear-gradient(135deg, #a92472 0%, #e1539a 52%, #741b68 100%)',
+    board: '#2a0b23',
+    accent: '#bfff4a',
+    panel: '#fff1fa',
+    panelLabel: '#8a2468',
+  },
+] as const;
 
 export type JobListingFallbackProps = {
   title?: string | null;
   industry?: string | null;
   requiredRoles?: string[] | null;
+  description?: string | null;
+  /** Stable theme seed — prefer listing id. */
+  listingId?: string | null;
+  seed?: string | null;
+  /** Kept for call-site compatibility; not shown on the cover. */
   cityName?: string | null;
   zoneName?: string | null;
   mapsUrl?: string | null;
   locationAddress?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  companyName?: string | null;
 };
 
-function normalizeRequiredRoles(requiredRoles?: string[] | null): string[] {
-  return (requiredRoles ?? []).map((role) => String(role).replace(/\s+/g, ' ').trim()).filter(Boolean);
+function themeIndexFromSeed(seed: string): number {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+  return hash % THEMES.length;
 }
 
-/** Shrink the profession icon when more roles need room below it. */
-function coverIconScale(roleCount: number): number {
-  if (roleCount <= 1) return 0.72;
-  if (roleCount === 2) return 0.58;
-  if (roleCount === 3) return 0.5;
-  return 0.42;
-}
+function resolvePanelRoles(props: JobListingFallbackProps): string[] {
+  const roles = resolveJobCardRoles({
+    requiredRoles: props.requiredRoles,
+    title: props.title ?? '',
+    description: props.description,
+  });
+  if (roles.length) return roles.slice(0, 5);
 
-function coverRoleFontSize(roleCount: number): string {
-  if (roleCount <= 2) return '0.78rem';
-  if (roleCount <= 4) return '0.72rem';
-  return '0.66rem';
-}
-
-function coverRoleBulletSize(roleCount: number): number {
-  if (roleCount <= 2) return 6;
-  if (roleCount <= 4) return 5.5;
-  return 5;
-}
-
-function JobCoverThemeOverlay() {
-  return (
-    <>
-      <Box
-        aria-hidden
-        sx={(muiTheme) => ({
-          position: 'absolute',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 28%, ${LIGHT_COVER_MID} 52%)`,
-          maskImage: GRADIENT_FADE_MASK,
-          WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_FADE} 28%, ${DARK_COVER_MID} 52%)`,
-          }),
-        })}
-      />
-      <Box
-        aria-hidden
-        sx={(muiTheme) => ({
-          position: 'absolute',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          background: `linear-gradient(180deg, ${LIGHT_COVER_SOLID} 0%, ${LIGHT_COVER_FADE} 100%)`,
-          opacity: 0.15,
-          maskImage: GRADIENT_FADE_MASK,
-          WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `linear-gradient(180deg, ${DARK_COVER_SOLID} 0%, ${DARK_COVER_MID} 100%)`,
-            opacity: 0.35,
-          }),
-        })}
-      />
-      <Box
-        aria-hidden
-        sx={(muiTheme) => ({
-          position: 'absolute',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0) 72%)`,
-          maskImage: GRADIENT_FADE_MASK,
-          WebkitMaskImage: GRADIENT_FADE_MASK,
-          ...muiTheme.applyStyles('dark', {
-            background: `radial-gradient(ellipse 95% 150% at 12% 50%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 72%)`,
-          }),
-        })}
-      />
-    </>
-  );
-}
-
-function JobCoverMapPreview({
-  query,
-  lat,
-  lng,
-}: {
-  query?: string;
-  lat?: number;
-  lng?: number;
-}) {
-  const hasPin =
-    typeof lat === 'number' &&
-    typeof lng === 'number' &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    Math.abs(lat) <= 90 &&
-    Math.abs(lng) <= 180;
-
-  const trimmed = String(query || '').trim();
-  const mapQuery = hasPin ? `${lat},${lng}` : trimmed || 'Shqipëri';
-  const zoom = hasPin ? 15 : trimmed ? 13 : 8;
-  const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=${zoom}&output=embed`;
-
-  return (
-    <Box
-      aria-hidden
-      sx={(muiTheme) => ({
-        position: 'absolute',
-        inset: 0,
-        bgcolor: '#e8eaed',
-        overflow: 'hidden',
-        ...muiTheme.applyStyles('dark', {
-          bgcolor: GOOGLE_NIGHT_LAND,
-        }),
-      })}
-    >
-      <Box
-        key={embedSrc}
-        component="iframe"
-        title=""
-        src={embedSrc}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        tabIndex={-1}
-        sx={(muiTheme) => ({
-          border: 0,
-          position: 'absolute',
-          top: -MAP_TOP_CLIP_PX,
-          left: `calc(${MAP_CENTER_X} - 50%)`,
-          width: '100%',
-          height: `calc(100% + ${MAP_TOP_CLIP_PX + MAP_BOTTOM_CLIP_PX}px)`,
-          display: 'block',
-          pointerEvents: 'none',
-          colorScheme: 'light',
-          ...muiTheme.applyStyles('dark', {
-            filter: GOOGLE_NIGHT_FILTER,
-            WebkitFilter: GOOGLE_NIGHT_FILTER,
-          }),
-        })}
-      />
-    </Box>
-  );
+  const title = String(props.title ?? '').trim();
+  return title ? [title] : ['Pozicion i hapur'];
 }
 
 /**
- * Photo-free job cover: full-bleed map, smooth theme fade on the left, large profession icon.
+ * Photo-free job cover — original “WE ARE HIRING” poster with a cream/white panel.
+ * The panel lists roles only.
  */
-export function JobListingFallback({
-  title,
-  industry,
-  requiredRoles,
-  cityName,
-  zoneName,
-  mapsUrl,
-  locationAddress,
-  locationLat,
-  locationLng,
-}: JobListingFallbackProps) {
-  const roles = normalizeRequiredRoles(requiredRoles);
-  const roleCount = roles.length;
-  const iconScale = coverIconScale(roleCount);
-  const roleFontSize = coverRoleFontSize(roleCount);
-  const roleBulletSize = coverRoleBulletSize(roleCount);
-  const roleHint = roles.join(' / ');
-  const CoverIcon = resolveJobCoverIcon(title || roleHint, industry);
-  const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, industry) || 'Punë';
-  const roleLabel = String(title || '').trim() || roleHint || industryLabel;
-  const locationParts = [zoneName, cityName].filter(Boolean);
-  const locationLabel = locationAddress?.trim() || locationParts.join(', ') || 'Shqipëri';
+export function JobListingFallback(props: JobListingFallbackProps) {
+  const roles = resolvePanelRoles(props);
+  const seed = String(props.listingId ?? props.seed ?? '').trim();
+  const hasSeed = Boolean(seed);
+  const [randomThemeIndex, setRandomThemeIndex] = React.useState(0);
 
-  const mapLocation =
-    businessMapLocation({
-      locationLat,
-      locationLng,
-      mapsUrl,
-      mapsPlaceQuery: locationAddress,
-      zoneName,
-      cityName,
-    }) ?? { query: 'Shqipëri' };
+  React.useEffect(() => {
+    if (!hasSeed) setRandomThemeIndex(Math.floor(Math.random() * THEMES.length));
+  }, [hasSeed]);
+
+  const themeIndex = hasSeed ? themeIndexFromSeed(seed) : randomThemeIndex;
+  const theme = THEMES[themeIndex] ?? THEMES[0];
+  const panelLabel = roles.length > 1 ? 'POZICIONET' : 'POZICIONI';
+  const roleFontSize =
+    roles.length >= 4
+      ? 'clamp(0.72rem, 2.8vw, 1.15rem)'
+      : roles.length === 3
+        ? 'clamp(0.82rem, 3.2vw, 1.45rem)'
+        : roles.length === 2
+          ? 'clamp(0.9rem, 3.6vw, 1.75rem)'
+          : 'clamp(0.96rem, 4vw, 2.2rem)';
 
   return (
     <Box
       role="img"
-      aria-label={`${roleLabel}, ${locationLabel}`}
-      sx={(muiTheme) => ({
+      aria-label={`We are hiring: ${roles.join(', ')}`}
+      sx={{
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        bgcolor: LIGHT_COVER_SOLID,
-        ...muiTheme.applyStyles('dark', { bgcolor: DARK_COVER_SOLID }),
-      })}
+        bgcolor: theme.background,
+        background: theme.gradient,
+        color: theme.board,
+        fontFamily: '"Arial Black", Impact, sans-serif',
+      }}
     >
-      <JobCoverMapPreview query={mapLocation.query} lat={mapLocation.lat} lng={mapLocation.lng} />
-      <JobCoverThemeOverlay />
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          top: '7%',
+          left: '19%',
+          width: '13%',
+          aspectRatio: '1',
+          border: { xs: 'clamp(5px, 1.2vw, 9px) solid', sm: '9px solid' },
+          borderColor: theme.board,
+          borderRadius: '50%',
+          transform: 'rotate(-10deg)',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            width: '58%',
+            height: { xs: 'clamp(5px, 1.2vw, 9px)', sm: 9 },
+            right: '-48%',
+            bottom: '-20%',
+            bgcolor: theme.board,
+            transform: 'rotate(-43deg)',
+            transformOrigin: 'left center',
+          },
+        }}
+      />
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          top: '13%',
+          right: '12%',
+          width: 0,
+          height: 0,
+          borderLeft: '26px solid transparent',
+          borderRight: '26px solid transparent',
+          borderBottom: `44px solid ${theme.accent}`,
+          transform: 'rotate(30deg)',
+        }}
+      />
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          left: '8%',
+          bottom: '8%',
+          width: 0,
+          height: 0,
+          borderTop: '18px solid transparent',
+          borderBottom: '18px solid transparent',
+          borderLeft: `44px solid ${theme.board}`,
+          transform: 'rotate(8deg)',
+        }}
+      />
 
       <Box
         aria-hidden
-        sx={(muiTheme) => ({
+        sx={{
           position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: LEFT_PANEL_WIDTH,
-          zIndex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: roleCount > 0 ? 0.5 : 0,
-          px: 0.5,
-          color: 'primary.main',
-          pointerEvents: 'none',
-          filter: `drop-shadow(0 2px 10px ${primaryMainAlpha(0.18)})`,
-          ...muiTheme.applyStyles('dark', {
-            color: '#fff',
-            filter: `drop-shadow(0 4px 16px ${alpha('#000', 0.3)})`,
-          }),
-        })}
+          top: '21%',
+          left: '8%',
+          right: '8%',
+          bottom: '11%',
+          bgcolor: theme.board,
+          clipPath: 'polygon(0 4%, 100% 0, 93% 100%, 7% 96%)',
+          boxShadow: `0 10px 18px ${theme.board}55`,
+        }}
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '15%',
+          left: '26%',
+          right: '23%',
+          zIndex: 2,
+          px: 1.25,
+          py: 0.55,
+          bgcolor: theme.accent,
+          transform: 'rotate(-1deg)',
+          textAlign: 'center',
+          boxShadow: `0 4px 0 ${theme.board}22`,
+        }}
       >
-        <Box
+        <Typography
+          component="span"
           sx={{
-            width: `${iconScale * 100}%`,
-            maxWidth: '88%',
-            aspectRatio: '1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            '& svg': {
-              width: '100%',
-              height: '100%',
-              maxWidth: '100%',
-              maxHeight: '100%',
-            },
+            display: 'block',
+            color: theme.board,
+            fontWeight: 950,
+            fontSize: 'clamp(0.78rem, 2.8vw, 1.55rem)',
+            letterSpacing: '0.08em',
+            lineHeight: 1,
           }}
         >
-          <CoverIcon weight="duotone" />
-        </Box>
-        {roleCount > 0 ? (
-          <Stack spacing={0.35} sx={{ width: '100%', maxWidth: '96%', px: 0.25, alignItems: 'center' }}>
-            {roles.map((role, index) => (
-              <Stack
-                key={`${role}-${index}`}
-                direction="row"
-                spacing={0.55}
-                sx={{ alignItems: 'center', justifyContent: 'center', minWidth: 0, maxWidth: '100%' }}
-              >
-                <Box
-                  sx={{
-                    width: roleBulletSize,
-                    height: roleBulletSize,
-                    borderRadius: '50%',
-                    bgcolor: 'currentColor',
-                    flexShrink: 0,
-                    opacity: 0.92,
-                  }}
-                />
-                <Typography
-                  sx={(muiTheme) => ({
-                    fontSize: roleFontSize,
-                    fontWeight: 800,
-                    lineHeight: 1.25,
-                    letterSpacing: '-0.01em',
-                    color: 'primary.main',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                    ...muiTheme.applyStyles('dark', { color: '#fff' }),
-                  })}
-                >
-                  {role}
-                </Typography>
-              </Stack>
-            ))}
-          </Stack>
-        ) : null}
+          WE ARE
+        </Typography>
       </Box>
 
-      {!locationParts.length && !locationAddress?.trim() && !mapsUrl?.trim() && locationLat == null ? (
-        <Box
-          aria-hidden
-          sx={(muiTheme) => ({
-            position: 'absolute',
-            right: 10,
-            bottom: 10,
-            zIndex: 2,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.5,
-            px: 1,
-            py: 0.45,
-            borderRadius: 999,
-            bgcolor: alpha('#fff', 0.92),
-            color: 'text.primary',
-            fontSize: '0.68rem',
-            fontWeight: 700,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            ...muiTheme.applyStyles('dark', {
-              bgcolor: alpha('#000', 0.82),
-              color: '#fff',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.45)',
-            }),
-          })}
+      <Typography
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          top: '28%',
+          left: '8%',
+          right: '8%',
+          zIndex: 1,
+          color: theme.accent,
+          fontWeight: 950,
+          fontSize: 'clamp(1.8rem, 9vw, 5rem)',
+          letterSpacing: '-0.06em',
+          lineHeight: 0.86,
+          textAlign: 'center',
+          transform: 'scaleX(0.92)',
+        }}
+      >
+        HIRING
+      </Typography>
+
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '41%',
+          left: '8%',
+          right: '8%',
+          bottom: '14%',
+          zIndex: 3,
+          boxSizing: 'border-box',
+          px: { xs: 1.5, sm: 2.5 },
+          py: { xs: 1.1, sm: 1.75 },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 0.55,
+          bgcolor: theme.panel,
+          border: `2px solid ${theme.board}`,
+          boxShadow: `5px 5px 0 ${theme.board}`,
+          transform: 'rotate(1deg)',
+          textAlign: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        <Typography
+          component="span"
+          sx={{
+            display: 'block',
+            color: theme.panelLabel,
+            fontFamily: 'inherit',
+            fontWeight: 800,
+            fontSize: 'clamp(0.58rem, 1.8vw, 0.92rem)',
+            letterSpacing: '0.12em',
+            lineHeight: 1.1,
+            flexShrink: 0,
+          }}
         >
-          <MapPinIcon size={13} weight="fill" />
-          Shqipëri
-        </Box>
-      ) : null}
+          {panelLabel}
+        </Typography>
+        <Stack spacing={0.25} sx={{ width: '100%', minHeight: 0, overflow: 'hidden', alignItems: 'center' }}>
+          {roles.map((role, index) => (
+            <Typography
+              key={`${role}-${index}`}
+              component="span"
+              sx={{
+                display: 'block',
+                color: theme.board,
+                fontFamily: 'inherit',
+                fontWeight: 950,
+                fontSize: roleFontSize,
+                letterSpacing: '-0.035em',
+                lineHeight: 1.12,
+                overflowWrap: 'anywhere',
+                maxWidth: '100%',
+              }}
+            >
+              {role}
+            </Typography>
+          ))}
+        </Stack>
+      </Box>
+
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          right: '23%',
+          bottom: '3%',
+          width: '10%',
+          aspectRatio: '1',
+          border: { xs: 'clamp(5px, 1vw, 8px) solid', sm: '8px solid' },
+          borderColor: theme.accent,
+          borderRadius: '50%',
+          transform: 'rotate(12deg)',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            width: '72%',
+            height: { xs: 'clamp(5px, 1vw, 8px)', sm: 8 },
+            right: '-60%',
+            bottom: '-25%',
+            bgcolor: theme.accent,
+            transform: 'rotate(38deg)',
+            transformOrigin: 'left center',
+          },
+        }}
+      />
     </Box>
   );
 }

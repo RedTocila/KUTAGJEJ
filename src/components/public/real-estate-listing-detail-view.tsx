@@ -840,7 +840,7 @@ export function RealEstateListingDetailView({
                     >
                       <ListingsCarousel>
                         {similar.map((s) => (
-                          <RealEstateCard key={s.id} listing={s} />
+                          <RealEstateCard key={s.id} listing={s} variant="homepage" />
                         ))}
                       </ListingsCarousel>
                     </Box>

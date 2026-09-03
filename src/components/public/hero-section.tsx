@@ -11,13 +11,14 @@ export function HeroSection({ children }: { children?: React.ReactNode }) {
     <Box component="header" role="banner" aria-label="Kreu">
       <Box
         sx={{
-          pt: { xs: 1.5, md: 3 },
+          // Keep mobile top gap tight — toolbar already leaves space under the search bar.
+          pt: { xs: 0.5, md: 3 },
           pb: 0,
           bgcolor: 'background.default',
         }}
       >
         <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
-          <Stack spacing={{ xs: 2.25, md: 3 }} sx={{ alignItems: 'stretch', width: '100%' }}>
+          <Stack spacing={{ xs: 1.5, md: 3 }} sx={{ alignItems: 'stretch', width: '100%' }}>
             <HeroCategoryCircles variant="links" includeAi={false} />
             {children}
           </Stack>

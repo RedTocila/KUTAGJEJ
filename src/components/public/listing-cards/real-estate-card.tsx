@@ -21,13 +21,17 @@ import { useLanguage } from '@/hooks/use-language';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
+import { CardLocationBadge } from './card-location-badge';
 import { CardMedia } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
+import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
+
+export type RealEstateCardVariant = 'default' | 'compact' | 'homepage' | 'browse';
 
 export function RealEstateCard({
   listing,
@@ -35,12 +39,14 @@ export function RealEstateCard({
   imagePriority = false,
   variant = 'default',
   locationInPriceRow = false,
+  hideOkazionBadge = false,
 }: {
   listing: PublicRealEstateListing;
   sellerRating?: ListingCardRatingSummary | null;
   imagePriority?: boolean;
-  variant?: 'default' | 'compact';
+  variant?: RealEstateCardVariant;
   locationInPriceRow?: boolean;
+  hideOkazionBadge?: boolean;
 }) {
   const t = useCopy();
   const { language } = useLanguage();
@@ -49,6 +55,7 @@ export function RealEstateCard({
     listing.transactionType === 'rent' ? t.common.forRent : listing.transactionType === 'sale' ? t.common.forSale : '';
   const viewCount = listing.viewCount ?? 0;
   const cardRating = resolveListingCardRating(null, sellerRating);
+  const isDense = variant !== 'default';
   const categoryLabel = propertyCategoryLabel(listing.propertyCategory, language);
   const furnishingLabel =
     listing.furnishing === 'furnished'
@@ -108,7 +115,7 @@ export function RealEstateCard({
       aria-labelledby={`listing-card-title-${listing.id}`}
     >
       <CardShell
-        compact={variant === 'compact'}
+        compact={isDense}
         premium={Boolean(listing.isPremium)}
         okazion={Boolean(listing.isOkazion)}
       >
@@ -118,15 +125,26 @@ export function RealEstateCard({
           imageUrl={listing.imageUrl}
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
           alt={listing.title}
-          height={{ xs: 185, md: 200 }}
-          aspectRatio={variant === 'compact' ? '1 / 1' : undefined}
-          compact={variant === 'compact'}
+          height={
+            variant === 'browse'
+              ? { xs: 238, md: 256 }
+              : variant === 'default'
+                ? { xs: 185, md: 200 }
+                : undefined
+          }
+          aspectRatio={
+            variant === 'homepage' ? '6 / 5' : variant === 'compact' ? '1 / 1' : undefined
+          }
+          compact={isDense}
+          showActionCounts={variant === 'homepage' || variant === 'browse'}
+          okazionCountdownCompact={variant === 'homepage' || variant === 'browse' ? false : undefined}
           topLeftBadge={transactionLabel || undefined}
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
           premium={Boolean(listing.isPremium)}
           okazion={Boolean(listing.isOkazion)}
+          hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
@@ -145,7 +163,57 @@ export function RealEstateCard({
             url: listingRealEstatePublicHref(listing),
           }}
         />
-        {variant === 'compact' ? (
+        {variant === 'homepage' ? (
+          <ListingCardHomepageBody
+            titleId={`listing-card-title-${listing.id}`}
+            title={listing.title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            density="carousel"
+            priceSuffix={
+              listing.transactionType === 'rent' ? (
+                <Typography
+                  component="span"
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 0.35, fontWeight: 500 }}
+                >
+                  {t.browse.perMonth}
+                </Typography>
+              ) : null
+            }
+            location={location}
+            specs={specs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'browse' ? (
+          <ListingCardHomepageBody
+            titleId={`listing-card-title-${listing.id}`}
+            title={listing.title}
+            price={listing.price}
+            originalPrice={listing.originalPrice}
+            currency={listing.currency}
+            density="compact"
+            priceSuffix={
+              listing.transactionType === 'rent' ? (
+                <Typography
+                  component="span"
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ ml: 0.35, fontWeight: 500 }}
+                >
+                  {t.browse.perMonth}
+                </Typography>
+              ) : null
+            }
+            location={location}
+            specs={specs}
+            listing={listing}
+            viewCount={viewCount}
+          />
+        ) : variant === 'compact' ? (
           <Stack
             className="listing-card-body"
             spacing={{ xs: 0.25, sm: 0.4 }}
@@ -183,16 +251,7 @@ export function RealEstateCard({
                   ) : null
                 }
               />
-              <Stack
-                direction="row"
-                spacing={0.35}
-                sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}
-              >
-                <EyeIcon size={12} weight="regular" />
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.7rem' }}>
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
-                </Typography>
-              </Stack>
+              <CardLocationBadge cityName={listing.cityName} />
             </Stack>
           </Stack>
         ) : (

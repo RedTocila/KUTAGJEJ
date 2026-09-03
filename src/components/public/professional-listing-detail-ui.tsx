@@ -6,7 +6,6 @@ import { Box, Button, ButtonBase, Grid, IconButton, Stack, Tooltip, Typography }
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
-import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
@@ -24,6 +23,12 @@ import { productPanelSx } from '@/styles/product-sx';
 const FONT_CAPTION = '0.75rem';
 const FONT_BODY = '0.875rem';
 const VERIFIED_SHIELD_COLOR = 'var(--mui-palette-primary-main)';
+/** Phosphor Shield fill — solid body (no check cutout). */
+const VERIFIED_SHIELD_PATH =
+  'M224,56v56c0,52.72-25.52,84.67-46.93,102.19-23.06,18.86-46,25.27-47,25.53a8,8,0,0,1-4.2,0c-1-.26-23.91-6.67-47-25.53C57.52,196.67,32,164.72,32,112V56A16,16,0,0,1,48,40H208A16,16,0,0,1,224,56Z';
+/** Phosphor ShieldCheck fill checkmark, drawn solid white over the shield. */
+const VERIFIED_CHECK_PATH =
+  'M173.66,109.66l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z';
 
 /** Material-style 5-point star — stays sharp at 13–16px (Phosphor fill blobs at that size). */
 const RATING_STAR_PATH =
@@ -204,7 +209,7 @@ export function ProfessionalRatingSummary({
   );
 }
 
-/** Shield with check — inline (e.g. inside a primary pill on job detail). */
+/** Shield with white check — inline (e.g. listing cards + detail headers). */
 export function ListingVerifiedShieldBadge({
   size = 16,
   color = VERIFIED_SHIELD_COLOR,
@@ -230,7 +235,17 @@ export function ListingVerifiedShieldBadge({
         verticalAlign: 'middle',
       }}
     >
-      <ShieldCheckIcon size={size} weight="fill" color={color} aria-hidden />
+      <Box
+        component="svg"
+        aria-hidden
+        viewBox="0 0 256 256"
+        width={size}
+        height={size}
+        sx={{ display: 'block', flexShrink: 0 }}
+      >
+        <path d={VERIFIED_SHIELD_PATH} fill={color} />
+        <path d={VERIFIED_CHECK_PATH} fill="#fff" />
+      </Box>
     </Box>
   );
 }

@@ -1,4 +1,5 @@
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
+import { isJobListingActive } from '@/lib/job-listing-expiry';
 import type {
   PublicCarListing,
   PublicDirectoryListing,
@@ -322,31 +323,32 @@ function mapMemberProfilePayload(payload: unknown): PublicMemberProfile | null {
     badges?: PublicMemberReferralBadge[];
   };
   if (!data.member) return null;
+  const listings = data.listings
+    ? sanitizePublicMemberListings({
+        realEstate: data.listings.realEstate ?? [],
+        cars: data.listings.cars ?? [],
+        jobs: data.listings.jobs ?? [],
+        marketplace: data.listings.marketplace ?? [],
+        businesses: data.listings.businesses ?? [],
+        professionals: data.listings.professionals ?? [],
+        totals: {
+          ...EMPTY_LISTINGS.totals,
+          ...data.listings.totals,
+          all:
+            data.listings.totals?.all ??
+            (data.listings.totals?.realEstate ?? 0) +
+              (data.listings.totals?.cars ?? 0) +
+              (data.listings.totals?.jobs ?? 0) +
+              (data.listings.totals?.marketplace ?? 0) +
+              (data.listings.totals?.businesses ?? 0) +
+              (data.listings.totals?.professionals ?? 0),
+        },
+      })
+    : EMPTY_LISTINGS;
   return {
     member: data.member,
     badges: mergeMemberReferralBadges(data.badges),
-    listings: data.listings
-      ? {
-          realEstate: data.listings.realEstate ?? [],
-          cars: data.listings.cars ?? [],
-          jobs: data.listings.jobs ?? [],
-          marketplace: data.listings.marketplace ?? [],
-          businesses: data.listings.businesses ?? [],
-          professionals: data.listings.professionals ?? [],
-          totals: {
-            ...EMPTY_LISTINGS.totals,
-            ...data.listings.totals,
-            all:
-              data.listings.totals?.all ??
-              (data.listings.totals?.realEstate ?? 0) +
-                (data.listings.totals?.cars ?? 0) +
-                (data.listings.totals?.jobs ?? 0) +
-                (data.listings.totals?.marketplace ?? 0) +
-                (data.listings.totals?.businesses ?? 0) +
-                (data.listings.totals?.professionals ?? 0),
-          },
-        }
-      : EMPTY_LISTINGS,
+    listings,
   };
 }
 
@@ -404,15 +406,44 @@ function normalizePublicMemberSearchHit(row: PublicMemberSearchHit): PublicMembe
   return { ...row, displayName };
 }
 
-/** Newest listings across all member verticals, merged and sorted by `createdAt`. */
+function isPubliclyActiveJobListing(listing: PublicJobListing): boolean {
+  if (listing.expiresAt) {
+    const expiresMs = new Date(listing.expiresAt).getTime();
+    if (Number.isFinite(expiresMs)) return expiresMs > Date.now();
+  }
+  const bumpedAt = (listing as PublicJobListing & { bumpedAt?: string | null }).bumpedAt ?? null;
+  return isJobListingActive(listing.createdAt, new Date(), bumpedAt);
+}
+
+/** Drop expired jobs and keep totals aligned with what the profile may show. */
+export function sanitizePublicMemberListings(bundle: PublicMemberListingsBundle): PublicMemberListingsBundle {
+  const jobs = bundle.jobs.filter(isPubliclyActiveJobListing);
+  const removed = bundle.jobs.length - jobs.length;
+  const jobsTotal = Math.max(0, (bundle.totals.jobs ?? 0) - removed);
+  const totals = {
+    ...bundle.totals,
+    jobs: jobsTotal,
+    all:
+      (bundle.totals.realEstate ?? 0) +
+      (bundle.totals.cars ?? 0) +
+      jobsTotal +
+      (bundle.totals.marketplace ?? 0) +
+      (bundle.totals.businesses ?? 0) +
+      (bundle.totals.professionals ?? 0),
+  };
+  return { ...bundle, jobs, totals };
+}
+
+/** Newest publicly active listings across all member verticals, sorted by `createdAt`. */
 export function buildMemberMixedListings(bundle: PublicMemberListingsBundle): HomepageMixedListing[] {
+  const active = sanitizePublicMemberListings(bundle);
   const items: HomepageMixedListing[] = [
-    ...bundle.realEstate.map((listing) => ({ kind: 'real-estate' as const, listing, createdAt: listing.createdAt })),
-    ...bundle.cars.map((listing) => ({ kind: 'cars' as const, listing, createdAt: listing.createdAt })),
-    ...bundle.jobs.map((listing) => ({ kind: 'jobs' as const, listing, createdAt: listing.createdAt })),
-    ...bundle.marketplace.map((listing) => ({ kind: 'marketplace' as const, listing, createdAt: listing.createdAt })),
-    ...bundle.businesses.map((listing) => ({ kind: 'businesses' as const, listing, createdAt: listing.createdAt })),
-    ...bundle.professionals.map((listing) => ({
+    ...active.realEstate.map((listing) => ({ kind: 'real-estate' as const, listing, createdAt: listing.createdAt })),
+    ...active.cars.map((listing) => ({ kind: 'cars' as const, listing, createdAt: listing.createdAt })),
+    ...active.jobs.map((listing) => ({ kind: 'jobs' as const, listing, createdAt: listing.createdAt })),
+    ...active.marketplace.map((listing) => ({ kind: 'marketplace' as const, listing, createdAt: listing.createdAt })),
+    ...active.businesses.map((listing) => ({ kind: 'businesses' as const, listing, createdAt: listing.createdAt })),
+    ...active.professionals.map((listing) => ({
       kind: 'professionals' as const,
       listing,
       createdAt: listing.createdAt,

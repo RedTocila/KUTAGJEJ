@@ -1,10 +1,12 @@
 'use strict';
 
-const { getSupabaseAdmin } = require('./supabase');
 const {
   countPosterListings,
   loadActivePaidSubscription,
+  categoryUsageFromSubscription,
+  consumeSubscriptionSlot,
 } = require('./listing-quota-convert');
+const { getSupabaseAdmin } = require('./supabase');
 const { isJobListingActive } = require('./public-listings/query-helpers');
 
 /** Matches seeded FREE plan when contracts row is missing. */
@@ -56,20 +58,24 @@ async function loadFreePlanMax() {
 }
 
 /**
- * Caps used when posting category listings (paid sub max_* or FREE plan).
- * Same rules as the user dashboard package panel.
+ * Caps used when posting category listings (paid sub consumption or FREE live count).
+ * Paid plans: used is period consumption and does not free on delete.
+ * Free plan: still concurrent live listing count.
  */
 async function getPostingQuotaSnapshot(userId) {
   const sub = await loadActivePaidSubscription(userId);
-  const max = sub
-    ? {
-        car: Math.max(0, Number(sub.max_car_listings) || 0),
-        product: Math.max(0, Number(sub.max_product_listings) || 0),
-        apartment: Math.max(0, Number(sub.max_apartment_listings) || 0),
-        job: Math.max(0, Number(sub.max_job_listings) || 0),
-      }
-    : await loadFreePlanMax();
+  if (sub) {
+    const { max, used, available } = categoryUsageFromSubscription(sub);
+    return {
+      hasPaidPlan: true,
+      subscriptionId: String(sub.id),
+      max,
+      used,
+      available,
+    };
+  }
 
+  const max = await loadFreePlanMax();
   const [usedCar, usedProduct, usedApartment, usedJob] = await Promise.all([
     countPosterListings(userId, 'car'),
     countPosterListings(userId, 'product'),
@@ -91,8 +97,8 @@ async function getPostingQuotaSnapshot(userId) {
   };
 
   return {
-    hasPaidPlan: Boolean(sub),
-    subscriptionId: sub ? String(sub.id) : null,
+    hasPaidPlan: false,
+    subscriptionId: null,
     max,
     used,
     available,
@@ -135,8 +141,32 @@ async function assertCanCreateCategoryListing(userId, kind) {
 }
 
 /**
- * Expired jobs do not occupy a package slot until a boost brings them back.
- * The active-job count then includes the reactivated listing as one used slot.
+ * After a successful listing create: consume one paid-plan slot for the period.
+ * Free plan has no consumption counter (live count is enough).
+ */
+async function recordCategoryListingSlotUse(userId, kind) {
+  if (!isQuotaKind(kind)) {
+    return { ok: false, status: 400, message: 'Kategori e pavlefshme për kuotë.' };
+  }
+  const sub = await loadActivePaidSubscription(userId);
+  if (!sub) return { ok: true, skipped: true };
+
+  const result = await consumeSubscriptionSlot(userId, kind);
+  if (!result.ok) {
+    const label = KIND_LABELS[kind];
+    return {
+      ...result,
+      message:
+        result.message ||
+        `Keni arritur limitin e njoftimeve për «${label}» (${result.used}/${result.max}).`,
+    };
+  }
+  return result;
+}
+
+/**
+ * Job boost/reactivate does not consume another category slot — create already did
+ * (or free-plan concurrent rules apply separately at create time).
  */
 async function assertCanReactivateJobListing(userId, listing) {
   if (!listing || isJobListingActive(listing)) return { ok: true };
@@ -147,13 +177,6 @@ async function assertCanReactivateJobListing(userId, listing) {
       ok: false,
       status: 403,
       message: 'Kuota për «Vende pune» nuk është e disponueshme në paketën tuaj.',
-    };
-  }
-  if (snapshot.available.job <= 0) {
-    return {
-      ok: false,
-      status: 403,
-      message: 'Keni përdorur të gjitha vendet e punës të paketës suaj.',
     };
   }
   return { ok: true, snapshot };
@@ -167,5 +190,6 @@ module.exports = {
   kindFromCategoryKey,
   getPostingQuotaSnapshot,
   assertCanCreateCategoryListing,
+  recordCategoryListingSlotUse,
   assertCanReactivateJobListing,
 };

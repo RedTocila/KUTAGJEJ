@@ -54,27 +54,33 @@ import type { ListingCategory, ListingCategoryKey } from '@/types/listing-catego
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 
 const RealEstateListingForm = dynamic(
-  () => import('@/components/real-estate/real-estate-listing-form').then((m) => m.RealEstateListingForm),
+  () => import('@/components/real-estate/real-estate-listing-form').then((m) => ({ default: m.RealEstateListingForm })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 const CarListingForm = dynamic(
-  () => import('@/components/cars/car-listing-form').then((m) => m.CarListingForm),
+  () => import('@/components/cars/car-listing-form').then((m) => ({ default: m.CarListingForm })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 const JobListingForm = dynamic(
-  () => import('@/components/jobs/job-listing-form').then((m) => m.JobListingForm),
+  () => import('@/components/jobs/job-listing-form').then((m) => ({ default: m.JobListingForm })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 const MarketplaceListingForm = dynamic(
-  () => import('@/components/marketplace/marketplace-listing-form').then((m) => m.MarketplaceListingForm),
+  () =>
+    import('@/components/marketplace/marketplace-listing-form').then((m) => ({
+      default: m.MarketplaceListingForm,
+    })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 const BusinessListingForm = dynamic(
-  () => import('@/components/businesses/business-listing-form').then((m) => m.BusinessListingForm),
+  () => import('@/components/businesses/business-listing-form').then((m) => ({ default: m.BusinessListingForm })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 const ProfessionalListingForm = dynamic(
-  () => import('@/components/professionals/professional-listing-form').then((m) => m.ProfessionalListingForm),
+  () =>
+    import('@/components/professionals/professional-listing-form').then((m) => ({
+      default: m.ProfessionalListingForm,
+    })),
   { loading: () => <PostListingFormFieldsSkeleton /> },
 );
 

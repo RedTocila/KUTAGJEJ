@@ -31,7 +31,7 @@ import { type Spec } from './spec-row';
 export type JobCardVariant = 'default' | 'cover' | 'compact' | 'carousel' | 'homepage' | 'browse';
 
 const JobListingCountdown = dynamic(
-  () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
+  () => import('./job-listing-countdown').then((m) => ({ default: m.JobListingCountdown })),
   {
     ssr: false,
     loading: () => <JobListingCountdownPlaceholder variant="overlay" bare showClock />,

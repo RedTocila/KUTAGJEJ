@@ -419,6 +419,13 @@ export function MemberProfileView({
     return byCategory.filter((item) => mixedListingMatches(item, searchQuery));
   }, [mixed, filter, searchQuery]);
 
+  const listingCountLabel = React.useMemo(() => {
+    if (searchQuery) return filtered.length;
+    if (filter === 'all') return totalActive;
+    const totalKey = FILTERS.find((f) => f.key === filter)?.totalKey;
+    return totalKey ? (listings.totals[totalKey] ?? filtered.length) : filtered.length;
+  }, [searchQuery, filtered.length, filter, totalActive, listings.totals]);
+
   const showOwner =
     isBusiness && member.businessOwner?.trim() && member.businessOwner.trim().toLowerCase() !== name.toLowerCase();
 
@@ -836,7 +843,7 @@ export function MemberProfileView({
             </Typography>
             {totalActive > 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                {filtered.length} {filtered.length === 1 ? 'njoftim' : 'njoftime'}
+                {listingCountLabel} {listingCountLabel === 1 ? 'njoftim' : 'njoftime'}
                 {filter !== 'all' && !searchQuery ? ' në këtë kategori' : ''}
               </Typography>
             ) : null}

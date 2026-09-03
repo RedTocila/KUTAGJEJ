@@ -10,6 +10,7 @@ const { loadPosterBrief, loadTrustBadgePosterIdSet, posterHasTrustBadge } = requ
 const {
   activeJobCreatedAtFilter,
   applyFilterSpec,
+  isJobListingActive,
   isUuid,
   buildCityIndex,
   parsePagination,
@@ -31,7 +32,8 @@ const {
 
 const router = express.Router();
 
-const LISTINGS_PER_VERTICAL = 48;
+/** Profile grids should list every publicly active listing (not a browse-page page size). */
+const LISTINGS_PER_VERTICAL = 1000;
 const MEMBER_SEARCH_FIELDS = [
   'first_name',
   'last_name',
@@ -283,13 +285,13 @@ async function loadMemberListings(posterId) {
   const [
     realEstateDocs,
     carDocs,
-    jobDocs,
+    jobDocsRaw,
     marketplaceDocs,
     businessDocs,
     professionalDocs,
     realEstateTotal,
     carsTotal,
-    jobsTotal,
+    jobsTotalRaw,
     marketplaceTotal,
     businessesTotal,
     professionalsTotal,
@@ -311,6 +313,13 @@ async function loadMemberListings(posterId) {
     countApproved('directory_listings', posterId, { eq: { vertical: 'businesses' } }),
     countApproved('directory_listings', posterId, { eq: { vertical: 'professionals' } }),
   ]);
+
+  // Defense in depth: never surface expired jobs on public profiles (same rule as browse/detail).
+  const jobDocs = (jobDocsRaw || []).filter(isJobListingActive);
+  const jobsTotal =
+    jobDocs.length < (jobDocsRaw || []).length
+      ? Math.max(0, jobsTotalRaw - ((jobDocsRaw || []).length - jobDocs.length))
+      : jobsTotalRaw;
 
   const allDocs = [
     ...realEstateDocs,

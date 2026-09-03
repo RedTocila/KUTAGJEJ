@@ -307,50 +307,11 @@ async function getActiveSubscriptionPremiumMax(userId) {
   return Number(active?.max_premium_listings) || 0;
 }
 
-async function listingStillPremium(sb, kind, listingId) {
-  const table = TABLE_BY_KIND[kind];
-  if (!table || !listingId) return false;
-  let q = sb.from(table).select('premium_until').eq('id', listingId);
-  if (kind === 'businesses' || kind === 'professionals') {
-    q = q.eq('vertical', kind);
-  }
-  const { data, error } = await q.maybeSingle();
-  if (error) {
-    if (String(error.message || '').includes('premium_until')) return false;
-    throw error;
-  }
-  return isPremiumActive(data);
-}
-
-async function countActivePlanPremiumSlots(userId) {
-  const sb = getSupabaseAdmin();
-  const { data, error } = await sb
-    .from('premium_listing_vouchers')
-    .select('listing_kind, listing_id')
-    .eq('user_id', userId)
-    .eq('source', 'subscription')
-    .eq('status', 'applied');
-  if (error) {
-    if (String(error.message || '').includes('premium_listing_vouchers')) return 0;
-    throw error;
-  }
-
-  const seen = new Set();
-  let used = 0;
-  for (const row of data || []) {
-    const kind = row.listing_kind;
-    const listingId = row.listing_id ? String(row.listing_id) : '';
-    if (!isValidKind(kind) || !listingId) continue;
-    const key = `${kind}:${listingId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (await listingStillPremium(sb, kind, listingId)) used += 1;
-  }
-  return used;
-}
-
 async function getPremiumQuotaSnapshot(userId) {
-  const [max, used] = await Promise.all([getActiveSubscriptionPremiumMax(userId), countActivePlanPremiumSlots(userId)]);
+  const { loadActivePaidSubscription, readSlotUsed, readSlotMax } = require('./listing-quota-convert');
+  const sub = await loadActivePaidSubscription(userId);
+  const max = sub ? readSlotMax(sub, 'premium') : (await getActiveSubscriptionPremiumMax(userId));
+  const used = sub ? readSlotUsed(sub, 'premium') : 0;
   return {
     max,
     used,
@@ -470,62 +431,71 @@ async function applyPremiumFromPlan({ userId, kind, listingId }) {
     };
   }
 
-  const quota = await getPremiumQuotaSnapshot(userId);
-  if (quota.max <= 0) {
+  const { consumeSubscriptionSlot } = require('./listing-quota-convert');
+  const consumed = await consumeSubscriptionSlot(userId, 'premium');
+  if (!consumed.ok) {
+    if (consumed.max <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Paketa juaj nuk përfshin Premium Listing. Upgrade në Grow/Elite ose blini një paketë ekstra.',
+      };
+    }
     return {
       ok: false,
-      status: 400,
-      message: 'Paketa juaj nuk përfshin Premium Listing. Upgrade në Grow/Elite ose blini një paketë ekstra.',
-    };
-  }
-  if (quota.remaining <= 0) {
-    return {
-      ok: false,
-      status: 400,
-      message: `Keni përdorur të gjitha vendet Premium të paketës (${quota.used}/${quota.max}).`,
+      status: consumed.status || 400,
+      message:
+        consumed.message ||
+        `Keni përdorur të gjitha vendet Premium të paketës (${consumed.used}/${consumed.max}).`,
     };
   }
 
   const { now, until } = computePremiumUntil(loaded.listing, PLAN_PREMIUM_DAYS, restartJob);
-  await bumpListingPremium(sb, loaded.table, listingId, until, now, restartJob);
-  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
+  try {
+    await bumpListingPremium(sb, loaded.table, listingId, until, now, restartJob);
+    await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
-  const { data: voucherRow, error: insErr } = await sb
-    .from('premium_listing_vouchers')
-    .insert({
-      user_id: userId,
-      package_id: PLAN_PREMIUM_PACKAGE_ID,
-      days: PLAN_PREMIUM_DAYS,
-      price_eur: null,
-      price_bc: null,
-      source: 'subscription',
-      payment_id: null,
-      status: 'applied',
-      listing_kind: kind,
-      listing_id: listingId,
-      applied_at: now.toISOString(),
-    })
-    .select('*')
-    .single();
-  if (insErr) {
-    if (/premium_listing_vouchers_source_check|subscription/i.test(String(insErr.message || ''))) {
-      return {
-        ok: false,
-        status: 503,
-        message:
-          'Skema Premium për paketat nuk është gati. Aplikoni migrimin 20260802020000_premium_subscription_source.sql.',
-      };
+    const { data: voucherRow, error: insErr } = await sb
+      .from('premium_listing_vouchers')
+      .insert({
+        user_id: userId,
+        package_id: PLAN_PREMIUM_PACKAGE_ID,
+        days: PLAN_PREMIUM_DAYS,
+        price_eur: null,
+        price_bc: null,
+        source: 'subscription',
+        payment_id: null,
+        status: 'applied',
+        listing_kind: kind,
+        listing_id: listingId,
+        applied_at: now.toISOString(),
+      })
+      .select('*')
+      .single();
+    if (insErr) {
+      if (/premium_listing_vouchers_source_check|subscription/i.test(String(insErr.message || ''))) {
+        return {
+          ok: false,
+          status: 503,
+          message:
+            'Skema Premium për paketat nuk është gati. Aplikoni migrimin 20260802020000_premium_subscription_source.sql.',
+        };
+      }
+      throw insErr;
     }
-    throw insErr;
-  }
 
-  return {
-    ok: true,
-    voucher: mapVoucher(voucherRow),
-    premiumUntil: until.toISOString(),
-    refreshedAt: now.toISOString(),
-    quota: await getPremiumQuotaSnapshot(userId),
-  };
+    return {
+      ok: true,
+      voucher: mapVoucher(voucherRow),
+      premiumUntil: until.toISOString(),
+      refreshedAt: now.toISOString(),
+      quota: await getPremiumQuotaSnapshot(userId),
+    };
+  } catch (err) {
+    const { refundSubscriptionSlot } = require('./listing-quota-convert');
+    await refundSubscriptionSlot(userId, 'premium').catch(() => {});
+    throw err;
+  }
 }
 
 module.exports = {

@@ -178,6 +178,20 @@ alter table public.contracts
 alter table public.user_subscriptions
   add column if not exists max_okazion_listings integer;
 
+-- Period-based package slot consumption (used until next purchase).
+alter table public.user_subscriptions
+  add column if not exists used_job_listings integer not null default 0;
+alter table public.user_subscriptions
+  add column if not exists used_car_listings integer not null default 0;
+alter table public.user_subscriptions
+  add column if not exists used_apartment_listings integer not null default 0;
+alter table public.user_subscriptions
+  add column if not exists used_product_listings integer not null default 0;
+alter table public.user_subscriptions
+  add column if not exists used_premium_listings integer not null default 0;
+alter table public.user_subscriptions
+  add column if not exists used_okazion_listings integer not null default 0;
+
 create table if not exists public.okazion_listing_vouchers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,

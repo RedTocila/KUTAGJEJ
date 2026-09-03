@@ -24,7 +24,7 @@ import { ListingVerifiedBadge } from '@/components/public/professional-listing-d
 
 import { OkazionCountdownPlaceholder } from './okazion-countdown';
 
-const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => m.OkazionCountdown), {
+const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => ({ default: m.OkazionCountdown })), {
   ssr: false,
   loading: () => <OkazionCountdownPlaceholder />,
 });

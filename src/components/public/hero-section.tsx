@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import { Box, Container, Stack } from '@mui/material';
 
@@ -5,6 +7,8 @@ import { HeroCategoryCircles } from './hero-category-circles';
 
 /**
  * Home hero — category circles paint immediately; banners stream in as `children`.
+ * Explicit client boundary so Turbopack does not dual-compile this module as both
+ * RSC and client (async server children like HomepageBanners stay valid via slots).
  */
 export function HeroSection({ children }: { children?: React.ReactNode }) {
   return (

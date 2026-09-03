@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 
 import { HomepageCommunityBanner, HomepagePostBanner } from '@/components/public/homepage-community-banner';
@@ -50,7 +52,7 @@ export function HomepageBelowFold({
   professionals,
   totals,
   ssrOk = true,
-  profilesSlot,
+  children,
 }: {
   realEstate?: PublicListingsBundle['realEstate'];
   cars?: PublicListingsBundle['cars'];
@@ -60,8 +62,8 @@ export function HomepageBelowFold({
   professionals?: PublicListingsBundle['professionals'];
   totals?: PublicListingsBundle['totals'];
   ssrOk?: boolean;
-  /** Server-streamed profiles row; client fallback renders `HomepageProfilesSection`. */
-  profilesSlot?: React.ReactNode;
+  /** Server-streamed profiles row; omit to render client `HomepageProfilesSection`. */
+  children?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <>
@@ -87,7 +89,7 @@ export function HomepageBelowFold({
         initialOk={ssrOk}
       />
 
-      {profilesSlot ?? <HomepageProfilesSection />}
+      {children ?? <HomepageProfilesSection />}
 
       <HomepagePostBanner />
 

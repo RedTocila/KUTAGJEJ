@@ -25,13 +25,11 @@ export function HomepageFeed(): React.JSX.Element {
       <React.Suspense fallback={<HomeRecommendedFallback />}>
         <HomepageRecommendedFeed />
       </React.Suspense>
-      <HomepageBelowFold
-        profilesSlot={
-          <React.Suspense fallback={<HomepageProfilesSection initialOk={false} />}>
-            <HomepageProfilesFeed />
-          </React.Suspense>
-        }
-      />
+      <HomepageBelowFold>
+        <React.Suspense fallback={<HomepageProfilesSection initialOk={false} />}>
+          <HomepageProfilesFeed />
+        </React.Suspense>
+      </HomepageBelowFold>
     </>
   );
 }

@@ -347,48 +347,11 @@ async function getActiveSubscriptionOkazionMax(userId) {
   return Number(active?.max_okazion_listings) || 0;
 }
 
-async function listingStillOkazion(sb, kind, listingId) {
-  if (kind === 'businesses' || kind === 'professionals') return false;
-  const table = TABLE_BY_KIND[kind];
-  if (!table || !listingId) return false;
-  const q = sb.from(table).select('okazion_until').eq('id', listingId);
-  const { data, error } = await q.maybeSingle();
-  if (error) {
-    if (String(error.message || '').includes('okazion_until')) return false;
-    throw error;
-  }
-  return isOkazionActive(data);
-}
-
-async function countActivePlanOkazionSlots(userId) {
-  const sb = getSupabaseAdmin();
-  const { data, error } = await sb
-    .from('okazion_listing_vouchers')
-    .select('listing_kind, listing_id')
-    .eq('user_id', userId)
-    .eq('source', 'subscription')
-    .eq('status', 'applied');
-  if (error) {
-    if (String(error.message || '').includes('okazion_listing_vouchers')) return 0;
-    throw error;
-  }
-
-  const seen = new Set();
-  let used = 0;
-  for (const row of data || []) {
-    const kind = row.listing_kind;
-    const listingId = row.listing_id ? String(row.listing_id) : '';
-    if (!isValidKind(kind) || !listingId) continue;
-    const key = `${kind}:${listingId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (await listingStillOkazion(sb, kind, listingId)) used += 1;
-  }
-  return used;
-}
-
 async function getOkazionQuotaSnapshot(userId) {
-  const [max, used] = await Promise.all([getActiveSubscriptionOkazionMax(userId), countActivePlanOkazionSlots(userId)]);
+  const { loadActivePaidSubscription, readSlotUsed, readSlotMax } = require('./listing-quota-convert');
+  const sub = await loadActivePaidSubscription(userId);
+  const max = sub ? readSlotMax(sub, 'okazion') : (await getActiveSubscriptionOkazionMax(userId));
+  const used = sub ? readSlotUsed(sub, 'okazion') : 0;
   return {
     max,
     used,
@@ -502,53 +465,62 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
     };
   }
 
-  const quota = await getOkazionQuotaSnapshot(userId);
-  if (quota.max <= 0) {
+  const { consumeSubscriptionSlot } = require('./listing-quota-convert');
+  const consumed = await consumeSubscriptionSlot(userId, 'okazion');
+  if (!consumed.ok) {
+    if (consumed.max <= 0) {
+      return {
+        ok: false,
+        status: 400,
+        message: 'Paketa juaj nuk përfshin OKAZION. Upgrade në Grow/Elite ose blini një paketë ekstra.',
+      };
+    }
     return {
       ok: false,
-      status: 400,
-      message: 'Paketa juaj nuk përfshin OKAZION. Upgrade në Grow/Elite ose blini një paketë ekstra.',
-    };
-  }
-  if (quota.remaining <= 0) {
-    return {
-      ok: false,
-      status: 400,
-      message: `Keni përdorur të gjitha vendet OKAZION të paketës (${quota.used}/${quota.max}).`,
+      status: consumed.status || 400,
+      message:
+        consumed.message ||
+        `Keni përdorur të gjitha vendet OKAZION të paketës (${consumed.used}/${consumed.max}).`,
     };
   }
 
   const restartJob = kind === 'job' && !isJobListingActive(loaded.listing);
   const { now, until } = computeOkazionUntil(loaded.listing, PLAN_OKAZION_DAYS, restartJob);
-  await bumpListingOkazion(sb, loaded.table, listingId, until, now, restartJob);
-  await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
+  try {
+    await bumpListingOkazion(sb, loaded.table, listingId, until, now, restartJob);
+    await markRefreshAnchor(sb, { userId, kind, listingId, refreshedAt: now.toISOString() });
 
-  const { data: voucherRow, error: insErr } = await sb
-    .from('okazion_listing_vouchers')
-    .insert({
-      user_id: userId,
-      package_id: PLAN_OKAZION_PACKAGE_ID,
-      days: PLAN_OKAZION_DAYS,
-      price_eur: null,
-      price_bc: null,
-      source: 'subscription',
-      payment_id: null,
-      status: 'applied',
-      listing_kind: kind,
-      listing_id: listingId,
-      applied_at: now.toISOString(),
-    })
-    .select('*')
-    .single();
-  if (insErr) throw insErr;
+    const { data: voucherRow, error: insErr } = await sb
+      .from('okazion_listing_vouchers')
+      .insert({
+        user_id: userId,
+        package_id: PLAN_OKAZION_PACKAGE_ID,
+        days: PLAN_OKAZION_DAYS,
+        price_eur: null,
+        price_bc: null,
+        source: 'subscription',
+        payment_id: null,
+        status: 'applied',
+        listing_kind: kind,
+        listing_id: listingId,
+        applied_at: now.toISOString(),
+      })
+      .select('*')
+      .single();
+    if (insErr) throw insErr;
 
-  return {
-    ok: true,
-    voucher: mapVoucher(voucherRow),
-    okazionUntil: until.toISOString(),
-    refreshedAt: now.toISOString(),
-    quota: await getOkazionQuotaSnapshot(userId),
-  };
+    return {
+      ok: true,
+      voucher: mapVoucher(voucherRow),
+      okazionUntil: until.toISOString(),
+      refreshedAt: now.toISOString(),
+      quota: await getOkazionQuotaSnapshot(userId),
+    };
+  } catch (err) {
+    const { refundSubscriptionSlot } = require('./listing-quota-convert');
+    await refundSubscriptionSlot(userId, 'okazion').catch(() => {});
+    throw err;
+  }
 }
 
 module.exports = {

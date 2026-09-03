@@ -21,7 +21,6 @@ import { useLanguage } from '@/hooks/use-language';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { MOTION } from '@/styles/motion';
 
-import { productChromeIdleBg } from './product-browse-chrome';
 import { HomeVerticalIcon } from './home-vertical-icon';
 
 export type HeroCategoryCirclesVariant = 'links' | 'tabs';
@@ -146,7 +145,7 @@ export function HeroCategoryCircles({
     return undefined;
   })();
 
-  /** Soft fill on hover; selected uses an accent wash, never a ring. */
+  /** Soft accent fill always; hover greens the label. */
   const itemSx = (mode: AccentMode) => {
     const accent = accentColor(mode);
     const soft = accentSoft(mode);
@@ -235,7 +234,7 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: selected ? soft : productChromeIdleBg,
+                bgcolor: soft,
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
@@ -263,7 +262,7 @@ export function HeroCategoryCircles({
                   display: { xs: 'none', md: 'block' },
                   fontWeight: selected ? 800 : 700,
                   fontSize: { md: '0.88rem', lg: '0.95rem' },
-                  color: selected ? accent : 'text.primary',
+                  color: 'text.primary',
                   whiteSpace: 'nowrap',
                   textAlign: 'center',
                   lineHeight: 1.2,
@@ -280,7 +279,7 @@ export function HeroCategoryCircles({
               sx={{
                 display: { xs: 'block', md: 'none' },
                 fontWeight: selected ? 700 : 600,
-                color: selected ? accent : 'text.primary',
+                color: 'text.primary',
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
                 transition: 'color 140ms ease',

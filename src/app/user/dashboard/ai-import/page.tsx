@@ -67,9 +67,13 @@ import { ImageLightbox } from '@/components/common/image-lightbox';
 import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 import {
+  AI_BUILD_INPUT_BG_DARK,
   AI_BUILD_INPUT_BG_LIGHT,
+  AI_BUILD_MUTED_TEXT_DARK,
   AI_BUILD_MUTED_TEXT_LIGHT,
+  AI_BUILD_PANEL_BG_DARK,
   AI_BUILD_PANEL_BG_LIGHT,
+  AI_BUILD_TEXT_LIGHT,
   AiBuildTheme,
 } from '@/components/user/ai-build-theme';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
@@ -84,9 +88,12 @@ const aiPanelSx = {
   borderRadius: 3,
   border: 'none',
   boxShadow: 'none',
-  bgcolor: (theme: { palette: { mode: string } }) =>
-    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : AI_BUILD_PANEL_BG_LIGHT,
+  bgcolor: AI_BUILD_PANEL_BG_LIGHT,
   overflow: 'hidden',
+  // CssVars class scheme — `palette.mode` stays light and would leave the lavender panel in dark mode.
+  '.dark &': {
+    bgcolor: AI_BUILD_PANEL_BG_DARK,
+  },
 } as const;
 
 const aiButtonSx = {
@@ -136,8 +143,10 @@ function estimatePostBatchMs(drafts: AiListingDraft[]): number {
 const aiProgressBarSx = {
   height: 6,
   borderRadius: 999,
-  bgcolor: (theme: { palette: { mode: string } }) =>
-    theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+  bgcolor: 'rgba(0,0,0,0.08)',
+  '.dark &': {
+    bgcolor: 'rgba(255,255,255,0.08)',
+  },
   '& .MuiLinearProgress-bar': {
     borderRadius: 999,
     bgcolor: AI_SEARCH_BLUE,
@@ -1281,8 +1290,9 @@ export default function AiImportListingsPage() {
                         borderRadius: '50%',
                         display: 'grid',
                         placeItems: 'center',
-                        bgcolor: selected ? AI_SEARCH_BLUE : (theme) =>
-                          theme.palette.mode === 'dark' ? 'action.hover' : AI_BUILD_INPUT_BG_LIGHT,
+                        bgcolor: selected
+                          ? AI_SEARCH_BLUE
+                          : `light-dark(${AI_BUILD_INPUT_BG_LIGHT}, ${AI_BUILD_INPUT_BG_DARK})`,
                         border: 'none',
                         transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                       }}
@@ -1341,20 +1351,17 @@ export default function AiImportListingsPage() {
                       pointerEvents: loading ? 'none' : undefined,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2.5,
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark' ? 'action.hover' : AI_BUILD_INPUT_BG_LIGHT,
+                        bgcolor: `light-dark(${AI_BUILD_INPUT_BG_LIGHT}, ${AI_BUILD_INPUT_BG_DARK})`,
                         pb: 5,
                         '& fieldset': { border: 'none' },
                         '&:hover fieldset': { border: 'none' },
                         '&.Mui-focused fieldset': { border: 'none' },
                       },
                       '& .MuiInputBase-input': {
-                        color: (theme) =>
-                          theme.palette.mode === 'dark' ? 'text.primary' : '#1c1630',
+                        color: `light-dark(${AI_BUILD_TEXT_LIGHT}, var(--mui-palette-text-primary))`,
                       },
                       '& .MuiInputBase-input::placeholder': {
-                        color: (theme) =>
-                          theme.palette.mode === 'dark' ? 'text.disabled' : AI_BUILD_MUTED_TEXT_LIGHT,
+                        color: `light-dark(${AI_BUILD_MUTED_TEXT_LIGHT}, ${AI_BUILD_MUTED_TEXT_DARK})`,
                         opacity: 1,
                       },
                     }}
@@ -1383,11 +1390,9 @@ export default function AiImportListingsPage() {
                         width: 34,
                         height: 34,
                         color: files.length > 0 ? AI_SEARCH_BLUE : 'text.secondary',
-                        bgcolor: (theme) =>
-                          theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                        bgcolor: 'light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06))',
                         '&:hover': {
-                          bgcolor: (theme) =>
-                            theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                          bgcolor: 'light-dark(rgba(0,0,0,0.08), rgba(255,255,255,0.12))',
                         },
                       }}
                     >

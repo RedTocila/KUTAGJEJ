@@ -11,7 +11,10 @@ const { isUuid } = require('../lib/public-listings/query-helpers');
 const { resolveOptionalCityAndZone } = require('../lib/listing-city');
 const { slugifyTitle } = require('../lib/real-estate-permalink');
 const { formatMineJob, formatMineJobFull, loadMineKind, loadMineListingById } = require('../lib/mine-listings');
-const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
+const {
+  assertCanCreateCategoryListing,
+  recordCategoryListingSlotUse,
+} = require('../lib/listing-category-quota');
 const { parseMapsFieldsFromBody, mapsColumnsFromParsed, mapsJsonFromDoc } = require('../lib/listing-maps-fields');
 
 const router = express.Router();
@@ -63,6 +66,7 @@ router.get('/mine/:id', authMiddleware, requirePortalUser, async (req, res) => {
 
 /** POST /api/listings/jobs */
 router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
+  let reservedSlot = false;
   try {
     const quota = await assertCanCreateCategoryListing(req.user.id, 'job');
     if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
@@ -80,6 +84,10 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
     if (!maps.ok) return res.status(400).json({ message: maps.message });
 
     const hasSalary = body.salary !== null && body.salary !== undefined && String(body.salary).trim() !== '';
+
+    const reserved = await recordCategoryListingSlotUse(req.user.id, 'job');
+    if (!reserved.ok) return res.status(reserved.status || 403).json({ message: reserved.message });
+    reservedSlot = !reserved.skipped;
 
     const row = {
       poster_id: req.user.id,
@@ -131,6 +139,10 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       },
     });
   } catch (err) {
+    if (reservedSlot) {
+      const { refundSubscriptionSlot } = require('../lib/listing-quota-convert');
+      await refundSubscriptionSlot(req.user.id, 'job').catch(() => {});
+    }
     console.error('POST /listings/jobs:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }

@@ -18,6 +18,16 @@ const LISTING_TABLE = {
   job: { table: 'job_listings', vertical: null },
 };
 
+/** Subscription columns for period-based slot consumption. */
+const SLOT_COLUMNS = {
+  car: { used: 'used_car_listings', max: 'max_car_listings' },
+  product: { used: 'used_product_listings', max: 'max_product_listings' },
+  apartment: { used: 'used_apartment_listings', max: 'max_apartment_listings' },
+  job: { used: 'used_job_listings', max: 'max_job_listings' },
+  premium: { used: 'used_premium_listings', max: 'max_premium_listings' },
+  okazion: { used: 'used_okazion_listings', max: 'max_okazion_listings' },
+};
+
 function normalizeCount(value) {
   const n = Math.floor(Number(value) || 0);
   return n > 0 ? n : 0;
@@ -31,6 +41,40 @@ function creditsFromCounts(counts) {
     normalizeCount(counts.job) * CONVERT_RATES.job;
   // Boost credits are stored as integers; fractional rates (e.g. 0.5) floor in total.
   return Math.floor(raw);
+}
+
+function readSlotUsed(sub, kind) {
+  const cols = SLOT_COLUMNS[kind];
+  if (!cols || !sub) return 0;
+  return Math.max(0, Number(sub[cols.used]) || 0);
+}
+
+function readSlotMax(sub, kind) {
+  const cols = SLOT_COLUMNS[kind];
+  if (!cols || !sub) return 0;
+  return Math.max(0, Number(sub[cols.max]) || 0);
+}
+
+function categoryUsageFromSubscription(sub) {
+  const max = {
+    car: readSlotMax(sub, 'car'),
+    product: readSlotMax(sub, 'product'),
+    apartment: readSlotMax(sub, 'apartment'),
+    job: readSlotMax(sub, 'job'),
+  };
+  const used = {
+    car: readSlotUsed(sub, 'car'),
+    product: readSlotUsed(sub, 'product'),
+    apartment: readSlotUsed(sub, 'apartment'),
+    job: readSlotUsed(sub, 'job'),
+  };
+  const available = {
+    car: Math.max(0, max.car - used.car),
+    product: Math.max(0, max.product - used.product),
+    apartment: Math.max(0, max.apartment - used.apartment),
+    job: Math.max(0, max.job - used.job),
+  };
+  return { max, used, available };
 }
 
 async function countPosterListings(userId, kind) {
@@ -62,6 +106,102 @@ async function loadActivePaidSubscription(userId) {
   return paid || null;
 }
 
+/**
+ * Atomically consume one package slot for the active paid subscription.
+ * Used stays until the next subscription purchase (new row starts at 0).
+ */
+async function consumeSubscriptionSlot(userId, kind) {
+  const cols = SLOT_COLUMNS[kind];
+  if (!cols) {
+    return { ok: false, status: 400, message: 'Lloj i pavlefshëm kuote.' };
+  }
+
+  const sub = await loadActivePaidSubscription(userId);
+  if (!sub) {
+    return { ok: false, status: 400, message: 'Nuk ka paketë të paguar aktive.' };
+  }
+
+  const used = readSlotUsed(sub, kind);
+  const max = readSlotMax(sub, kind);
+  if (max <= 0) {
+    return { ok: false, status: 403, message: 'Kuota nuk është e disponueshme në paketën tuaj.', used, max };
+  }
+  if (used >= max) {
+    return {
+      ok: false,
+      status: 403,
+      message: `Keni arritur limitin (${used}/${max}).`,
+      used,
+      max,
+      remaining: 0,
+    };
+  }
+
+  const nextUsed = used + 1;
+  const sb = getSupabaseAdmin();
+  const { data: updated, error } = await sb
+    .from('user_subscriptions')
+    .update({
+      [cols.used]: nextUsed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sub.id)
+    .eq(cols.used, used)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    if (String(error.message || '').includes(cols.used)) {
+      return {
+        ok: false,
+        status: 503,
+        message: 'Skema e kuotave nuk është gati. Aplikoni migrimin e databazës.',
+      };
+    }
+    throw error;
+  }
+  if (!updated) {
+    return {
+      ok: false,
+      status: 409,
+      message: 'Kuota sapo u përdor. Provoni përsëri.',
+      used,
+      max,
+    };
+  }
+
+  return {
+    ok: true,
+    subscriptionId: String(sub.id),
+    used: nextUsed,
+    max,
+    remaining: Math.max(0, max - nextUsed),
+  };
+}
+
+/** Best-effort undo after a failed apply (optimistic lock). */
+async function refundSubscriptionSlot(userId, kind) {
+  const cols = SLOT_COLUMNS[kind];
+  if (!cols) return { ok: false };
+  const sub = await loadActivePaidSubscription(userId);
+  if (!sub) return { ok: false };
+  const used = readSlotUsed(sub, kind);
+  if (used <= 0) return { ok: true, used: 0 };
+  const nextUsed = used - 1;
+  const { data: updated, error } = await getSupabaseAdmin()
+    .from('user_subscriptions')
+    .update({
+      [cols.used]: nextUsed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sub.id)
+    .eq(cols.used, used)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  return { ok: Boolean(updated), used: nextUsed };
+}
+
 async function getConvertibleQuotas(userId) {
   const sub = await loadActivePaidSubscription(userId);
   if (!sub) {
@@ -75,31 +215,7 @@ async function getConvertibleQuotas(userId) {
     };
   }
 
-  const [usedCar, usedProduct, usedApartment, usedJob] = await Promise.all([
-    countPosterListings(userId, 'car'),
-    countPosterListings(userId, 'product'),
-    countPosterListings(userId, 'apartment'),
-    countPosterListings(userId, 'job'),
-  ]);
-
-  const max = {
-    car: Math.max(0, Number(sub.max_car_listings) || 0),
-    product: Math.max(0, Number(sub.max_product_listings) || 0),
-    apartment: Math.max(0, Number(sub.max_apartment_listings) || 0),
-    job: Math.max(0, Number(sub.max_job_listings) || 0),
-  };
-  const used = {
-    car: usedCar,
-    product: usedProduct,
-    apartment: usedApartment,
-    job: usedJob,
-  };
-  const available = {
-    car: Math.max(0, max.car - used.car),
-    product: Math.max(0, max.product - used.product),
-    apartment: Math.max(0, max.apartment - used.apartment),
-    job: Math.max(0, max.job - used.job),
-  };
+  const { max, used, available } = categoryUsageFromSubscription(sub);
 
   return {
     hasPaidPlan: true,
@@ -208,9 +324,15 @@ async function convertListingQuotas(userId, countsInput) {
 
 module.exports = {
   CONVERT_RATES,
+  SLOT_COLUMNS,
   creditsFromCounts,
   countPosterListings,
   loadActivePaidSubscription,
+  categoryUsageFromSubscription,
+  readSlotUsed,
+  readSlotMax,
+  consumeSubscriptionSlot,
+  refundSubscriptionSlot,
   getConvertibleQuotas,
   convertListingQuotas,
 };

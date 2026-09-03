@@ -25,7 +25,10 @@ const {
   loadMineListingById,
   loadMineListingsForPoster,
 } = require('../lib/mine-listings');
-const { assertCanCreateCategoryListing } = require('../lib/listing-category-quota');
+const {
+  assertCanCreateCategoryListing,
+  recordCategoryListingSlotUse,
+} = require('../lib/listing-category-quota');
 const {
   parseMapsFieldsFromBody,
   mapsColumnsFromParsed,
@@ -141,6 +144,7 @@ router.get('/real-estate/mine/:id', authMiddleware, requirePortalUser, async (re
 });
 
 router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) => {
+  let reservedSlot = false;
   try {
     const quota = await assertCanCreateCategoryListing(req.user.id, 'apartment');
     if (!quota.ok) return res.status(quota.status || 403).json({ message: quota.message });
@@ -163,6 +167,10 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
     const price = Number(req.body.price);
     const cmp = parseComparePrice(req.body.originalPrice, price);
     if (!cmp.ok) return res.status(400).json({ message: cmp.message });
+
+    const reserved = await recordCategoryListingSlotUse(req.user.id, 'apartment');
+    if (!reserved.ok) return res.status(reserved.status || 403).json({ message: reserved.message });
+    reservedSlot = !reserved.skipped;
 
     const row = {
       poster_id: req.user.id,
@@ -206,6 +214,10 @@ router.post('/real-estate', authMiddleware, requirePortalUser, async (req, res) 
       },
     });
   } catch (error) {
+    if (reservedSlot) {
+      const { refundSubscriptionSlot } = require('../lib/listing-quota-convert');
+      await refundSubscriptionSlot(req.user.id, 'apartment').catch(() => {});
+    }
     console.error('POST /listings/real-estate:', error?.message || error);
     res.status(500).json({ message: 'Server error' });
   }

@@ -37,12 +37,7 @@ import { paths } from '@/paths';
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
 import { authClient } from '@/lib/auth/client';
-import {
-  listMyCarListings,
-  listMyJobListings,
-  listMyMarketplaceListings,
-  listMyRealEstateListings,
-} from '@/lib/listings-client';
+import { fetchCategoryQuotas } from '@/lib/listing-category-quota-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { listMySubscriptions, fetchOkazionPlanQuota, fetchPremiumPlanQuota } from '@/lib/payments-client';
 import { getUserPortalAccountCategoryLabel } from '@/lib/user-portal-account-label';
@@ -363,21 +358,15 @@ export function UserDashboardHome() {
     }
     let cancelled = false;
     setUsageLoading(true);
-    void Promise.all([
-      listMyRealEstateListings(),
-      listMyCarListings(),
-      listMyJobListings(),
-      listMyMarketplaceListings(),
-      fetchPremiumPlanQuota(),
-      fetchOkazionPlanQuota(),
-    ])
-      .then(([re, cars, jobs, mkt, premium, okazion]) => {
+    void Promise.all([fetchCategoryQuotas(), fetchPremiumPlanQuota(), fetchOkazionPlanQuota()])
+      .then(([category, premium, okazion]) => {
         if (cancelled) return;
+        const used = category.snapshot?.used;
         setUsage({
-          apartments: (re.listings ?? []).length,
-          cars: (cars.listings ?? []).length,
-          jobs: (jobs.listings ?? []).length,
-          products: (mkt.listings ?? []).length,
+          apartments: used?.apartment ?? 0,
+          cars: used?.car ?? 0,
+          jobs: used?.job ?? 0,
+          products: used?.product ?? 0,
           premium: premium.quota?.used ?? 0,
           okazion: okazion.quota?.used ?? 0,
         });
@@ -402,19 +391,17 @@ export function UserDashboardHome() {
       (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
     setActiveSub(active);
     if (!canPublish) return;
-    const [re, cars, jobs, mkt, premium, okazion] = await Promise.all([
-      listMyRealEstateListings(),
-      listMyCarListings(),
-      listMyJobListings(),
-      listMyMarketplaceListings(),
+    const [category, premium, okazion] = await Promise.all([
+      fetchCategoryQuotas(),
       fetchPremiumPlanQuota(),
       fetchOkazionPlanQuota(),
     ]);
+    const used = category.snapshot?.used;
     setUsage({
-      apartments: (re.listings ?? []).length,
-      cars: (cars.listings ?? []).length,
-      jobs: (jobs.listings ?? []).length,
-      products: (mkt.listings ?? []).length,
+      apartments: used?.apartment ?? 0,
+      cars: used?.car ?? 0,
+      jobs: used?.job ?? 0,
+      products: used?.product ?? 0,
       premium: premium.quota?.used ?? 0,
       okazion: okazion.quota?.used ?? 0,
     });

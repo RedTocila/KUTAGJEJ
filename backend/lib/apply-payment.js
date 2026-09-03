@@ -137,35 +137,62 @@ async function grantSubscription(payment) {
       ? Number(contract.boost_credits)
       : 0;
 
-  const { data: sub, error: subErr } = await sb
+  // New purchase starts a fresh consumption period (used_* defaults to 0).
+  await sb
     .from('user_subscriptions')
-    .insert({
-      user_id: payment.payerId,
-      contract_id: contractId || (contract ? contract.id : null),
-      contract_title: contract?.title || payment.metadata?.contractTitle || '',
-      listing_category_key: contract?.listing_category_key ?? null,
-      subscriber_kind: contract?.subscriber_kind ?? null,
-      months,
-      price_eur: payment.amount,
-      refresh_every_hours: contract?.refresh_every_hours ?? null,
-      glow_badge_enabled: Boolean(contract?.glow_badge_enabled),
-      boost_credits_granted: boost,
-      daily_boost_access: Boolean(contract?.daily_boost_access),
-      plan_code: contract?.plan_code ?? null,
-      max_list_all_categories: Number(contract?.max_list_all_categories) || 0,
-      max_job_listings: Number(contract?.max_job_listings) || 0,
-      max_car_listings: Number(contract?.max_car_listings) || 0,
-      max_apartment_listings: Number(contract?.max_apartment_listings) || 0,
-      max_product_listings: Number(contract?.max_product_listings) || 0,
-      max_premium_listings: Number(contract?.max_premium_listings) || 0,
-      max_okazion_listings: Number(contract?.max_okazion_listings) || 0,
-      starts_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-      status: 'active',
-      payment_id: payment.id,
-    })
+    .update({ status: 'canceled', updated_at: now.toISOString() })
+    .eq('user_id', payment.payerId)
+    .eq('status', 'active');
+
+  const insertRow = {
+    user_id: payment.payerId,
+    contract_id: contractId || (contract ? contract.id : null),
+    contract_title: contract?.title || payment.metadata?.contractTitle || '',
+    listing_category_key: contract?.listing_category_key ?? null,
+    subscriber_kind: contract?.subscriber_kind ?? null,
+    months,
+    price_eur: payment.amount,
+    refresh_every_hours: contract?.refresh_every_hours ?? null,
+    glow_badge_enabled: Boolean(contract?.glow_badge_enabled),
+    boost_credits_granted: boost,
+    daily_boost_access: Boolean(contract?.daily_boost_access),
+    plan_code: contract?.plan_code ?? null,
+    max_list_all_categories: Number(contract?.max_list_all_categories) || 0,
+    max_job_listings: Number(contract?.max_job_listings) || 0,
+    max_car_listings: Number(contract?.max_car_listings) || 0,
+    max_apartment_listings: Number(contract?.max_apartment_listings) || 0,
+    max_product_listings: Number(contract?.max_product_listings) || 0,
+    max_premium_listings: Number(contract?.max_premium_listings) || 0,
+    max_okazion_listings: Number(contract?.max_okazion_listings) || 0,
+    used_job_listings: 0,
+    used_car_listings: 0,
+    used_apartment_listings: 0,
+    used_product_listings: 0,
+    used_premium_listings: 0,
+    used_okazion_listings: 0,
+    starts_at: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    status: 'active',
+    payment_id: payment.id,
+  };
+
+  let { data: sub, error: subErr } = await sb
+    .from('user_subscriptions')
+    .insert(insertRow)
     .select('id')
     .single();
+  if (subErr && /used_.*_listings/i.test(String(subErr.message || ''))) {
+    const {
+      used_job_listings: _j,
+      used_car_listings: _c,
+      used_apartment_listings: _a,
+      used_product_listings: _p,
+      used_premium_listings: _pr,
+      used_okazion_listings: _o,
+      ...rest
+    } = insertRow;
+    ({ data: sub, error: subErr } = await sb.from('user_subscriptions').insert(rest).select('id').single());
+  }
   if (subErr) throw subErr;
 
   payment.metadata.subscriptionId = sub.id;

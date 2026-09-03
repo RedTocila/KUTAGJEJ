@@ -51,7 +51,7 @@ import { JobListingCountdownPlaceholder } from './job-listing-countdown';
 import { ListingPrice } from './listing-price';
 
 const JobListingCountdown = dynamic(
-  () => import('./job-listing-countdown').then((m) => m.JobListingCountdown),
+  () => import('./job-listing-countdown').then((m) => ({ default: m.JobListingCountdown })),
   {
     ssr: false,
     loading: () => <JobListingCountdownPlaceholder variant="compact" />,

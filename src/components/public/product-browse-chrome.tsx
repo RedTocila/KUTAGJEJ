@@ -131,11 +131,11 @@ export type ProductTagAccent = {
 /** Idle fill for pills, search bars, filter circles — dark on dark, soft neutral on light. */
 export function productChromeIdleBg(_theme?: Theme): string {
   // Prefer `light-dark()` over `palette.mode` — CssVars class scheme can leave mode stale.
-  return 'light-dark(#e4e4e4, #2a2a2a)';
+  return 'light-dark(#e8e8e8, #333333)';
 }
 
 export function productChromeIdleHoverBg(_theme?: Theme): string {
-  return 'light-dark(#d6d6d6, #333333)';
+  return 'light-dark(#dcdcdc, #3d3d3d)';
 }
 
 /** Pill tag chrome — subcategory pills, filter chips, service tags. */

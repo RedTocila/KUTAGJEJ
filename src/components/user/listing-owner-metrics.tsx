@@ -161,27 +161,32 @@ const menuActionBtnSx = {
   '& .MuiButton-startIcon': { mr: 0.35, ml: 0 },
 };
 
-function fadedToneSx(_bg: string, _hoverBg: string, color: string): Record<string, unknown> {
+function fadedToneSx(bg: string, hoverBg: string, color: string): Record<string, unknown> {
   return {
-    bgcolor: (t: { palette: { mode: string } }) =>
-      t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    bgcolor: bg,
     color,
     border: 'none',
     boxShadow: 'none',
     '&:hover': {
-      bgcolor: (t: { palette: { mode: string } }) =>
-        t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+      bgcolor: hoverBg,
+      border: 'none',
       boxShadow: 'none',
+    },
+    '&.Mui-disabled': {
+      bgcolor: bg,
+      color,
+      opacity: 0.55,
+      border: 'none',
     },
   };
 }
 
-const fadedPrimarySx = fadedToneSx(primaryMainAlpha(0.28), primaryMainAlpha(0.42), 'primary.main');
-const fadedWarningSx = fadedToneSx(warningMainAlpha(0.28), warningMainAlpha(0.42), 'warning.main');
-const fadedErrorSx = fadedToneSx(errorMainAlpha(0.28), errorMainAlpha(0.42), 'error.main');
-const fadedPrimaryStrongSx = fadedToneSx(primaryMainAlpha(0.45), primaryMainAlpha(0.58), 'primary.main');
-const fadedWarningStrongSx = fadedToneSx(warningMainAlpha(0.45), warningMainAlpha(0.58), 'warning.main');
-const fadedErrorStrongSx = fadedToneSx(errorMainAlpha(0.45), errorMainAlpha(0.58), 'error.main');
+const fadedPrimarySx = fadedToneSx(primaryMainAlpha(0.22), primaryMainAlpha(0.34), 'primary.main');
+const fadedWarningSx = fadedToneSx(warningMainAlpha(0.22), warningMainAlpha(0.34), 'warning.main');
+const fadedErrorSx = fadedToneSx(errorMainAlpha(0.22), errorMainAlpha(0.34), 'error.main');
+const fadedPrimaryStrongSx = fadedToneSx(primaryMainAlpha(0.38), primaryMainAlpha(0.5), 'primary.main');
+const fadedWarningStrongSx = fadedToneSx(warningMainAlpha(0.38), warningMainAlpha(0.5), 'warning.main');
+const fadedErrorStrongSx = fadedToneSx(errorMainAlpha(0.38), errorMainAlpha(0.5), 'error.main');
 
 function editHrefFor(listingId: string, kind: ListingMetricKind) {
   return `${paths.user.editListing}?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(listingId)}`;
@@ -219,11 +224,11 @@ export function ListingOwnerTopActions({
           alignItems: 'center',
           p: 0.45,
           borderRadius: ACTION_CONTAINER_RADIUS_PX,
-          bgcolor: 'rgba(0,0,0,0.35)',
-          border: '1px solid rgba(255,255,255,0.22)',
+          bgcolor: 'rgba(0,0,0,0.55)',
+          border: 'none',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
         }}
       >
         {showMenu ? (
@@ -483,10 +488,11 @@ export function ListingOwnerMetrics({
         </Typography>
       ) : null}
 
-      <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 0.8 }}>
+      <Box sx={{ borderTop: 'none', boxShadow: 'inset 0 1px 0 light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))', pt: 0.8 }}>
         {listingId && kind && canRefresh ? (
           <Stack
             direction="row"
+            spacing={0.65}
             sx={{
               width: '100%',
               alignItems: 'center',
@@ -515,16 +521,16 @@ export function ListingOwnerMetrics({
                     whiteSpace: 'nowrap',
                     ...(refreshLocked
                       ? {
-                          bgcolor: 'transparent',
+                          bgcolor: 'light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
                           color: 'text.disabled',
-                          borderColor: 'divider',
+                          border: 'none',
                           boxShadow: 'none',
                           opacity: 1,
                           pointerEvents: 'none',
                           '&.Mui-disabled': {
-                            bgcolor: 'transparent',
+                            bgcolor: 'light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
                             color: 'text.disabled',
-                            borderColor: 'divider',
+                            border: 'none',
                             opacity: 1,
                           },
                         }

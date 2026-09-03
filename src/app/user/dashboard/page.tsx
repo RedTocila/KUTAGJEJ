@@ -62,6 +62,7 @@ import { ThemeSwitchRow } from '@/components/user/theme-switch-row';
 import { formatBc, planAccentForCode } from '@/components/user/packages/package-ui';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
+import { alpha } from '@mui/material/styles';
 import {
   PANEL_BG_DARK,
   PANEL_BG_LIGHT,
@@ -789,8 +790,8 @@ export function UserDashboardHome() {
       </PortalLinkGroup>
 
       <Button
-        variant="outlined"
-        color="inherit"
+        variant="text"
+        color="error"
         fullWidth
         startIcon={<SignOutIcon size={20} />}
         onClick={() => {
@@ -800,11 +801,14 @@ export function UserDashboardHome() {
           fontWeight: 700,
           borderRadius: 3.5,
           py: 1.4,
-          borderColor: 'divider',
+          border: 'none',
+          boxShadow: 'none',
+          bgcolor: (theme) => alpha(theme.palette.error.main, 0.16),
           color: 'error.main',
           '&:hover': {
-            borderColor: 'error.main',
-            bgcolor: (theme) => `${theme.palette.error.main}14`,
+            border: 'none',
+            boxShadow: 'none',
+            bgcolor: (theme) => alpha(theme.palette.error.main, 0.24),
           },
         }}
       >

@@ -46,7 +46,7 @@ import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
 import { paths } from '@/paths';
 import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { productChromeIdleBg } from '@/components/public/product-browse-chrome';
+import { productChromeIdleBg, productChromeIdleHoverBg } from '@/components/public/product-browse-chrome';
 import {
   PANEL_BG_DARK,
   PANEL_BG_LIGHT,
@@ -1718,9 +1718,9 @@ export default function UserMyListingsPage() {
                   height: 40,
                   borderRadius: 2.25,
                   border: 'none',
-                  bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                  bgcolor: productChromeIdleBg,
                   color: 'text.secondary',
-                  '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
+                  '&:hover': { bgcolor: productChromeIdleHoverBg, color: 'primary.main' },
                 }}
               >
                 <CheckCircleIcon size={20} weight="bold" />
@@ -1840,8 +1840,18 @@ export default function UserMyListingsPage() {
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: 2.5,
-              bgcolor: 'background.paper',
+              borderRadius: 999,
+              bgcolor: productChromeIdleBg,
+              transition: 'background-color 0.15s ease',
+              '& fieldset': { border: 'none' },
+              '&:hover': {
+                bgcolor: productChromeIdleHoverBg,
+              },
+              '&:hover fieldset': { border: 'none' },
+              '&.Mui-focused': {
+                bgcolor: productChromeIdleHoverBg,
+              },
+              '&.Mui-focused fieldset': { border: 'none' },
             },
           }}
         />
@@ -1877,7 +1887,7 @@ export default function UserMyListingsPage() {
                     py: 0.85,
                     borderRadius: 999,
                     border: 'none',
-                    bgcolor: active ? primaryMainAlpha(0.12) : productChromeIdleBg,
+                    bgcolor: active ? primaryMainAlpha(0.22) : productChromeIdleBg,
                     color: active ? 'primary.main' : 'text.primary',
                     fontSize: '0.8125rem',
                     fontWeight: 600,
@@ -1888,7 +1898,7 @@ export default function UserMyListingsPage() {
                     transition: 'background-color 0.15s, color 0.15s',
                     '&:hover': {
                       color: 'primary.main',
-                      bgcolor: primaryMainAlpha(0.08),
+                      bgcolor: active ? primaryMainAlpha(0.28) : productChromeIdleHoverBg,
                     },
                   }}
                 >
@@ -1909,7 +1919,7 @@ export default function UserMyListingsPage() {
                         justifyContent: 'center',
                         fontSize: '0.7rem',
                         fontWeight: 700,
-                        bgcolor: active ? primaryMainAlpha(0.2) : 'action.hover',
+                        bgcolor: active ? primaryMainAlpha(0.32) : 'light-dark(rgba(0,0,0,0.08), rgba(255,255,255,0.12))',
                         color: active ? 'primary.main' : 'text.secondary',
                       }}
                     >

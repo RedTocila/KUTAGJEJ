@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 
 import type { PublicContract } from '@/types/contract';
 import type { UserSubscriptionSummary } from '@/types/payment';
@@ -387,8 +388,7 @@ export function MainPackagesPanel() {
   const cancelFooter = activeSubscription ? (
     <Button
       size="medium"
-      color="error"
-      variant="outlined"
+      variant="text"
       fullWidth
       onClick={(event) => {
         event.preventDefault();
@@ -401,6 +401,15 @@ export function MainPackagesPanel() {
         fontWeight: 750,
         borderRadius: 2,
         py: 1,
+        border: 'none',
+        boxShadow: 'none',
+        bgcolor: (theme) => alpha(theme.palette.error.main, 0.16),
+        color: 'error.main',
+        '&:hover': {
+          border: 'none',
+          boxShadow: 'none',
+          bgcolor: (theme) => alpha(theme.palette.error.main, 0.24),
+        },
       }}
     >
       {t.myPayments.cancelSubscription}

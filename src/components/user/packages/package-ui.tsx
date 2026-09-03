@@ -1577,18 +1577,23 @@ export function SoftChip({
   );
 }
 
-/** Contained / outlined CTA using a plan accent color. */
+/** Contained / soft-fill CTA using a plan accent color (no stroke). */
 export function accentButtonSx(accent: PlanAccent, variant: 'contained' | 'outlined' = 'contained') {
   if (variant === 'outlined') {
     return {
       fontWeight: 800,
       textTransform: 'none' as const,
       borderRadius: 2,
-      borderColor: (t: Theme) => resolveAccent(t, accent),
+      border: 'none',
+      boxShadow: 'none',
       color: (t: Theme) => resolveAccent(t, accent),
+      bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.16),
+      '&.MuiButton-outlined': { border: 'none' },
       '&:hover': {
-        borderColor: (t: Theme) => resolveAccent(t, accent),
-        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.08),
+        border: 'none',
+        boxShadow: 'none',
+        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.24),
+        '&.MuiButton-outlined': { border: 'none' },
       },
     };
   }
@@ -1596,9 +1601,12 @@ export function accentButtonSx(accent: PlanAccent, variant: 'contained' | 'outli
     fontWeight: 800,
     textTransform: 'none' as const,
     borderRadius: 2,
+    border: 'none',
+    boxShadow: 'none',
     bgcolor: (t: Theme) => resolveAccent(t, accent),
     color: '#fff',
     '&:hover': {
+      boxShadow: 'none',
       bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.88),
     },
   };
@@ -1617,18 +1625,20 @@ export function dualPayButtonSx(accent: PlanAccent, variant: 'contained' | 'outl
     fontWeight: 850,
     letterSpacing: '-0.01em',
     textTransform: 'none' as const,
+    border: 'none',
+    boxShadow: 'none',
+    '&.MuiButton-outlined': { border: 'none' },
   };
   if (variant === 'outlined') {
     return {
       ...shared,
-      borderWidth: 1.5,
-      borderColor: (t: Theme) => resolveAccent(t, accent),
       color: (t: Theme) => resolveAccent(t, accent),
-      bgcolor: 'transparent',
+      bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.16),
       '&:hover': {
-        borderWidth: 1.5,
-        borderColor: (t: Theme) => resolveAccent(t, accent),
-        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.08),
+        border: 'none',
+        boxShadow: 'none',
+        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.24),
+        '&.MuiButton-outlined': { border: 'none' },
       },
     };
   }
@@ -1637,6 +1647,8 @@ export function dualPayButtonSx(accent: PlanAccent, variant: 'contained' | 'outl
     bgcolor: (t: Theme) => resolveAccent(t, accent),
     color: (t: Theme) => accentContrast(t, accent),
     '&:hover': {
+      border: 'none',
+      boxShadow: 'none',
       bgcolor: (t: Theme) => resolveAccent(t, accent),
       filter: 'brightness(1.05)',
     },

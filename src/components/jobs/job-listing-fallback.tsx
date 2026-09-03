@@ -88,6 +88,11 @@ export type JobListingFallbackProps = {
   /** Stable theme seed — prefer listing id. */
   listingId?: string | null;
   seed?: string | null;
+  /**
+   * `share` uses larger container-relative type for story / save image export.
+   * Default `card` matches browse / detail covers.
+   */
+  density?: 'card' | 'share';
   /** Kept for call-site compatibility; not shown on the cover. */
   cityName?: string | null;
   zoneName?: string | null;
@@ -120,12 +125,13 @@ function resolvePanelRoles(props: JobListingFallbackProps): string[] {
 
 /**
  * Photo-free job cover — original “WE ARE HIRING” poster with a cream/white panel.
- * The panel lists roles only.
+ * The panel lists roles only. Type scales from the panel box so roles never clip.
  */
 export function JobListingFallback(props: JobListingFallbackProps) {
   const roles = resolvePanelRoles(props);
   const seed = String(props.listingId ?? props.seed ?? '').trim();
   const hasSeed = Boolean(seed);
+  const share = props.density === 'share';
   const [randomThemeIndex, setRandomThemeIndex] = React.useState(0);
 
   React.useEffect(() => {
@@ -135,14 +141,30 @@ export function JobListingFallback(props: JobListingFallbackProps) {
   const themeIndex = hasSeed ? themeIndexFromSeed(seed) : randomThemeIndex;
   const theme = THEMES[themeIndex] ?? THEMES[0];
   const panelLabel = roles.length > 1 ? 'POZICIONET' : 'POZICIONI';
-  const roleFontSize =
-    roles.length >= 4
-      ? 'clamp(0.72rem, 2.8vw, 1.15rem)'
-      : roles.length === 3
-        ? 'clamp(0.82rem, 3.2vw, 1.45rem)'
-        : roles.length === 2
-          ? 'clamp(0.9rem, 3.6vw, 1.75rem)'
-          : 'clamp(0.96rem, 4vw, 2.2rem)';
+  const roleCount = Math.max(1, roles.length);
+  // Size from the panel container so every role stays fully visible.
+  // Budget leaves room for the "POZICIONET" label, padding, and line-height.
+  const roleLineBudget = share ? 56 : 60;
+  const roleFontSize = `min(${share ? '10.5cqw' : '9.5cqw'}, calc(${roleLineBudget / roleCount}cqh), ${
+    share
+      ? roleCount >= 4
+        ? '2rem'
+        : roleCount === 3
+          ? '2.35rem'
+          : roleCount === 2
+            ? '2.7rem'
+            : '3.1rem'
+      : roleCount >= 4
+        ? '1.05rem'
+        : roleCount === 3
+          ? '1.25rem'
+          : roleCount === 2
+            ? '1.5rem'
+            : '1.85rem'
+  })`;
+  const weAreFontSize = share ? 'min(6cqw, 7.5cqh, 1.9rem)' : 'min(7cqw, 9cqh, 1.45rem)';
+  const hiringFontSize = share ? 'min(16cqw, 20cqh, 4.8rem)' : 'min(20cqw, 24cqh, 4.5rem)';
+  const panelLabelFontSize = share ? 'min(4.4cqw, 8.5cqh, 1.25rem)' : 'min(4.2cqw, 8cqh, 0.88rem)';
 
   return (
     <Box
@@ -156,6 +178,7 @@ export function JobListingFallback(props: JobListingFallbackProps) {
         background: theme.gradient,
         color: theme.board,
         fontFamily: '"Arial Black", Impact, sans-serif',
+        containerType: 'size',
       }}
     >
       <Box
@@ -246,7 +269,7 @@ export function JobListingFallback(props: JobListingFallbackProps) {
             display: 'block',
             color: theme.board,
             fontWeight: 950,
-            fontSize: 'clamp(0.78rem, 2.8vw, 1.55rem)',
+            fontSize: weAreFontSize,
             letterSpacing: '0.08em',
             lineHeight: 1,
           }}
@@ -259,13 +282,13 @@ export function JobListingFallback(props: JobListingFallbackProps) {
         aria-hidden
         sx={{
           position: 'absolute',
-          top: '28%',
+          top: share ? '26%' : '28%',
           left: '8%',
           right: '8%',
           zIndex: 1,
           color: theme.accent,
           fontWeight: 950,
-          fontSize: 'clamp(1.8rem, 9vw, 5rem)',
+          fontSize: hiringFontSize,
           letterSpacing: '-0.06em',
           lineHeight: 0.86,
           textAlign: 'center',
@@ -278,25 +301,28 @@ export function JobListingFallback(props: JobListingFallbackProps) {
       <Box
         sx={{
           position: 'absolute',
-          top: '41%',
-          left: '8%',
-          right: '8%',
-          bottom: '14%',
+          // Keep clear of the cover edge + rotate/shadow so the panel never clips.
+          top: share ? '42%' : '41%',
+          left: '9%',
+          right: '9%',
+          bottom: share ? '17%' : '15%',
           zIndex: 3,
           boxSizing: 'border-box',
-          px: { xs: 1.5, sm: 2.5 },
-          py: { xs: 1.1, sm: 1.75 },
+          px: share ? '5%' : { xs: 1.5, sm: 2.5 },
+          py: share ? '4.5%' : { xs: 1.1, sm: 1.75 },
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 0.55,
+          gap: share ? 0.6 : 0.45,
           bgcolor: theme.panel,
-          border: `2px solid ${theme.board}`,
-          boxShadow: `5px 5px 0 ${theme.board}`,
-          transform: 'rotate(1deg)',
+          border: `${share ? 3 : 2}px solid ${theme.board}`,
+          boxShadow: `${share ? 6 : 5}px ${share ? 6 : 5}px 0 ${theme.board}`,
+          transform: 'rotate(0.6deg)',
           textAlign: 'center',
           overflow: 'hidden',
+          containerType: 'size',
+          containerName: 'jobMockupPanel',
         }}
       >
         <Typography
@@ -306,7 +332,7 @@ export function JobListingFallback(props: JobListingFallbackProps) {
             color: theme.panelLabel,
             fontFamily: 'inherit',
             fontWeight: 800,
-            fontSize: 'clamp(0.58rem, 1.8vw, 0.92rem)',
+            fontSize: panelLabelFontSize,
             letterSpacing: '0.12em',
             lineHeight: 1.1,
             flexShrink: 0,
@@ -314,7 +340,18 @@ export function JobListingFallback(props: JobListingFallbackProps) {
         >
           {panelLabel}
         </Typography>
-        <Stack spacing={0.25} sx={{ width: '100%', minHeight: 0, overflow: 'hidden', alignItems: 'center' }}>
+        <Stack
+          spacing={share ? 0.35 : 0.2}
+          sx={{
+            width: '100%',
+            flex: '1 1 auto',
+            minHeight: 0,
+            maxHeight: '100%',
+            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {roles.map((role, index) => (
             <Typography
               key={`${role}-${index}`}
@@ -326,9 +363,11 @@ export function JobListingFallback(props: JobListingFallbackProps) {
                 fontWeight: 950,
                 fontSize: roleFontSize,
                 letterSpacing: '-0.035em',
-                lineHeight: 1.12,
+                lineHeight: 1.08,
                 overflowWrap: 'anywhere',
                 maxWidth: '100%',
+                flexShrink: 1,
+                minHeight: 0,
               }}
             >
               {role}

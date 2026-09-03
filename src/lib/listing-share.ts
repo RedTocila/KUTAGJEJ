@@ -35,6 +35,13 @@ export type ListingShareSpec = {
   label: string;
 };
 
+/** Job hiring poster props for share/save cards when there is no cover photo. */
+export type ListingShareJobMockup = {
+  industry?: string | null;
+  requiredRoles?: string[] | null;
+  description?: string | null;
+};
+
 /** Payload used to render the share sheet + Instagram story card. */
 export type ListingSharePayload = {
   /** Omit for profile shares — extras fetch and listing metrics are skipped. */
@@ -59,6 +66,11 @@ export type ListingSharePayload = {
   themeColor?: string | null;
   /** Absolute or path URL; defaults to current page. */
   url?: string;
+  /**
+   * When set (and `imageUrl` is empty), job share/save images use the hiring mockup
+   * instead of the generic building placeholder.
+   */
+  jobMockup?: ListingShareJobMockup | null;
 };
 
 const SHARE_PHONE_PATH: Record<ListingMetricKind, string> = {

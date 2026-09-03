@@ -21,8 +21,6 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/PaintBucket';
 import { Path as PathIcon } from '@phosphor-icons/react/dist/ssr/Path';
 import { Phone as PhoneIcon } from '@phosphor-icons/react/dist/ssr/Phone';
-import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
-import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
@@ -31,6 +29,7 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
 import { brandLogoSrc, config } from '@/config';
 import { formatRatingDisplay } from '@/lib/format-rating';
@@ -204,38 +203,6 @@ export function StoryBackground({ accent }: { accent?: string }) {
   );
 }
 
-function MediaActionChip({
-  icon,
-  count,
-  iconColor,
-}: {
-  icon: React.ReactNode;
-  count: number;
-  iconColor?: string;
-}) {
-  return (
-    <Box
-      sx={{
-        display: 'inline-flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 0.5 * S,
-        height: 32 * S,
-        px: 1 * S,
-        borderRadius: 999,
-        bgcolor: 'rgba(18,18,18,0.92)',
-        border: '1px solid rgba(255,255,255,0.14)',
-        color: '#fff',
-      }}
-    >
-      <Box sx={{ color: iconColor ?? 'inherit', display: 'inline-flex', lineHeight: 0 }}>{icon}</Box>
-      <Typography sx={{ fontSize: 11.5 * S, fontWeight: 700, lineHeight: 1, color: '#fff' }}>
-        {new Intl.NumberFormat('en-GB').format(count)}
-      </Typography>
-    </Box>
-  );
-}
-
 function StoryRatingStar({ size, fill }: { size: number; fill: 'full' | 'half' | 'empty' }) {
   return (
     <Box
@@ -380,19 +347,38 @@ function StoryListingImage({
   );
 }
 
+function JobShareMockupCover({ payload }: { payload: ListingSharePayload }) {
+  return (
+    <JobListingFallback
+      listingId={payload.listingId}
+      title={payload.title}
+      industry={payload.jobMockup?.industry}
+      requiredRoles={payload.jobMockup?.requiredRoles}
+      description={payload.jobMockup?.description}
+      density="share"
+    />
+  );
+}
+
+function shareUsesJobMockup(payload: ListingSharePayload, imageSrc: string | null): boolean {
+  return !imageSrc && (Boolean(payload.jobMockup) || payload.listingKind === 'job');
+}
+
 function ListingPhoto({
   imageSrc,
   fallbackSrc,
   accent,
   badge,
-  topRight,
+  jobMockupPayload,
 }: {
   imageSrc: string | null;
   fallbackSrc?: string | null;
   accent: string;
   badge?: string;
-  topRight: React.ReactNode;
+  jobMockupPayload?: ListingSharePayload | null;
 }) {
+  const useJobMockup = Boolean(jobMockupPayload && shareUsesJobMockup(jobMockupPayload, imageSrc));
+
   return (
     <Box
       sx={{
@@ -406,6 +392,8 @@ function ListingPhoto({
     >
       {imageSrc ? (
         <StoryListingImage src={imageSrc} fallbackSrc={fallbackSrc} />
+      ) : useJobMockup && jobMockupPayload ? (
+        <JobShareMockupCover payload={jobMockupPayload} />
       ) : (
         <Stack
           sx={{
@@ -441,8 +429,6 @@ function ListingPhoto({
           </Typography>
         </Box>
       ) : null}
-
-      <Box sx={{ position: 'absolute', top: 14, right: 14 }}>{topRight}</Box>
     </Box>
   );
 }
@@ -510,6 +496,8 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
     >
       {imageSrc ? (
         <StoryListingImage src={imageSrc} fallbackSrc={payload.imageUrl} objectPosition="center" />
+      ) : shareUsesJobMockup(payload, imageSrc) ? (
+        <JobShareMockupCover payload={payload} />
       ) : (
         <Stack
           sx={{
@@ -725,7 +713,6 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
  */
 function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 5);
-  const saveCount = payload.saveCount ?? 0;
   const viewCount = payload.viewCount ?? 0;
   const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
@@ -754,16 +741,7 @@ function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
           fallbackSrc={payload.imageUrl}
           accent={accent}
           badge={payload.badge}
-          topRight={
-            <Stack direction="row" spacing={0.75 * S} sx={{ alignItems: 'center' }}>
-              <MediaActionChip icon={<PaperPlaneTiltIcon size={17 * S} weight="bold" />} count={0} />
-              <MediaActionChip
-                icon={<BookmarkSimpleIcon size={17 * S} weight="fill" />}
-                count={saveCount}
-                iconColor={accent}
-              />
-            </Stack>
-          }
+          jobMockupPayload={payload}
         />
       </Box>
 

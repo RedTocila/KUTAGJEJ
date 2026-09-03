@@ -13,10 +13,14 @@ import {
   beginPendingNavigation,
   clearPendingNavigation,
   clearPendingNavigationIfMatches,
+  normalizeNavPath,
 } from '@/lib/navigation-pending';
+import { paths } from '@/paths';
 
 const SCROLL_ENTRY_KEY = '__kutagjejScrollEntryKey';
 const SCROLL_STORAGE_PREFIX = 'kutagjej:scroll:';
+/** Soft back/forward to home that never commits in React → hard reload. */
+const HOME_POP_RECOVERY_MS = 8_000;
 
 type ScrollPosition = {
   left: number;
@@ -112,6 +116,7 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
   const previousPathnameRef = React.useRef(pathname);
   const pendingPopNavigationRef = React.useRef(false);
   const scrollEntryKeyRef = React.useRef<string | null>(null);
+  const homePopRecoveryRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     registerAppRouterNavigation(
@@ -139,6 +144,17 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     const handlePopState = () => {
       clearPendingNavigation();
       pendingPopNavigationRef.current = true;
+      if (homePopRecoveryRef.current != null) {
+        window.clearTimeout(homePopRecoveryRef.current);
+        homePopRecoveryRef.current = null;
+      }
+      // Browser URL already updated; React pathname may stall on a hung RSC flight.
+      if (normalizeNavPath(window.location.pathname) === paths.home) {
+        homePopRecoveryRef.current = window.setTimeout(() => {
+          homePopRecoveryRef.current = null;
+          window.location.reload();
+        }, HOME_POP_RECOVERY_MS);
+      }
     };
     const saveCurrentPosition = () => {
       if (scrollEntryKeyRef.current) saveScrollPosition(scrollEntryKeyRef.current);
@@ -149,6 +165,10 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('pagehide', saveCurrentPosition);
+      if (homePopRecoveryRef.current != null) {
+        window.clearTimeout(homePopRecoveryRef.current);
+        homePopRecoveryRef.current = null;
+      }
     };
   }, []);
 
@@ -176,6 +196,11 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     const routeChanged = previousPathnameRef.current !== pathname;
     const isPopNavigation = pendingPopNavigationRef.current;
     pendingPopNavigationRef.current = false;
+
+    if (normalizeNavPath(pathname ?? '') === paths.home && homePopRecoveryRef.current != null) {
+      window.clearTimeout(homePopRecoveryRef.current);
+      homePopRecoveryRef.current = null;
+    }
 
     rememberFirstPageIfNeeded();
     let cancelRestore: (() => void) | undefined;

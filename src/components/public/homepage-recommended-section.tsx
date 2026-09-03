@@ -42,6 +42,12 @@ export function HomepageRecommendedSection({
   const [loading, setLoading] = React.useState(needsRecovery);
 
   React.useEffect(() => {
+    if (fallbackItems.length === 0) return;
+    setItems(fallbackItems);
+    setLoading(false);
+  }, [fallbackItems]);
+
+  React.useEffect(() => {
     if (!needsRecovery) return;
     let cancelled = false;
     void (async () => {

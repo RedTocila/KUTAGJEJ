@@ -242,6 +242,15 @@ export function ShareMyListingsDialog({
             saveCount: l.saveCount,
             contactPhone: l.contactPhone?.trim() || undefined,
             url,
+            ...(thumbUrl
+              ? {}
+              : {
+                  jobMockup: {
+                    industry: l.industry,
+                    requiredRoles: l.requiredRoles,
+                    description: l.description,
+                  },
+                }),
           },
         });
       }

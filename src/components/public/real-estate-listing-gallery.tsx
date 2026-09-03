@@ -477,7 +477,8 @@ export function RealEstateListingGallery(props: {
       category: sharePayload?.category,
       priceLabel: sharePayload?.priceLabel,
       badge: sharePayload?.badge,
-      imageUrl: sharePayload?.imageUrl ?? urls[0] ?? null,
+      // Prefer share payload even when imageUrl is null (job mockup covers).
+      imageUrl: sharePayload ? (sharePayload.imageUrl ?? null) : (urls[0] ?? null),
       location: sharePayload?.location,
       specs: sharePayload?.specs,
       createdAt: sharePayload?.createdAt,
@@ -488,6 +489,7 @@ export function RealEstateListingGallery(props: {
       contactPhone: sharePayload?.contactPhone,
       themeColor: sharePayload?.themeColor,
       url: sharePayload?.url,
+      jobMockup: sharePayload?.jobMockup,
     };
   }, [listingId, listingKind, saveCount, sharePayload, title, urls]);
 

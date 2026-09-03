@@ -243,6 +243,7 @@ export function CardMedia({
       contactPhone: sharePayload?.contactPhone,
       themeColor: sharePayload?.themeColor,
       url: sharePayload?.url,
+      jobMockup: sharePayload?.jobMockup,
     }),
     [alt, imageUrl, listingId, listingKind, saveCount, sharePayload, topLeftBadge]
   );

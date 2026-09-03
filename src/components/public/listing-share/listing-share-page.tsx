@@ -396,7 +396,7 @@ function needsCaptureWarmup(): boolean {
 
 const btnSx = {
   height: 54,
-  borderRadius: 2,
+  borderRadius: 999,
   fontWeight: 800,
   textTransform: 'none' as const,
   fontSize: '0.95rem',
@@ -405,6 +405,7 @@ const btnSx = {
   letterSpacing: '-0.01em',
   flex: 1,
   minWidth: 0,
+  border: 'none',
 };
 
 function ShareThemePickerPopover({
@@ -1001,7 +1002,8 @@ export function ListingSharePage({
 
             <Button
               type="button"
-              variant="outlined"
+              variant="contained"
+              disableElevation
               size="large"
               disabled={Boolean(busy)}
               onClick={() => void handleSaveCard()}
@@ -1017,17 +1019,16 @@ export function ListingSharePage({
                 px: 1.25,
                 fontSize: { xs: '0.8rem', sm: '0.9rem' },
                 whiteSpace: 'nowrap',
-                borderColor: 'rgba(255,255,255,0.22)',
                 color: '#fff',
-                bgcolor: 'rgba(255,255,255,0.04)',
+                bgcolor: 'rgba(255,255,255,0.1)',
                 '& .MuiButton-startIcon': { mr: 0.75, ml: 0 },
                 '&:hover': {
-                  borderColor: themeColor,
-                  bgcolor: shareThemeToRgba(themeColor, 0.12),
+                  bgcolor: shareThemeToRgba(themeColor, 0.22),
                   color: '#fff',
+                  boxShadow: 'none',
                 },
                 '&.Mui-disabled': {
-                  borderColor: 'rgba(255,255,255,0.1)',
+                  bgcolor: 'rgba(255,255,255,0.06)',
                   color: 'rgba(255,255,255,0.35)',
                 },
               }}
@@ -1045,17 +1046,16 @@ export function ListingSharePage({
                 width: 54,
                 height: 54,
                 flex: 'none',
-                borderRadius: 2,
-                border: '1px solid rgba(255,255,255,0.22)',
+                borderRadius: 999,
+                border: 'none',
                 color: '#fff',
-                bgcolor: 'rgba(255,255,255,0.04)',
+                bgcolor: 'rgba(255,255,255,0.1)',
                 '&:hover': {
-                  borderColor: themeColor,
-                  bgcolor: shareThemeToRgba(themeColor, 0.12),
+                  bgcolor: shareThemeToRgba(themeColor, 0.22),
                   color: '#fff',
                 },
                 '&.Mui-disabled': {
-                  borderColor: 'rgba(255,255,255,0.1)',
+                  bgcolor: 'rgba(255,255,255,0.06)',
                   color: 'rgba(255,255,255,0.35)',
                 },
               }}

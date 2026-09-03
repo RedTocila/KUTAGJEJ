@@ -11,6 +11,7 @@ import {
   beginPendingNavigation,
   clearPendingNavigation,
   clearPendingNavigationIfMatches,
+  normalizeNavPath,
   pathFromHref,
 } from '@/lib/navigation-pending';
 import { isPostListingPath } from '@/lib/post-listing-path';
@@ -24,6 +25,8 @@ import { ListingDetailSkeleton } from '@/components/public/listing-detail-skelet
 import { PostListingFormSkeleton } from '@/components/user/post-listing-header';
 
 const PENDING_TIMEOUT_MS = 10_000;
+/** Soft-nav to home that never commits → full document load (avoids eternal skeletons). */
+const HOME_SOFT_NAV_FALLBACK_MS = 8_000;
 
 function shouldSkipOverlay(path: string, currentPath: string): boolean {
   // These routes paint from cache / their own cards — a full-page loader flashes.
@@ -51,7 +54,7 @@ function HomePendingSkeleton() {
       <HeroSection>
         <HomeBannerSkeleton />
       </HeroSection>
-      <HomeCarouselsFallback />
+      <HomeCarouselsFallback refresh />
     </>
   );
 }
@@ -167,9 +170,19 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
 
   React.useEffect(() => {
     if (!pendingPath) return undefined;
+    const target = pendingPath;
+    const isHome = target === paths.home;
     const timer = window.setTimeout(() => {
       clearPendingNavigation();
-    }, PENDING_TIMEOUT_MS);
+      // Soft nav never committed — hard load so the user is not stuck on skeletons.
+      if (
+        isHome &&
+        typeof window !== 'undefined' &&
+        normalizeNavPath(window.location.pathname) !== paths.home
+      ) {
+        window.location.assign(paths.home);
+      }
+    }, isHome ? HOME_SOFT_NAV_FALLBACK_MS : PENDING_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [pendingPath]);
 

@@ -60,6 +60,9 @@ export function HomepageOkazionSection({
 
   React.useEffect(() => {
     if (!ssrOk || initialListings.length === 0) return;
+    setListings(initialListings);
+    setTotal(initialTotal);
+    setLoading(false);
     patchHomepageListingsCache({ okazion: initialListings, okazionTotal: initialTotal });
   }, [ssrOk, initialListings, initialTotal]);
 

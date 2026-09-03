@@ -168,25 +168,37 @@ export function JobListingDetailView({
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
 
   const sharePayload = React.useMemo<ListingSharePayload>(
-    () => ({
-      listingKind: 'job',
-      listingId: listing.id,
-      title: listing.title,
-      category: industryLabel,
-      priceLabel: salary,
-      badge: jobTypeLabel,
-      imageUrl: coverImageUrls[0] ?? listing.imageUrl ?? null,
-      location: locationLine || listing.cityName || undefined,
-      specs: [
-        { icon: 'clock', label: jobTypeLabel },
-        { icon: 'briefcase', label: industryLabel },
-      ],
-      createdAt: listing.createdAt,
-      viewCount,
-      saveCount: listing.saveCount,
-      contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
-      url: canonicalUrl,
-    }),
+    () => {
+      const imageUrl = coverImageUrls[0] ?? null;
+      return {
+        listingKind: 'job',
+        listingId: listing.id,
+        title: listing.title,
+        category: industryLabel,
+        priceLabel: salary,
+        badge: jobTypeLabel,
+        imageUrl,
+        location: locationLine || listing.cityName || undefined,
+        specs: [
+          { icon: 'clock', label: jobTypeLabel },
+          { icon: 'briefcase', label: industryLabel },
+        ],
+        createdAt: listing.createdAt,
+        viewCount,
+        saveCount: listing.saveCount,
+        contactPhone: (listing.contactPhone ?? listing.seller?.phone)?.trim() || undefined,
+        url: canonicalUrl,
+        ...(imageUrl
+          ? {}
+          : {
+              jobMockup: {
+                industry: listing.industry,
+                requiredRoles: listing.requiredRoles,
+                description: listing.description,
+              },
+            }),
+      };
+    },
     [canonicalUrl, coverImageUrls, industryLabel, jobTypeLabel, listing, locationLine, salary, viewCount]
   );
 

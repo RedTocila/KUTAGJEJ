@@ -91,6 +91,15 @@ export function JobCard({
       saveCount: listing.saveCount,
       contactPhone: listing.contactPhone?.trim() || undefined,
       url: listingJobPublicHref(listing),
+      ...(displayImageUrl
+        ? {}
+        : {
+            jobMockup: {
+              industry: listing.industry,
+              requiredRoles: listing.requiredRoles,
+              description: listing.description,
+            },
+          }),
     }),
     [
       displayImageUrl,
@@ -99,7 +108,10 @@ export function JobCard({
       listing.cityName,
       listing.contactPhone,
       listing.createdAt,
+      listing.description,
       listing.id,
+      listing.industry,
+      listing.requiredRoles,
       listing.saveCount,
       listing.title,
       locationLabel,

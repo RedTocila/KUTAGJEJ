@@ -353,7 +353,7 @@ export function ReferralSummaryCard() {
               borderRadius: 2.25,
               border: 'none',
               bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? alpha('#000', 0.4) : 'rgba(15, 23, 10, 0.05)',
+                theme.palette.mode === 'dark' ? alpha('#fff', 0.12) : 'rgba(15, 23, 10, 0.05)',
             }}
           >
             <Typography

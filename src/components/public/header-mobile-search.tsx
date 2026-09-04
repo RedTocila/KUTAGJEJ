@@ -5,14 +5,13 @@ import { Box, Stack, Typography } from '@mui/material';
 
 import { useSearchOverlay } from '@/contexts/search-overlay-context';
 import { useCopy } from '@/hooks/use-copy';
-import {
-  ProductSearchIcon,
-  productChromeIdleBg,
-  productChromeIdleHoverBg,
-  productSearchBarSx,
-} from '@/components/public/product-browse-chrome';
+import { ProductSearchIcon, productSearchBarSx } from '@/components/public/product-browse-chrome';
 
 const HEADER_SEARCH_HEIGHT = 42;
+
+/** Same soft primary wash as hero category circle containers. */
+const SEARCH_BAR_BG = 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
+const SEARCH_BAR_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
 
 /** Mobile header search control — opens the full-page search sheet. */
 export function HeaderMobileSearch() {
@@ -39,8 +38,8 @@ export function HeaderMobileSearch() {
         cursor: 'pointer',
         font: 'inherit',
         textAlign: 'left',
-        bgcolor: productChromeIdleBg,
-        '&:hover': { bgcolor: productChromeIdleHoverBg },
+        bgcolor: SEARCH_BAR_BG,
+        '&:hover': { bgcolor: SEARCH_BAR_BG_HOVER },
       }}
     >
       <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}>

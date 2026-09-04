@@ -329,7 +329,7 @@ export function BannerSlideCard({
               ) : (
                 <Box sx={{ flex: 'none', minWidth: 0, alignSelf: 'flex-end', mb: 0.15 }}>{bottomRightLabel}</Box>
               )
-            ) : href ? (
+            ) : href && showNavigationArrow ? (
               <Box
                 aria-hidden
                 sx={{

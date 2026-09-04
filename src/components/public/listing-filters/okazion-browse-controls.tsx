@@ -172,6 +172,7 @@ export function OkazionBrowseControls() {
                 href={href}
                 label={vertical.label}
                 icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
+                bareIcon
                 active={active}
                 accent={OKAZION_SEARCH_ACCENT}
               />

@@ -352,8 +352,10 @@ export function ReferralSummaryCard() {
               py: 0.65,
               borderRadius: 2.25,
               border: 'none',
-              bgcolor: (theme) =>
-                theme.palette.mode === 'dark' ? alpha('#fff', 0.12) : 'rgba(15, 23, 10, 0.05)',
+              bgcolor: 'rgba(15, 23, 10, 0.05)',
+              '.dark &': {
+                bgcolor: alpha('#fff', 0.14),
+              },
             }}
           >
             <Typography
@@ -413,8 +415,10 @@ export function ReferralSummaryCard() {
             py: { xs: 1, sm: 1.2 },
             borderRadius: 2.5,
             border: 'none',
-            bgcolor: (theme) =>
-              theme.palette.mode === 'dark' ? alpha('#fff', 0.06) : 'rgba(15, 23, 10, 0.045)',
+            bgcolor: 'rgba(15, 23, 10, 0.045)',
+            '.dark &': {
+              bgcolor: alpha('#fff', 0.08),
+            },
           }}
           aria-label={`${streakCurrent}/${required} ${t.streakTitle(required)}`}
         >

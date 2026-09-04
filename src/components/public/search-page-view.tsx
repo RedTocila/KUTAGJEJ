@@ -235,7 +235,6 @@ export function SearchPageView({
   const [error, setError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<SearchItem[]>([]);
   const [total, setTotal] = React.useState(0);
-  const [profilePage, setProfilePage] = React.useState(1);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
   const [entered, setEntered] = React.useState(isOverlay);
@@ -309,7 +308,7 @@ export function SearchPageView({
   );
 
   const runVerticalSearch = React.useCallback(
-    async (cat: HomeVerticalId, q: string, nextPage = 1, append = false) => {
+    async (cat: HomeVerticalId, q: string) => {
       const generation = ++searchGeneration.current;
       setLoading(true);
       setError(null);
@@ -317,21 +316,14 @@ export function SearchPageView({
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        const res = await fetchVerticalResults(cat, q, nextPage);
+        const res = await fetchVerticalResults(cat, q, 1);
         if (generation !== searchGeneration.current) return;
-        setItems((prev) => {
-          if (!append) return res.items;
-          const seen = new Set(prev.map(searchItemKey));
-          return [...prev, ...res.items.filter((item) => !seen.has(searchItemKey(item)))];
-        });
-        setProfilePage(nextPage);
+        setItems(res.items);
         setTotal(res.total);
       } catch {
         if (generation !== searchGeneration.current) return;
-        if (!append) {
-          setItems([]);
-          setTotal(0);
-        }
+        setItems([]);
+        setTotal(0);
         setError(t.search.failed);
       } finally {
         if (generation === searchGeneration.current) setLoading(false);
@@ -341,7 +333,7 @@ export function SearchPageView({
   );
 
   const runProfileSearch = React.useCallback(
-    async (q: string, nextPage = 1, append = false) => {
+    async (q: string) => {
       const generation = ++searchGeneration.current;
       setLoading(true);
       setError(null);
@@ -349,34 +341,20 @@ export function SearchPageView({
       setSubmittedQuery(q.trim());
       setAiReply(null);
       try {
-        const res = await fetchPublicMemberSearch(q, PAGE_SIZE, nextPage);
+        const res = await fetchPublicMemberSearch(q, PAGE_SIZE, 1);
         if (generation !== searchGeneration.current) return;
         if (!res.ok) {
-          if (!append) {
-            setItems([]);
-            setTotal(0);
-          }
+          setItems([]);
+          setTotal(0);
           setError(t.search.failed);
           return;
         }
-        const nextItems = res.members.map((member) => ({ kind: 'profile' as const, member }));
-        setItems((prev) => {
-          if (!append) return nextItems;
-          const seen = new Set(
-            prev
-              .filter((item): item is Extract<SearchItem, { kind: 'profile' }> => item.kind === 'profile')
-              .map((item) => item.member.id)
-          );
-          return [...prev, ...nextItems.filter((item) => !seen.has(item.member.id))];
-        });
-        setProfilePage(nextPage);
+        setItems(res.members.map((member) => ({ kind: 'profile' as const, member })));
         setTotal(res.total);
       } catch {
         if (generation !== searchGeneration.current) return;
-        if (!append) {
-          setItems([]);
-          setTotal(0);
-        }
+        setItems([]);
+        setTotal(0);
         setError(t.search.failed);
       } finally {
         if (generation === searchGeneration.current) setLoading(false);
@@ -480,7 +458,6 @@ export function SearchPageView({
     setQuery('');
     setItems([]);
     setTotal(0);
-    setProfilePage(1);
     setHasSearched(next.id !== 'ai');
     setSubmittedQuery('');
     setError(null);
@@ -866,15 +843,13 @@ export function SearchPageView({
                 <ResultCard key={searchItemKey(item)} item={item} divider={index < items.length - 1} />
               ))}
             </Box>
-            {total > items.length && isLiveSearchCategory(categoryId) ? (
+            {total > items.length && isLiveSearchCategory(categoryId) && activeCategory ? (
               <Box sx={{ textAlign: 'center' }}>
                 <Button
                   onClick={() => {
-                    if (isProfilesSearchCategory(categoryId)) {
-                      void runProfileSearch(submittedQuery, profilePage + 1, true);
-                      return;
-                    }
-                    void runVerticalSearch(categoryId, submittedQuery, profilePage + 1, true);
+                    const q = submittedQuery.trim();
+                    const qs = q ? buildBrowseUrlQuery({ q }) : '';
+                    goTo(`${activeCategory.href}${qs}`);
                   }}
                   disabled={loading}
                   variant="text"

@@ -27,7 +27,6 @@ import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
-import { PortalIconBox } from '@/components/user/portal-cards';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
@@ -74,8 +73,6 @@ export function PublicCategoryHero({
     : localizeSearchCategory(verticalId, language).label;
   const isOkazion = verticalId === 'okazion';
   const isProfiles = verticalId === 'profiles';
-  const accent = isOkazion ? OKAZION_ACCENT : isProfiles ? PROFILES_ACCENT : undefined;
-  const accentSoft = isOkazion ? OKAZION_ACCENT_SOFT : isProfiles ? PROFILES_ACCENT_SOFT : undefined;
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
@@ -152,26 +149,9 @@ export function PublicCategoryHero({
               aria-label={t.browse.backHomeAria}
               sx={{ display: { xs: 'inline-flex', md: 'none' } }}
             />
-            {accent && accentSoft ? (
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 2.25,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  bgcolor: accentSoft,
-                  color: accent,
-                }}
-              >
-                <HomeVerticalIcon verticalId={verticalId} size={22} />
-              </Box>
-            ) : (
-              <PortalIconBox size={40}>
-                <HomeVerticalIcon verticalId={verticalId} size={22} />
-              </PortalIconBox>
-            )}
+            <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0, lineHeight: 0 }}>
+              <HomeVerticalIcon verticalId={verticalId} size={34} />
+            </Box>
             <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
               <Typography
                 component="h1"

@@ -848,7 +848,7 @@ export function SearchPageView({
                 <Button
                   onClick={() => {
                     const q = submittedQuery.trim();
-                    const qs = q ? buildBrowseUrlQuery({ q }) : '';
+                    const qs = q ? buildBrowseUrlQuery({ q: [q] }) : '';
                     goTo(`${activeCategory.href}${qs}`);
                   }}
                   disabled={loading}

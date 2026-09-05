@@ -92,7 +92,16 @@ function validateJobPayload(body) {
   if (coverMode && !COVER_MODE_VALUES.includes(coverMode)) {
     return { ok: false, message: 'Lloji i kopertinës nuk është i vlefshëm.' };
   }
-  body.coverMode = coverMode || 'image';
+  const hasImages =
+    Array.isArray(body?.imageUrls) &&
+    body.imageUrls.some((url) => String(url || '').trim().length > 0);
+  // Jobs without photos always use the hiring mockup — never persist coverMode=image with empty images.
+  if (coverMode === 'mockup' || (!coverMode && !hasImages) || (coverMode === 'image' && !hasImages)) {
+    body.coverMode = 'mockup';
+    body.imageUrls = [];
+  } else {
+    body.coverMode = 'image';
+  }
 
   const preferredGender = String(body?.preferredGender || '').trim();
   if (preferredGender && !PREFERRED_GENDER_VALUES.includes(preferredGender)) {

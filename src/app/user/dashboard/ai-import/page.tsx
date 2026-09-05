@@ -65,6 +65,7 @@ import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 import { useUser } from '@/hooks/use-user';
 import { ImageLightbox } from '@/components/common/image-lightbox';
 import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
+import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { HomeVerticalIcon } from '@/components/public/home-vertical-icon';
 import {
   AI_BUILD_INPUT_BG_DARK,
@@ -78,6 +79,7 @@ import {
 } from '@/components/user/ai-build-theme';
 import { AiCategoryMismatchPanel } from '@/components/user/ai-category-mismatch-panel';
 import { PostListingFormSurface, PostListingHeader } from '@/components/user/post-listing-header';
+import { JOB_LISTING_COVER_ASPECT_RATIO } from '@/lib/job-listing-cover';
 import { MOTION } from '@/styles/motion';
 import { productButtonSx } from '@/styles/product-sx';
 
@@ -685,10 +687,13 @@ export default function AiImportListingsPage() {
               })
             : (draft.imageUrls ?? []);
         const jobCover = resolveJobAiCover({ prompt: sourcePrompt, imageUrls: merged });
+        const photoWarning =
+          draft.warning === 'Shtoni të paktën një foto.' || draft.warning === 'Shtoni të paktën një foto';
         return {
           ...draft,
           sourcePrompt,
           imageUrls: jobCover.imageUrls,
+          warning: photoWarning ? null : draft.warning,
           form: { ...(draft.form ?? {}), coverMode: jobCover.coverMode },
         };
       }
@@ -1611,6 +1616,31 @@ export default function AiImportListingsPage() {
                         onRemove={() => removeDraftImage(draft.id, 0)}
                         disabled={postingAll || postingId != null || openingId != null}
                       />
+                    ) : draft.category === 'job-listings' || draft.detectedCategory === 'job-listings' ? (
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: 72,
+                          aspectRatio: JOB_LISTING_COVER_ASPECT_RATIO,
+                          flexShrink: 0,
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <JobListingFallback
+                          listingId={draft.id}
+                          title={draft.title}
+                          requiredRoles={
+                            Array.isArray(draft.form?.requiredRoles)
+                              ? draft.form.requiredRoles.map(String)
+                              : undefined
+                          }
+                          industry={typeof draft.form?.industry === 'string' ? draft.form.industry : undefined}
+                          description={
+                            typeof draft.form?.description === 'string' ? draft.form.description : draft.summary
+                          }
+                        />
+                      </Box>
                     ) : (
                       <Box
                         sx={{

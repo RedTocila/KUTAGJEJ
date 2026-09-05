@@ -1930,7 +1930,8 @@ General rules:
 - zoneName should be the neighborhood/lagje when mentioned (e.g. Blloku, Komuna e Parisit). Leave empty if unknown — never invent a zone.
 - surfaceM2 for real-estate when size is stated. Leave empty if unknown — never invent m².
 - imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
-- If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.`;
+- If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.
+- When preferredCategory is job-listings: NEVER invent roles, titles, or offers from profile.businessName / businessCategory / accountType (e.g. do not turn every thin link into a fitness trainer / coach listing). Use only the link content, attached flyer photos, and the user prompt.`;
 }
 
 const MAX_ATTACHED_IMAGES = 6;
@@ -2133,6 +2134,41 @@ function sanitizeProfile(raw) {
         .trim()
         .slice(0, 80) || null,
   };
+}
+
+/**
+ * Job imports must not see professional account branding — otherwise thin Instagram
+ * scrapes get filled with the seller's trainer/coach profile instead of the job post.
+ */
+function profileForCategory(profile, preferredCategory) {
+  if (!profile) return null;
+  if (preferredCategory !== 'job-listings') return profile;
+  return {
+    accountType: null,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    fullName: null,
+    phone: profile.phone,
+    email: null,
+    businessName: null,
+    businessOwner: null,
+    businessCategory: null,
+    nipt: null,
+    preferredCityId: profile.preferredCityId,
+    preferredCityName: profile.preferredCityName,
+  };
+}
+
+function snapshotHasUsableListingContent(snapshot) {
+  if (!snapshot) return false;
+  if (snapshot.mapsPlace) return true;
+  const caption = String(snapshot.caption || snapshot.description || '').trim();
+  if (caption.length >= 12) return true;
+  const text = String(snapshot.text || '').trim();
+  if (text.length >= 40) return true;
+  const images = Array.isArray(snapshot.imageUrls) ? snapshot.imageUrls.filter(Boolean) : [];
+  if (images.length > 0) return true;
+  return false;
 }
 
 function applyProfileDefaultsToForm(form, profile, { allowProfileTitle = true, skipLocationDefaults = false } = {}) {
@@ -3453,7 +3489,7 @@ async function interpretListing({
       url: url || null,
       prompt: prompt || null,
       preferredCategory: preferredCategory || null,
-      profile: profile || null,
+      profile: profileForCategory(profile, preferredCategory) || null,
       currentListing: currentListing || null,
       fetchOk: snapshot?.ok ?? null,
       fetchStatus: snapshot?.status ?? null,
@@ -3480,7 +3516,7 @@ async function interpretListing({
       jobCatalogHints:
         preferredCategory === 'job-listings'
           ? {
-              note: 'Job flyer OCR: extract employer name, job title/role, full street address → locationAddress, phone → contactPhone, hours/shifts → description bullets + jobType, salary if stated. Infer cityName from address (e.g. Rruga e Kavajës → Tiranë). Never leave only cityName when address/phone/hours are visible on the flyer.',
+              note: 'Job flyer OCR: extract employer name, job title/role, full street address → locationAddress, phone → contactPhone, hours/shifts → description bullets + jobType, salary if stated. Infer cityName from address (e.g. Rruga e Kavajës → Tiranë). Never leave only cityName when address/phone/hours are visible on the flyer. CRITICAL: Never invent job roles from seller profile (businessName / businessCategory / accountType). Profile may only supply contactPhone or city when the listing omits them. If the link has no readable job text or flyer, leave title empty rather than inventing a profession.',
             }
           : null,
       attachedImageCount: visionImages.length,
@@ -3534,8 +3570,13 @@ function applyJobAiCoverToDraft({ category, sourcePrompt, imageUrls, form }) {
 async function finalizeDraft({ interpreted, sourceUrl, warning, profile, sourcePrompt, snapshot }) {
   const hasCaption = Boolean(String(snapshot?.caption || snapshot?.description || '').trim());
   const socialSource = Boolean(snapshot?.social) || isInstagramUrl(sourceUrl);
+  const isJobCategory =
+    interpreted?.category === 'job-listings' ||
+    interpreted?.detectedCategory === 'job-listings' ||
+    interpreted?.preferredCategory === 'job-listings';
   // Social posts must not all inherit the same KuTaGjej business/profile name.
-  const allowProfileTitle = !(socialSource && hasCaption);
+  // Job listings must never take titles from a professional seller profile.
+  const allowProfileTitle = !(socialSource && hasCaption) && !isJobCategory;
 
   // Prefer category mismatch so the UI can offer a category switch instead of a hard block.
   if (interpreted?.error === CATEGORY_MISMATCH_CODE || interpreted?.categoryMatch === false) {
@@ -3760,6 +3801,7 @@ async function importListingsFromLinks({
   const preferredCategory = CATEGORIES.includes(category) ? category : null;
   const mapsOnly = urls.length > 0 && urls.every((u) => isGoogleMapsUrl(u));
   const effectivePreferredCategory = preferredCategory || (mapsOnly ? 'businesses' : null);
+  const modelProfile = profileForCategory(profile, effectivePreferredCategory);
 
   if (!urls.length && !prompt && !attachedImages.length) {
     const err = new Error('Paste a link, describe the listing, or attach images');
@@ -3782,7 +3824,7 @@ async function importListingsFromLinks({
         url: null,
         snapshot: null,
         preferredCategory: effectivePreferredCategory,
-        profile,
+        profile: modelProfile,
         attachedImages,
         mode,
         prompt,
@@ -3793,7 +3835,7 @@ async function importListingsFromLinks({
         interpreted,
         sourceUrl: '',
         warning: null,
-        profile,
+        profile: modelProfile,
         sourcePrompt: prompt,
       });
       throwIfAborted(signal);
@@ -3825,11 +3867,36 @@ async function importListingsFromLinks({
     try {
       throwIfAborted(signal);
       const snapshot = await fetchPageSnapshot(url, signal);
+      const hasAttached = Array.isArray(attachedImages) && attachedImages.length > 0;
+      // Thin Instagram scrapes + a professional seller profile used to invent
+      // "fitness trainer" jobs for every link. Fail closed when there is nothing to read.
+      if (
+        effectivePreferredCategory === 'job-listings' &&
+        !snapshotHasUsableListingContent(snapshot) &&
+        !hasAttached &&
+        !prompt
+      ) {
+        drafts.push({
+          id: `ai-${Date.now()}-${drafts.length}`,
+          sourceUrl: url,
+          category: null,
+          title: '',
+          summary: '',
+          cityName: '',
+          imageUrls: [],
+          imageRoles: [],
+          form: {},
+          error:
+            'Could not read this job link (login wall or empty page). Paste the job text or attach a flyer photo.',
+          errorCode: null,
+        });
+        continue;
+      }
       const interpreted = await interpretListing({
         url,
         snapshot,
         preferredCategory: effectivePreferredCategory,
-        profile,
+        profile: modelProfile,
         attachedImages,
         mode,
         prompt,
@@ -3843,7 +3910,7 @@ async function importListingsFromLinks({
         interpreted,
         sourceUrl: url,
         warning: snapshot.ok ? null : friendlyFetchWarning(snapshot.fetchError),
-        profile,
+        profile: modelProfile,
         sourcePrompt: prompt,
         snapshot,
       });

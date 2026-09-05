@@ -15,6 +15,9 @@ export function jobListingCoverImageUrl(listing: JobCoverListing): string | null
 /** True when the generated icon + map cover should show instead of a photo. */
 export function jobListingUsesMockupCover(listing: JobCoverListing): boolean {
   const imageUrl = listing.imageUrl ?? listing.imageUrls?.[0] ?? null;
-  return listing.coverMode === 'mockup' || (!listing.coverMode && !imageUrl);
+  if (listing.coverMode === 'mockup') return true;
+  // No usable photo → always show mockup (covers legacy rows stored as coverMode=image with empty urls).
+  if (!imageUrl) return true;
+  return false;
 }
 

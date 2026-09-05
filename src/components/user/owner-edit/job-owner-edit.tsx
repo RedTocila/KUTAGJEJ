@@ -205,7 +205,8 @@ export function JobOwnerEdit({
         uploaded = up.urls;
       }
       const imageUrls = [...kept, ...uploaded].slice(0, MAX_IMAGES);
-      if (imageUrls.length < 1) {
+      const coverMode: 'image' | 'mockup' = imageUrls.length > 0 ? 'image' : 'mockup';
+      if (coverMode === 'image' && imageUrls.length < 1) {
         setError('Shtoni të paktën një foto.');
         return;
       }
@@ -213,6 +214,7 @@ export function JobOwnerEdit({
       const res = await updateJobListing(draft.id, {
         title: draft.title.trim(),
         description: (draft.description ?? '').trim(),
+        coverMode,
         industry: draft.industry,
         cityId: loc.cityId,
         zoneId: loc.zoneId,
@@ -233,13 +235,13 @@ export function JobOwnerEdit({
         responsibilities: draft.responsibilities ?? [],
         requirements: draft.requirements ?? [],
         benefits: draft.benefits ?? [],
-        imageUrls,
+        imageUrls: coverMode === 'mockup' ? [] : imageUrls,
       });
       if (res.error) {
         setError(res.error);
         return;
       }
-      const next = { ...draft, imageUrls };
+      const next = { ...draft, imageUrls: coverMode === 'mockup' ? [] : imageUrls, coverMode };
       setDraft(next);
       setBaseline(JSON.stringify(next));
       setExistingUrls(imageUrls);

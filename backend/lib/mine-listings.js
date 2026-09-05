@@ -237,7 +237,10 @@ function formatMineJob(doc, cityById) {
   return {
     id: listingId(doc),
     title: doc.title,
-    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
+    coverMode:
+      doc.coverMode === 'mockup' || !(Array.isArray(doc.imageUrls) && doc.imageUrls.some(Boolean))
+        ? 'mockup'
+        : 'image',
     industry: doc.industry,
     cityId: doc.cityId ? String(doc.cityId) : null,
     cityName: city?.name ?? null,
@@ -430,10 +433,11 @@ function formatMineCarFull(doc, cityById) {
 function formatMineJobFull(doc, cityById) {
   const city = cityById?.get(String(doc.cityId));
   const zone = city?.zones?.find((z) => String(z.id) === String(doc.zoneId));
+  const imageUrls = Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [];
   return {
     id: listingId(doc),
     title: doc.title,
-    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
+    coverMode: doc.coverMode === 'mockup' || imageUrls.length === 0 ? 'mockup' : 'image',
     description: doc.description ?? '',
     industry: doc.industry,
     cityId: doc.cityId ? String(doc.cityId) : null,
@@ -454,7 +458,7 @@ function formatMineJobFull(doc, cityById) {
     requirements: doc.requirements ?? [],
     requiredRoles: doc.requiredRoles ?? [],
     benefits: doc.benefits ?? [],
-    imageUrls: Array.isArray(doc.imageUrls) ? doc.imageUrls.filter(Boolean) : [],
+    imageUrls,
     status: doc.status || 'pending',
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

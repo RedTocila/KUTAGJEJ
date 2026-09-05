@@ -162,7 +162,9 @@ function formatJob(doc, cityById) {
     kind: 'job',
     title: doc.title,
     description: snippet(doc.description),
-    coverMode: doc.coverMode === 'mockup' ? 'mockup' : 'image',
+    coverMode: doc.coverMode === 'mockup' || !(Array.isArray(doc.imageUrls) && doc.imageUrls.some(Boolean))
+      ? 'mockup'
+      : 'image',
     industry: doc.industry,
     cityName: city?.name ?? null,
     zoneName: zone?.name ?? null,

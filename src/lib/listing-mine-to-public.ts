@@ -198,7 +198,10 @@ export function jobMineToPublic(mine: JobMineListing): PublicJobListingDetail {
     kind: 'job',
     title: mine.title,
     description: mine.description ?? '',
-    coverMode: mine.coverMode === 'mockup' ? 'mockup' : 'image',
+    coverMode:
+      mine.coverMode === 'mockup' || !(Array.isArray(mine.imageUrls) && mine.imageUrls.some(Boolean))
+        ? 'mockup'
+        : 'image',
     industry: mine.industry,
     cityName: mine.cityName,
     zoneName: mine.zoneName ?? null,

@@ -8,20 +8,24 @@ import { paths } from '@/paths';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
-  AI_SEARCH_BLUE_SOFT,
   localizeHomeBrowseCategories,
   localizeSearchCategories,
   OKAZION_ACCENT,
   OKAZION_ACCENT_SOFT,
   PROFILES_ACCENT,
-  PROFILES_ACCENT_SOFT,
 } from '@/lib/home-categories';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { MOTION } from '@/styles/motion';
 
+import { productChromeSubtleBg } from './product-browse-chrome';
 import { HomeVerticalIcon } from './home-vertical-icon';
+
+/** Soft grey matching the header search bar; icons use primary green (OKAZION red). */
+const CATEGORY_TILE_BG = productChromeSubtleBg;
+const CATEGORY_TILE_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
+const CATEGORY_ICON_COLOR = 'var(--mui-palette-primary-main)';
 
 export type HeroCategoryCirclesVariant = 'links' | 'tabs';
 
@@ -44,13 +48,6 @@ function accentColor(mode: AccentMode): string {
   if (mode === 'okazion') return OKAZION_ACCENT;
   if (mode === 'profiles') return PROFILES_ACCENT;
   return 'var(--mui-palette-primary-main)';
-}
-
-function accentSoft(mode: AccentMode): string {
-  if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
-  if (mode === 'okazion') return OKAZION_ACCENT_SOFT;
-  if (mode === 'profiles') return PROFILES_ACCENT_SOFT;
-  return 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 }
 
 function accentModeFor(id: string): AccentMode {
@@ -145,10 +142,10 @@ export function HeroCategoryCircles({
     return undefined;
   })();
 
-  /** Soft accent fill always; hover greens the label. */
+  /** Grey tile; hover washes green (OKAZION washes red). */
   const itemSx = (mode: AccentMode) => {
     const accent = accentColor(mode);
-    const soft = accentSoft(mode);
+    const hoverTileBg = mode === 'okazion' ? OKAZION_ACCENT_SOFT : CATEGORY_TILE_BG_HOVER;
     return {
       flexShrink: 0,
       alignItems: 'center',
@@ -161,7 +158,7 @@ export function HeroCategoryCircles({
       WebkitTapHighlightColor: 'transparent',
       touchAction: 'manipulation',
       '&:hover .hero-cat-tile': {
-        bgcolor: soft,
+        bgcolor: hoverTileBg,
       },
       '&:hover .hero-cat-label': {
         color: accent,
@@ -171,7 +168,7 @@ export function HeroCategoryCircles({
         transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-tile': {
-        bgcolor: soft,
+        bgcolor: hoverTileBg,
         transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-label': {
@@ -213,9 +210,9 @@ export function HeroCategoryCircles({
       {heroVerticals.map((v, i) => {
         const selected = selectedIndex >= 0 && i === selectedIndex;
         const mode = accentModeFor(v.id);
-        const accent = accentColor(mode);
-        const soft = accentSoft(mode);
+        const isOkazion = v.id === 'okazion';
         const label = heroCategoryLabel(v.id, v.label);
+        const iconColor = isOkazion ? OKAZION_ACCENT : CATEGORY_ICON_COLOR;
         const body = (
           <>
             {/* Mobile: circle tile. Desktop: 4:3 tile matching the banner. */}
@@ -234,7 +231,7 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: soft,
+                bgcolor: CATEGORY_TILE_BG,
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
@@ -253,7 +250,7 @@ export function HeroCategoryCircles({
                   },
                 }}
               >
-                <HomeVerticalIcon verticalId={v.id} size={34} color={accent} />
+                <HomeVerticalIcon verticalId={v.id} size={34} color={iconColor} />
               </Box>
               <Typography
                 className="hero-cat-label"
@@ -292,7 +289,12 @@ export function HeroCategoryCircles({
 
         if (variant === 'tabs') {
           return (
-            <Stack key={v.id} spacing={{ xs: 0.15, md: 0 }} onClick={() => onSelect?.(i)} sx={itemSx(mode)}>
+            <Stack
+              key={v.id}
+              spacing={{ xs: 0.15, md: 0 }}
+              onClick={() => onSelect?.(i)}
+              sx={itemSx(mode)}
+            >
               {body}
             </Stack>
           );

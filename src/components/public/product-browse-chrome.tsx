@@ -138,6 +138,15 @@ export function productChromeIdleHoverBg(_theme?: Theme): string {
   return 'light-dark(#dcdcdc, #3d3d3d)';
 }
 
+/** Softer idle fill for homepage category tiles + header search — lower contrast vs page bg. */
+export function productChromeSubtleBg(_theme?: Theme): string {
+  return 'light-dark(#f2f2f2, #1f1f1f)';
+}
+
+export function productChromeSubtleHoverBg(_theme?: Theme): string {
+  return 'light-dark(#e8e8e8, #2a2a2a)';
+}
+
 /** Pill tag chrome — subcategory pills, filter chips, service tags. */
 export function productTagSx(active = false, accent?: ProductTagAccent): SxProps<Theme> {
   const accentColor = accent?.color ?? 'primary.main';

@@ -15,6 +15,7 @@ import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
+import { productChromeSubtleBg } from './product-browse-chrome';
 
 export function HomeCategoriesStrip() {
   const { language } = useLanguage();
@@ -93,19 +94,15 @@ export function HomeCategoriesStrip() {
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: isOkazion ? '#fff' : 'primary.main',
-                    bgcolor: isOkazion
-                      ? OKAZION_ACCENT
-                      : (theme) =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                            : 'rgba(var(--mui-palette-primary-mainChannel) / 0.12)',
+                    color: isOkazion ? OKAZION_ACCENT : 'primary.main',
+                    bgcolor: productChromeSubtleBg,
+                    transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                   }}
                 >
                   <HomeVerticalIcon
                     verticalId={v.id}
                     size={32}
-                    color={isOkazion ? '#fff' : undefined}
+                    color={isOkazion ? OKAZION_ACCENT : 'var(--mui-palette-primary-main)'}
                   />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>

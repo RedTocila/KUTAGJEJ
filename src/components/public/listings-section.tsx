@@ -131,7 +131,9 @@ export function ListingsSection({
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
-                  ...(meta.accent ? { color: meta.accent } : null),
+                  ...(meta.accent
+                    ? { color: verticalId === 'okazion' ? 'text.primary' : meta.accent }
+                    : null),
                 }}
               >
                 {title}

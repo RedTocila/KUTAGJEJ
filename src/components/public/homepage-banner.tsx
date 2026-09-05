@@ -188,8 +188,7 @@ export function HomepageBanner({
             position: 'relative',
             overflow: 'hidden',
             borderRadius: { xs: 3, md: 4 },
-            border: '1px solid',
-            borderColor: 'divider',
+            border: 'none',
             backgroundImage:
               'linear-gradient(135deg, var(--banner-base-from) 0%, var(--banner-base-to) 100%)',
             backgroundSize: '200% 200%',
@@ -325,8 +324,7 @@ export function HomepageBanner({
                 textTransform: 'uppercase',
                 bgcolor: 'var(--banner-eyebrow-bg)',
                 color: 'primary.main',
-                border: '1px solid',
-                borderColor: 'var(--banner-eyebrow-border)',
+                border: 'none',
               }}
             >
               {eyebrow}
@@ -373,6 +371,7 @@ export function HomepageBanner({
                   px: 2.5,
                   py: 1.25,
                   borderRadius: 2,
+                  border: 'none',
                   boxShadow: '0 8px 24px -8px rgba(var(--mui-palette-primary-mainChannel) / 0.6)',
                   '&:hover': {
                     boxShadow: '0 12px 28px -8px rgba(var(--mui-palette-primary-mainChannel) / 0.7)',
@@ -388,8 +387,9 @@ export function HomepageBanner({
                   {...(secondaryAction.href
                     ? { component: RouterLink, href: secondaryAction.href }
                     : { type: 'button' as const, onClick: secondaryAction.onClick })}
-                  variant="outlined"
+                  variant="contained"
                   size="large"
+                  disableElevation
                   sx={{
                     textTransform: 'none',
                     fontWeight: 600,
@@ -397,12 +397,13 @@ export function HomepageBanner({
                     px: 2.25,
                     py: 1.25,
                     borderRadius: 2,
-                    borderColor: 'divider',
+                    border: 'none',
                     color: 'text.primary',
                     bgcolor: 'var(--banner-secondary-bg)',
-                    backdropFilter: 'blur(8px)',
+                    boxShadow: 'none',
                     '&:hover': {
-                      borderColor: 'primary.main',
+                      border: 'none',
+                      boxShadow: 'none',
                       bgcolor: 'var(--banner-secondary-bg-hover)',
                     },
                   }}
@@ -435,8 +436,7 @@ export function HomepageBanner({
                         py: 0.65,
                         borderRadius: 99,
                         bgcolor: 'var(--banner-pill-bg)',
-                        border: '1px solid',
-                        borderColor: 'divider',
+                        border: 'none',
                         backdropFilter: 'blur(8px)',
                       }}
                     >

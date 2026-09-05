@@ -43,9 +43,9 @@ const PACKAGE_TIERS = [
     price1Month: 14,
     maxListAllCategories: 1,
     maxJobListings: 50,
-    maxCarListings: 15,
-    maxApartmentListings: 25,
-    maxProductListings: 15,
+    maxCarListings: 20,
+    maxApartmentListings: 40,
+    maxProductListings: 30,
     maxPremiumListings: 0,
     maxOkazionListings: 0,
     boostCredits: 150,
@@ -53,7 +53,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: false,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/15 Car · 0/25 Apartment · 0/15 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours',
+      '0/1 List in All Categories · 0/20 Car · 0/40 Apartment · 0/30 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours',
   },
   {
     planCode: 'grow',
@@ -63,8 +63,8 @@ const PACKAGE_TIERS = [
     maxListAllCategories: 1,
     maxJobListings: 200,
     maxCarListings: 40,
-    maxApartmentListings: 250,
-    maxProductListings: 50,
+    maxApartmentListings: 300,
+    maxProductListings: 70,
     maxPremiumListings: 20,
     maxOkazionListings: 5,
     boostCredits: 1000,
@@ -72,7 +72,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/250 Apartments · 0/50 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
+      '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
   },
   {
     planCode: 'elite',
@@ -182,7 +182,49 @@ async function ensureContractPackages() {
     console.log(`✓ Seeded missing contract packages (${upserted} inserted)`);
   }
 
+  await syncStarterGrowQuotas(sb);
   await backfillLongerTermPrices(sb);
+}
+
+/**
+ * Product quota adjustments for STARTER / GROW — keep catalog rows aligned without
+ * rewriting prices or other admin-edited fields.
+ */
+async function syncStarterGrowQuotas(sb) {
+  const now = new Date().toISOString();
+  const patches = [
+    {
+      planCode: 'starter',
+      max_apartment_listings: 40,
+      max_car_listings: 20,
+      max_product_listings: 30,
+      content:
+        '0/1 List in All Categories · 0/20 Car · 0/40 Apartment · 0/30 Product · 0/50 Job · 150 Boost Coins · Refresh same listing after 24 hours',
+    },
+    {
+      planCode: 'grow',
+      max_apartment_listings: 300,
+      max_product_listings: 70,
+      content:
+        '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 OKAZION (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
+    },
+  ];
+
+  let updated = 0;
+  for (const patch of patches) {
+    const { planCode, ...fields } = patch;
+    const { data, error } = await sb
+      .from('contracts')
+      .update({ ...fields, updated_at: now })
+      .eq('plan_code', planCode)
+      .select('id');
+    if (error) throw error;
+    updated += data?.length || 0;
+  }
+
+  if (updated > 0) {
+    console.log(`✓ Synced STARTER/GROW package quotas (${updated} contracts)`);
+  }
 }
 
 /** Fill null 6/12-month prices from monthly — never overwrites admin-set amounts. */

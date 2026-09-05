@@ -52,7 +52,7 @@ function planFeatureLines(t: AppMessages, plan: PublicContract): FeatureListItem
     lines.push(t.packages.premiumListingDays(plan.maxPremiumListings, 30));
   }
   if (plan.maxOkazionListings > 0) {
-    lines.push(t.packages.okazionListingDays(plan.maxOkazionListings, 5));
+    lines.push(t.packages.okazionListingDays(plan.maxOkazionListings, 7));
   }
   if ((plan.boostCredits ?? 0) > 0) {
     lines.push(`${plan.boostCredits} Boost Coins`);
@@ -367,22 +367,6 @@ export function MainPackagesPanel() {
     return availableBillingMonths[0] ?? 1;
   }, [pickedMonths, availableBillingMonths]);
 
-  const firstPaidTarget = (() => {
-    for (const plan of plans) {
-      const match = plan.priceOptions.find((o) => o.price > 0 && o.months === selectedMonths);
-      if (match) return { contractId: plan.id, months: match.months };
-    }
-    for (const plan of plans) {
-      const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
-      if (!paidOptions.length) continue;
-      const monthly = paidOptions.find((o) => o.months === 1);
-      const target = monthly ?? paidOptions[0];
-      if (!target) continue;
-      return { contractId: plan.id, months: target.months };
-    }
-    return null;
-  })();
-
   if (!user) return null;
 
   const cancelFooter = activeSubscription ? (
@@ -451,37 +435,17 @@ export function MainPackagesPanel() {
           {plans.flatMap((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
+            // Free is included with every account — not purchasable; skip the card.
+            if (isFree) return [];
+
             const planCode = (plan.planCode || '').toLowerCase();
-            const hasPaidPlan = Boolean(activeContractId || activePlanCode);
             const isPlanCurrent =
               (activeContractId != null && activeContractId === plan.id) ||
-              (activePlanCode != null && planCode === activePlanCode) ||
-              (!hasPaidPlan && isFree);
+              (activePlanCode != null && planCode === activePlanCode);
             const accent = MAIN_PACKAGES_ACCENT;
             const monthlyPrice = plan.price1Month ?? paidOptions.find((o) => o.months === 1)?.price ?? null;
             const details = planFeatureLines(t, plan);
             const PlanIcon = planIconForCode(plan.planCode);
-
-            if (isFree) {
-              return [
-                <PackageCheckoutCard
-                  key={plan.id}
-                  icon={PlanIcon}
-                  title={plan.title}
-                  badge={titleBadge(t, isPlanCurrent)}
-                  price="€0"
-                  priceSuffix={t.packages.perMonth}
-                  accent={accent}
-                  selected={isPlanCurrent}
-                  details={details}
-                  onClick={
-                    firstPaidTarget
-                      ? () => router.push(checkoutSubscriptionHref(firstPaidTarget.contractId, firstPaidTarget.months))
-                      : undefined
-                  }
-                />,
-              ];
-            }
 
             const opt = paidOptions.find((o) => o.months === selectedMonths);
             if (!opt) return [];

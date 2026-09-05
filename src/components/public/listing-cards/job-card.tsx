@@ -20,7 +20,7 @@ import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-li
 import type { PublicJobListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
-import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice } from './format-helpers';
 import { JobListingCountdownPlaceholder } from './job-listing-countdown';
@@ -185,7 +185,7 @@ export function JobCard({
           }
           alt={listing.title}
           height={browseLike ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
-          aspectRatio={homepageLike ? '6 / 5' : squareLike ? '1 / 1' : undefined}
+          aspectRatio={homepageLike || squareLike ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO : undefined}
           compact
           showActionCounts
           okazionCountdownCompact={false}

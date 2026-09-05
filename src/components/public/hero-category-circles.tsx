@@ -19,11 +19,10 @@ import { useLanguage } from '@/hooks/use-language';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { MOTION } from '@/styles/motion';
 
-import { productChromeSubtleBg } from './product-browse-chrome';
 import { HomeVerticalIcon } from './home-vertical-icon';
 
-/** Soft grey matching the header search bar; icons use primary green (OKAZION red). */
-const CATEGORY_TILE_BG = productChromeSubtleBg;
+/** Soft primary green fill for every category circle (OKAZION icon stays red). */
+const CATEGORY_TILE_BG = 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 const CATEGORY_TILE_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
 const CATEGORY_ICON_COLOR = 'var(--mui-palette-primary-main)';
 
@@ -231,7 +230,7 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: CATEGORY_TILE_BG,
+                bgcolor: isOkazion ? OKAZION_ACCENT_SOFT : CATEGORY_TILE_BG,
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
@@ -250,14 +249,14 @@ export function HeroCategoryCircles({
                   },
                 }}
               >
-                <HomeVerticalIcon verticalId={v.id} size={34} color={iconColor} />
+                <HomeVerticalIcon verticalId={v.id} size={34} weight="regular" color={iconColor} />
               </Box>
               <Typography
                 className="hero-cat-label"
                 variant="caption"
                 sx={{
                   display: { xs: 'none', md: 'block' },
-                  fontWeight: selected ? 800 : 700,
+                  fontWeight: selected ? 600 : 500,
                   fontSize: { md: '0.88rem', lg: '0.95rem' },
                   color: 'text.primary',
                   whiteSpace: 'nowrap',
@@ -275,7 +274,7 @@ export function HeroCategoryCircles({
               variant="caption"
               sx={{
                 display: { xs: 'block', md: 'none' },
-                fontWeight: selected ? 700 : 600,
+                fontWeight: selected ? 600 : 500,
                 color: 'text.primary',
                 whiteSpace: 'nowrap',
                 textAlign: 'center',

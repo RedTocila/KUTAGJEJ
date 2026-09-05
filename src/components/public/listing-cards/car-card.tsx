@@ -16,7 +16,7 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
-import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatKilometers, formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
@@ -80,7 +80,11 @@ export function CarCard({
           alt={title}
           height={variant === 'browse' ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
           aspectRatio={
-            variant === 'homepage' ? '6 / 5' : variant === 'compact' ? '1 / 1' : variant === 'browse' ? undefined : '4 / 3'
+            variant === 'homepage' || variant === 'compact'
+              ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
+              : variant === 'browse'
+                ? undefined
+                : LISTING_CARD_HOMEPAGE_ASPECT_RATIO
           }
           compact={isDense}
           showActionCounts={variant === 'homepage' || variant === 'browse'}

@@ -22,7 +22,7 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
-import { CardMedia } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
 import { formatPrice, listingCardRelativeDate } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
@@ -127,13 +127,15 @@ export function RealEstateCard({
           alt={listing.title}
           height={
             variant === 'browse'
-              ? { xs: 238, md: 256 }
+              ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
               : variant === 'default'
                 ? { xs: 185, md: 200 }
                 : undefined
           }
           aspectRatio={
-            variant === 'homepage' ? '6 / 5' : variant === 'compact' ? '1 / 1' : undefined
+            variant === 'homepage' || variant === 'compact'
+              ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
+              : undefined
           }
           compact={isDense}
           showActionCounts={variant === 'homepage' || variant === 'browse'}

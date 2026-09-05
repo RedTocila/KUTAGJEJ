@@ -33,6 +33,11 @@ function hostRedirects(host) {
 const config = {
   reactStrictMode: true,
 
+  // Parent ~/package-lock.json otherwise becomes Turbopack root and breaks the RSC client manifest.
+  turbopack: {
+    root: import.meta.dirname,
+  },
+
   // AI import (and similar) can exceed the default 30s rewrite proxy timeout.
   experimental: {
     proxyTimeout: 180_000,

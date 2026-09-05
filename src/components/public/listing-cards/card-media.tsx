@@ -107,8 +107,11 @@ function CardMediaOverlayAction({
   );
 }
 
-/** Shared image height for mixed browse grids (properties + OKAZION). */
-export const LISTING_CARD_BROWSE_MEDIA_HEIGHT = { xs: 215, md: 232 } as const;
+/** Shared image height for browse grids — matches full-width property cards. */
+export const LISTING_CARD_BROWSE_MEDIA_HEIGHT = { xs: 238, md: 256 } as const;
+
+/** Homepage / carousel media — same long proportion as property cards. */
+export const LISTING_CARD_HOMEPAGE_ASPECT_RATIO = '6 / 5' as const;
 
 export interface CardMediaProps {
   listingKind: ListingMetricKind;

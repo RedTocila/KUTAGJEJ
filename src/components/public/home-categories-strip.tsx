@@ -9,13 +9,13 @@ import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import {
   OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   localizeHomeBrowseCategories,
 } from '@/lib/home-categories';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
-import { productChromeSubtleBg } from './product-browse-chrome';
 
 export function HomeCategoriesStrip() {
   const { language } = useLanguage();
@@ -95,7 +95,9 @@ export function HomeCategoriesStrip() {
                     placeItems: 'center',
                     flexShrink: 0,
                     color: isOkazion ? OKAZION_ACCENT : 'primary.main',
-                    bgcolor: productChromeSubtleBg,
+                    bgcolor: isOkazion
+                      ? OKAZION_ACCENT_SOFT
+                      : 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)',
                     transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                   }}
                 >

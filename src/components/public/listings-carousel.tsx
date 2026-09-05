@@ -165,7 +165,7 @@ export function ListingsCarousel({
           ...(equalMediaHeight
             ? {
                 '& .listing-card-media': {
-                  height: { xs: 185, md: 200 },
+                  height: { xs: 238, md: 256 },
                   minHeight: 0,
                   aspectRatio: 'auto',
                 },

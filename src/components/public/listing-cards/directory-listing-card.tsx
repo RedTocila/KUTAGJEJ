@@ -18,7 +18,7 @@ import { BusinessOpenStatusLine } from '@/components/public/business-open-status
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { BusinessPromoBanner } from './business-promo-banner';
-import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT } from './card-media';
+import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatBusinessOpeningHoursForCard, listingPriceAccentColor } from './format-helpers';
 import { ListingCardHomepageBody } from './listing-card-homepage-body';
@@ -126,9 +126,9 @@ function BusinessVenueCardBody({
           }
           aspectRatio={
             variant === 'homepage'
-              ? '6 / 5'
+              ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
               : variant === 'cover' || variant === 'compact'
-                ? '1 / 1'
+                ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
                 : undefined
           }
           compact={isDense}
@@ -382,9 +382,9 @@ function ProfessionalListingCardBody({
           }
           aspectRatio={
             variant === 'homepage'
-              ? '6 / 5'
+              ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
               : variant === 'cover' || variant === 'compact'
-                ? '1 / 1'
+                ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO
                 : undefined
           }
           compact={isDense}

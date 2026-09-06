@@ -24,7 +24,10 @@ import {
 } from '@/components/core/product-dialog';
 import { listBusinessReviews, submitBusinessReview, type BusinessReview } from '@/lib/business-reviews-client';
 import { formatRatingDisplay } from '@/lib/format-rating';
-import { ProfessionalFiveStarRating } from '@/components/public/professional-listing-detail-ui';
+import {
+  LeaveReviewIconButton,
+  ProfessionalFiveStarRating,
+} from '@/components/public/professional-listing-detail-ui';
 import { useUser } from '@/hooks/use-user';
 import { paths } from '@/paths';
 import { productButtonSx, productFieldSx } from '@/styles/product-sx';
@@ -554,43 +557,15 @@ export function BusinessReviewSection({
   return (
     <Box>
       {showSummary ? (
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%' }}>
-          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, flex: 1 }}>
-            <ProfessionalFiveStarRating value={avgValue} size={16} />
-            {avgLabel ? (
-              <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', lineHeight: 1 }}>{avgLabel}</Typography>
-            ) : null}
-            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-              ({count})
-            </Typography>
-          </Stack>
-          {showLeaveReview ? (
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              onClick={openDialog}
-              startIcon={<StarIcon size={14} weight="fill" />}
-              sx={{
-                flexShrink: 0,
-                ml: 'auto',
-                height: 32,
-                minHeight: 32,
-                px: 1.25,
-                py: 0,
-                borderRadius: 999,
-                fontWeight: 800,
-                textTransform: 'none',
-                fontSize: '0.75rem',
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-                borderWidth: 1.5,
-                '& .MuiButton-startIcon': { mr: 0.5 },
-              }}
-            >
-              Lini vlerësim
-            </Button>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', width: '100%', flexWrap: 'nowrap' }}>
+          {showLeaveReview ? <LeaveReviewIconButton onClick={openDialog} /> : null}
+          {avgLabel ? (
+            <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', lineHeight: 1 }}>{avgLabel}</Typography>
           ) : null}
+          <ProfessionalFiveStarRating value={avgValue} size={16} />
+          <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
+            ({count})
+          </Typography>
         </Stack>
       ) : null}
 

@@ -164,11 +164,6 @@ export const ProfessionalReviewSection = React.forwardRef<
             {showLeaveReview ? <LeaveReviewIconButton onClick={openDialog} /> : null}
           </Stack>
         )}
-        {showLeaveReview ? (
-          <Button size="small" variant="outlined" onClick={openDialog} sx={{ alignSelf: 'flex-start' }}>
-            Lini vlerësim
-          </Button>
-        ) : null}
       </Stack>
 
       {views.length > 0 ? (

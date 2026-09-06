@@ -194,6 +194,7 @@ export function ProfessionalRatingSummary({
       >
         {rating}
       </Typography>
+      <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
         sx={{
           ...numberSx,
@@ -205,7 +206,6 @@ export function ProfessionalRatingSummary({
       >
         ({reviewCount})
       </Typography>
-      <ProfessionalFiveStarRating value={rating} size={starSize} />
     </Stack>
   );
 }
@@ -402,8 +402,10 @@ export function ProfessionalReviewsSectionHeader({
   return (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, width: '100%', minWidth: 0 }}>
       <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, flexShrink: 0 }}>Vlerësimet</Typography>
+      <Box sx={{ flex: 1, minWidth: 8 }} />
       {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
       <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, flexShrink: 0 }}>{rating}</Typography>
+      <ProfessionalFiveStarRating value={rating} size={16} />
       <Typography
         sx={{
           fontWeight: 600,
@@ -415,8 +417,6 @@ export function ProfessionalReviewsSectionHeader({
       >
         ({reviewCount})
       </Typography>
-      <Box sx={{ flex: 1, minWidth: 8 }} />
-      <ProfessionalFiveStarRating value={rating} size={16} />
     </Stack>
   );
 }

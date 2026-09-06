@@ -574,33 +574,35 @@ function formatMineProfessionalFull(doc, cityById) {
 
 async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
   const cap = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT_PER_KIND;
-  // Prefer updated_at so refresh/premium bumps (which only touch bumped_at) do not
-  // reshuffle the owner's dashboard. Fall back to created_at if the column is missing.
-  let q = getSupabaseAdmin()
-    .from(table)
-    .select(MINE_SELECT[table] || '*')
-    .eq('poster_id', posterId)
-    .order('updated_at', { ascending: false })
-    .limit(cap);
-  if (extraEq) {
-    for (const [col, val] of Object.entries(extraEq)) {
-      q = q.eq(col, val);
-    }
-  }
-  let { data, error } = await q;
-  if (error && /updated_at/i.test(String(error.message || ''))) {
-    q = getSupabaseAdmin()
+
+  async function run(orderCol) {
+    let q = getSupabaseAdmin()
       .from(table)
       .select(MINE_SELECT[table] || '*')
       .eq('poster_id', posterId)
-      .order('created_at', { ascending: false })
+      .order(orderCol, { ascending: false })
       .limit(cap);
     if (extraEq) {
       for (const [col, val] of Object.entries(extraEq)) {
         q = q.eq(col, val);
       }
     }
-    ({ data, error } = await q);
+    return q;
+  }
+
+  // Prefer updated_at so refresh/premium bumps (which only touch bumped_at) do not
+  // reshuffle the owner's dashboard. Fall back to created_at if the column is missing.
+  let { data, error } = await run('updated_at');
+  if (error && /updated_at/i.test(String(error.message || ''))) {
+    ({ data, error } = await run('created_at'));
+  }
+  // One retry for transient network blips (hotspot / DNS / undici "fetch failed").
+  if (error && /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network/i.test(String(error.message || error))) {
+    await new Promise((r) => setTimeout(r, 350));
+    ({ data, error } = await run('updated_at'));
+    if (error && /updated_at/i.test(String(error.message || ''))) {
+      ({ data, error } = await run('created_at'));
+    }
   }
   if (error) throw error;
   return camelizeRows(data);
@@ -649,51 +651,73 @@ async function loadMineListingById(posterId, { table, listingId: id, metricKind,
  */
 async function loadMineListingsForPoster(posterId, { limitPerKind = DEFAULT_LIMIT_PER_KIND } = {}) {
   const limit = limitPerKind;
+
+  async function safeKind(label, fn) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.error(`loadMineListingsForPoster/${label}:`, err?.message || err);
+      return [];
+    }
+  }
+
   const [realEstate, cars, jobs, marketplace, businesses, professionals] = await Promise.all([
-    loadMineKind(posterId, {
-      table: 'real_estate_listings',
-      metricKind: 'real-estate',
-      format: formatMineRealEstate,
-      limit,
-      withMetrics: false,
-    }),
-    loadMineKind(posterId, {
-      table: 'car_listings',
-      metricKind: 'car',
-      format: formatMineCar,
-      limit,
-      withMetrics: false,
-    }),
-    loadMineKind(posterId, {
-      table: 'job_listings',
-      metricKind: 'job',
-      format: formatMineJob,
-      limit,
-      withMetrics: false,
-    }),
-    loadMineKind(posterId, {
-      table: 'marketplace_listings',
-      metricKind: 'marketplace',
-      format: formatMineMarketplace,
-      limit,
-      withMetrics: false,
-    }),
-    loadMineKind(posterId, {
-      table: 'directory_listings',
-      metricKind: 'businesses',
-      format: formatMineBusiness,
-      limit,
-      withMetrics: false,
-      extraEq: { vertical: 'businesses' },
-    }),
-    loadMineKind(posterId, {
-      table: 'directory_listings',
-      metricKind: 'professionals',
-      format: formatMineProfessional,
-      limit,
-      withMetrics: false,
-      extraEq: { vertical: 'professionals' },
-    }),
+    safeKind('real-estate', () =>
+      loadMineKind(posterId, {
+        table: 'real_estate_listings',
+        metricKind: 'real-estate',
+        format: formatMineRealEstate,
+        limit,
+        withMetrics: false,
+      }),
+    ),
+    safeKind('cars', () =>
+      loadMineKind(posterId, {
+        table: 'car_listings',
+        metricKind: 'car',
+        format: formatMineCar,
+        limit,
+        withMetrics: false,
+      }),
+    ),
+    safeKind('jobs', () =>
+      loadMineKind(posterId, {
+        table: 'job_listings',
+        metricKind: 'job',
+        format: formatMineJob,
+        limit,
+        withMetrics: false,
+      }),
+    ),
+    safeKind('marketplace', () =>
+      loadMineKind(posterId, {
+        table: 'marketplace_listings',
+        metricKind: 'marketplace',
+        format: formatMineMarketplace,
+        limit,
+        withMetrics: false,
+      }),
+    ),
+    safeKind('businesses', () =>
+      loadMineKind(posterId, {
+        table: 'directory_listings',
+        metricKind: 'businesses',
+        format: formatMineBusiness,
+        limit,
+        withMetrics: false,
+        extraEq: { vertical: 'businesses' },
+      }),
+    ),
+    safeKind('professionals', () =>
+      loadMineKind(posterId, {
+        table: 'directory_listings',
+        metricKind: 'professionals',
+        format: formatMineProfessional,
+        limit,
+        withMetrics: false,
+        extraEq: { vertical: 'professionals' },
+      }),
+    ),
   ]);
 
   const { fetchMetricsMap, metricsKey, emptyMetrics } = require('./listing-metrics');
@@ -706,13 +730,26 @@ async function loadMineListingsForPoster(posterId, { limitPerKind = DEFAULT_LIMI
     { kind: 'professionals', listings: professionals },
   ];
   const refs = kindBuckets.flatMap(({ kind, listings }) => listings.map((l) => ({ kind, listingId: l.id })));
-  const map = await fetchMetricsMap(refs);
-  for (const { kind, listings } of kindBuckets) {
-    for (const listing of listings) {
-      const m = map.get(metricsKey(kind, listing.id)) ?? emptyMetrics();
-      listing.viewCount = m.viewCount;
-      listing.shareCount = m.shareCount;
-      listing.saveCount = m.saveCount;
+  try {
+    const map = await fetchMetricsMap(refs);
+    for (const { kind, listings } of kindBuckets) {
+      for (const listing of listings) {
+        const m = map.get(metricsKey(kind, listing.id)) ?? emptyMetrics();
+        listing.viewCount = m.viewCount;
+        listing.shareCount = m.shareCount;
+        listing.saveCount = m.saveCount;
+      }
+    }
+  } catch (err) {
+    // Metrics are best-effort — never fail the whole mine payload.
+    console.error('loadMineListingsForPoster/metrics:', err?.message || err);
+    const empty = emptyMetrics();
+    for (const { listings } of kindBuckets) {
+      for (const listing of listings) {
+        listing.viewCount = empty.viewCount;
+        listing.shareCount = empty.shareCount;
+        listing.saveCount = empty.saveCount;
+      }
     }
   }
 

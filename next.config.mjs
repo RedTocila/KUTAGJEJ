@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
-const backendOrigin = (process.env.API_URL || 'http://localhost:5001').replace(/\/$/, '');
+// Prefer 127.0.0.1 over localhost — Next rewrites can hit TypeError: fetch failed when
+// localhost resolves to ::1 and the proxy stack mis-handles IPv6 on some macOS setups.
+const backendOrigin = (process.env.API_URL || 'http://127.0.0.1:5001').replace(/\/$/, '');
 const backendHostname = (() => {
   try {
     return new URL(backendOrigin).hostname;

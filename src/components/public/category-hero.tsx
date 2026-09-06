@@ -116,7 +116,7 @@ export function PublicCategoryHero({
               xs: 'max(10px, env(safe-area-inset-top, 0px))',
               md: 5,
             },
-            pb: isOkazion || isProfiles ? { xs: 1.25, md: 2.5 } : { xs: 1.5, md: 5 },
+            pb: isOkazion || isProfiles ? { xs: 0.75, md: 2 } : { xs: 1.5, md: 5 },
             bgcolor: {
               xs: showFrost ? frosted : 'background.default',
               md: 'transparent',
@@ -178,32 +178,34 @@ export function PublicCategoryHero({
                 </Typography>
               ) : null}
             </Stack>
-            <IconButton
-              onClick={() => setPickerOpen(true)}
-              aria-label={t.picker.title}
-              sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                flexShrink: 0,
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                boxShadow: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-                    : '0 2px 8px rgba(118, 186, 27, 0.35)',
-                transition:
-                  'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
-                '&:hover': {
-                  bgcolor: 'primary.dark',
+            {isProfiles ? null : (
+              <IconButton
+                onClick={() => setPickerOpen(true)}
+                aria-label={t.picker.title}
+                sx={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  bgcolor: 'primary.main',
                   color: 'primary.contrastText',
-                  transform: 'scale(1.06)',
-                },
-                '&:active': { transform: 'scale(0.94)' },
-              }}
-            >
-              <PlusIcon size={20} weight="bold" />
-            </IconButton>
+                  boxShadow: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                      : '0 2px 8px rgba(118, 186, 27, 0.35)',
+                  transition:
+                    'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
+                    color: 'primary.contrastText',
+                    transform: 'scale(1.06)',
+                  },
+                  '&:active': { transform: 'scale(0.94)' },
+                }}
+              >
+                <PlusIcon size={20} weight="bold" />
+              </IconButton>
+            )}
           </Stack>
 
           {isHomeVerticalId(verticalId) ? (
@@ -222,12 +224,14 @@ export function PublicCategoryHero({
         </Container>
       </Box>
 
-      <AddListingPickerDialog
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        category={toListingCategoryKey(verticalId)}
-        initialOkazion={verticalId === 'okazion'}
-      />
+      {isProfiles ? null : (
+        <AddListingPickerDialog
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          category={toListingCategoryKey(verticalId)}
+          initialOkazion={verticalId === 'okazion'}
+        />
+      )}
 
       {/* Spacer only while the chrome is `position: fixed` on mobile */}
       <Box

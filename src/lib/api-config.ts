@@ -5,7 +5,7 @@
  * Next / Vercel rewrites `/api` → Express. Server Components talk to Express directly (API_URL or default).
  */
 const PUBLIC_DEV_ORIGIN = 'http://localhost:3000';
-const INTERNAL_API_ORIGIN = 'http://localhost:5001';
+const INTERNAL_API_ORIGIN = 'http://127.0.0.1:5001';
 
 function normalizeOrigin(value: string | undefined): string | undefined {
   const trimmed = value?.trim();

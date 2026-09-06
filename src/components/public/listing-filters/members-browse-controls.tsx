@@ -61,7 +61,7 @@ export function MembersBrowseControls() {
   };
 
   return (
-    <Box component="section" aria-label={t.browse.searchControlsAria} sx={{ mt: { xs: 1.25, md: 2 } }}>
+    <Box component="section" aria-label={t.browse.searchControlsAria} sx={{ mt: { xs: 1, md: 1.75 } }}>
       <Box
         sx={{
           display: 'flex',

@@ -2,7 +2,7 @@
 /**
  * Local full-stack dev — always:
  *   http://localhost:3000  (Next)
- *   http://localhost:5001  (Express API, proxied via /api)
+ *   http://127.0.0.1:5001  (Express API, proxied via /api)
  *
  * Frees :3000/:5001 before start so Next never hops to 3001.
  * Restarts the API if it dies so messages/packages stop 500-ing.
@@ -14,6 +14,10 @@ const net = require('net');
 const root = path.join(__dirname, '..');
 const API_PORT = Number(process.env.API_PORT || process.env.PORT) || 5001;
 const WEB_PORT = Number(process.env.WEB_PORT) || 3000;
+// Force IPv4 loopback for Next→API rewrites (avoids localhost → ::1 fetch failed).
+if (!process.env.API_URL) {
+  process.env.API_URL = `http://127.0.0.1:${API_PORT}`;
+}
 
 let shuttingDown = false;
 let apiChild = null;

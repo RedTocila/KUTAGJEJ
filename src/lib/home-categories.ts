@@ -158,14 +158,14 @@ export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   searchPlaceholder: 'Kërko oferta Okazion…',
 };
 
-/** Public member profiles — homepage slider + `/anetares` browse. */
-export const PROFILES_ACCENT = '#6366F1';
-export const PROFILES_ACCENT_SOFT = 'rgba(99, 102, 241, 0.16)';
+/** Public member profiles — homepage slider + `/anetares` browse (primary green). */
+export const PROFILES_ACCENT = '#76ba1b';
+export const PROFILES_ACCENT_SOFT = 'rgba(118, 186, 27, 0.16)';
 export const PROFILES_SEARCH_CATEGORY: SearchCategory = {
   id: 'profiles',
   label: 'Profile',
   tagline: 'Anëtarë dhe biznese — kërko sipas emrit, qytetit ose kategorisë',
-  gradient: [PROFILES_ACCENT, '#4338CA'] as const,
+  gradient: [PROFILES_ACCENT, '#3a8c00'] as const,
   iconKey: 'users',
   href: paths.public.profiles,
   searchPlaceholder: 'Kërko emër, biznes, qytet…',

@@ -60,6 +60,7 @@ export function CategoryBrowseLayout({
   children,
 }: CategoryBrowseLayoutProps) {
   const isOkazion = verticalId === 'okazion';
+  const isProfiles = verticalId === 'profiles';
   const recoverEmpty = shownCount === 0 && (!ssrOk || !hasFilters);
   const [phase, setPhase] = React.useState<BrowsePhase>(() => initialPhase(shownCount, recoverEmpty));
   const [liveTotal, setLiveTotal] = React.useState(total);
@@ -112,12 +113,16 @@ export function CategoryBrowseLayout({
           <Container
             maxWidth="xl"
             sx={{
-              pt: showTopViewed ? { xs: 2, md: 2.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
+              pt: showTopViewed
+                ? { xs: 2, md: 2.5 }
+                : isOkazion || isProfiles
+                  ? { xs: 1, md: 2 }
+                  : { xs: 4, md: 6 },
               pb: { xs: 4, md: 6 },
               position: 'relative',
             }}
           >
-            <Stack spacing={showTopViewed ? { xs: 1, md: 1.5 } : 3}>
+            <Stack spacing={showTopViewed ? { xs: 1, md: 1.5 } : isProfiles ? 1.25 : 3}>
               {pending ? (
                 <Skeleton variant="text" animation="wave" width={168} />
               ) : (
@@ -128,7 +133,7 @@ export function CategoryBrowseLayout({
                   totalPages={liveTotalPages}
                   pageSize={pageSize}
                   hasFilters={hasFilters}
-                  countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
+                  countKind={isProfiles ? 'profiles' : 'listings'}
                   emphasized={showTopViewed}
                 />
               )}

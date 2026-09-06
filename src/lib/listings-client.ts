@@ -2,7 +2,7 @@
 
 import type { ListingCategory } from '@/types/listing-category';
 import type { RealEstateMineListing } from '@/types/real-estate-mine-listing';
-import { authHeaders, authHeadersAsync, getAccessToken } from '@/lib/api-client';
+import { apiFetch, authHeaders, authHeadersAsync, getAccessToken } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import type { BusinessMineListing, ProfessionalMineListing } from '@/lib/directory-listings-client';
 import type { ListingMetricKind, ListingMetrics } from '@/lib/listing-metrics';
@@ -194,8 +194,8 @@ export async function listMyListings(): Promise<{
   error?: string;
 }> {
   try {
-    const res = await fetch(getApiUrl('/listings/mine'), {
-      headers: authHeaders(),
+    const res = await apiFetch(getApiUrl('/listings/mine'), {
+      headers: await authHeadersAsync(),
       cache: 'no-store',
     });
     const data = await res.json().catch(() => ({}));

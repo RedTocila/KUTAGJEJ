@@ -124,9 +124,9 @@ export function MemberBadgeEmblem({
   const emblem = getBadgeEmblemSpec(kind, level);
   const Icon = emblem.Icon;
   const iconSize = Math.round(size * (emblem.shape === 'diamond' || emblem.shape === 'crest' ? 0.38 : 0.42));
-  const fill = earned ? emblem.fill : '#2a2e34';
-  const stroke = earned ? emblem.stroke : '#5a6068';
-  const iconColor = earned ? emblem.icon : '#8a9098';
+  const fill = earned ? emblem.fill : '#e8efdc';
+  const stroke = earned ? emblem.stroke : '#a3bc8f';
+  const iconColor = earned ? emblem.icon : '#3f5433';
 
   return (
     <Box
@@ -135,6 +135,18 @@ export function MemberBadgeEmblem({
         width: size,
         height: size,
         flexShrink: 0,
+        color: iconColor,
+        ...(earned
+          ? {}
+          : {
+              '.dark &': {
+                color: '#8a9098',
+                '& > svg > path:first-of-type': {
+                  fill: '#2a2e34',
+                  stroke: '#5a6068',
+                },
+              },
+            }),
       }}
     >
       <MedalSvg shape={emblem.shape} fill={fill} stroke={stroke} earned={earned} />
@@ -144,7 +156,7 @@ export function MemberBadgeEmblem({
           inset: 0,
           display: 'grid',
           placeItems: 'center',
-          color: iconColor,
+          color: 'inherit',
           pointerEvents: 'none',
         }}
       >

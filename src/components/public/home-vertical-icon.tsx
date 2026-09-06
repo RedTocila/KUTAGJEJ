@@ -28,7 +28,7 @@ function resolveDuotoneWeight(weight: IconWeight | undefined): IconWeight {
   return weight;
 }
 
-/** Map pin above a faded warehouse — same mark as homepage businesses category. */
+/** Map pin above a warehouse — same mark as homepage businesses category. */
 function BusinessesDirectoryIcon({
   size,
   weight,
@@ -63,7 +63,6 @@ function BusinessesDirectoryIcon({
           left: '50%',
           bottom: `-${Math.round(down * 0.35)}px`,
           transform: 'translateX(-50%)',
-          opacity: 0.7,
           lineHeight: 0,
         }}
       >

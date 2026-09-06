@@ -447,12 +447,13 @@ export function MemberProfileView({
             borderColor: 'divider',
             borderTop: { xs: 'none', md: '1px solid' },
             borderTopColor: { md: 'divider' },
-            bgcolor: 'background.paper',
+            bgcolor: '#ffffff',
             mb: { xs: 3, md: 4 },
             mt: { md: 3 },
             mx: { md: 'auto' },
             maxWidth: { md: 680 },
             width: { md: 'calc(100% - 48px)' },
+            '.dark &': { bgcolor: 'background.paper' },
           }}
         >
           <BrandCover sx={{ height: { xs: 120, sm: 150 } }}>
@@ -464,6 +465,8 @@ export function MemberProfileView({
                 top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
                 left: { xs: 8, sm: 12 },
                 zIndex: 2,
+                color: '#fff',
+                '&:hover': { bgcolor: 'transparent', color: 'rgba(255,255,255,0.82)' },
               }}
             />
           </BrandCover>
@@ -535,14 +538,15 @@ export function MemberProfileView({
           borderColor: 'divider',
           borderTop: { xs: 'none', md: '1px solid' },
           borderTopColor: { md: 'divider' },
-          bgcolor: 'background.paper',
-          mb: { xs: 3, md: 4 },
-          mt: { md: 3 },
-          mx: { md: 'auto' },
-          maxWidth: { md: 900 },
-          width: { md: 'calc(100% - 48px)' },
-        }}
-      >
+            bgcolor: '#ffffff',
+            mb: { xs: 3, md: 4 },
+            mt: { md: 3 },
+            mx: { md: 'auto' },
+            maxWidth: { md: 900 },
+            width: { md: 'calc(100% - 48px)' },
+            '.dark &': { bgcolor: 'background.paper' },
+          }}
+        >
         <BrandCover sx={{ height: { xs: 148, sm: 176 } }}>
           <ProductBackButton
             href={paths.home}
@@ -552,6 +556,8 @@ export function MemberProfileView({
               top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
               left: { xs: 8, sm: 12 },
               zIndex: 2,
+              color: '#fff',
+              '&:hover': { bgcolor: 'transparent', color: 'rgba(255,255,255,0.82)' },
             }}
           />
           <IconButton
@@ -565,6 +571,8 @@ export function MemberProfileView({
                 top: { xs: 'max(10px, env(safe-area-inset-top, 0px))', sm: 14 },
                 right: { xs: 8, sm: 12 },
                 zIndex: 2,
+                color: '#fff',
+                '&:hover': { bgcolor: 'transparent', color: 'rgba(255,255,255,0.82)' },
               },
             ]}
           >
@@ -617,17 +625,27 @@ export function MemberProfileView({
                 sx={{
                   width: { xs: 88, sm: 104 },
                   height: { xs: 88, sm: 104 },
-                  bgcolor: (theme) => primaryMainAlpha(theme.palette.mode === 'dark' ? 0.18 : 0.14),
-                  color: 'primary.main',
+                  bgcolor: '#ffffff',
+                  color: 'primary.dark',
                   fontWeight: 800,
                   fontSize: { xs: '1.75rem', sm: '2rem' },
                   border: '3px solid',
-                  borderColor: 'background.paper',
+                  borderColor: '#ffffff',
+                  outline: '1px solid',
+                  outlineColor: 'divider',
                   boxShadow: (theme) =>
-                    theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.45)' : '0 8px 24px rgba(0,0,0,0.08)',
+                    theme.palette.mode === 'dark'
+                      ? '0 8px 24px rgba(0,0,0,0.45)'
+                      : '0 4px 0 rgba(15,23,10,0.06), 0 10px 28px rgba(15,23,10,0.14)',
+                  '.dark &': {
+                    bgcolor: 'background.level1',
+                    color: 'primary.main',
+                    borderColor: 'background.paper',
+                    outline: 'none',
+                  },
                 }}
               >
-                {initials}
+                {initials || <UserIcon size={42} weight="duotone" />}
               </Avatar>
 
               <Stack spacing={1} sx={{ flex: '1 1 auto', minWidth: 0, pb: { sm: 0.5 }, pr: { sm: 12 } }}>

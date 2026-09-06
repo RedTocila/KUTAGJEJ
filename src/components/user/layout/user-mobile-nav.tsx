@@ -34,14 +34,12 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
       slotProps={{
         paper: {
           sx: {
-            '--MobileNav-background': 'var(--mui-palette-background-paper)',
             '--NavItem-color': 'var(--mui-palette-text-secondary)',
             '--NavItem-hover-background': 'var(--mui-palette-action-hover)',
             '--NavItem-active-background': 'var(--mui-palette-primary-main)',
             '--NavItem-active-color': 'var(--mui-palette-primary-contrastText)',
             '--NavItem-icon-color': 'var(--mui-palette-text-secondary)',
             '--NavItem-icon-active-color': 'var(--mui-palette-primary-contrastText)',
-            bgcolor: 'var(--MobileNav-background)',
             display: 'flex',
             flexDirection: 'column',
             maxWidth: '100%',

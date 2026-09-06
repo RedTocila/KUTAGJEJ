@@ -56,7 +56,7 @@ export function TransientNotification({
       }}
     >
       <Slide
-        direction={visible ? 'down' : 'up'}
+        direction="up"
         in={visible}
         mountOnEnter
         unmountOnExit
@@ -77,7 +77,8 @@ export function TransientNotification({
             const startY = touchStartY.current;
             touchStartY.current = null;
             const endY = event.changedTouches[0]?.clientY;
-            if (startY != null && endY != null && startY - endY >= 56) dismiss();
+            // Swipe down to dismiss — matches exit animation.
+            if (startY != null && endY != null && endY - startY >= 56) dismiss();
             props.onTouchEnd?.(event);
           }}
           sx={[

@@ -196,7 +196,7 @@ function BadgeTile({
         gap: 0.55,
         width: isGrid ? '100%' : dense ? 56 : 62,
         minWidth: 0,
-        opacity: earned ? 1 : 0.78,
+        opacity: earned ? 1 : 0.92,
         WebkitTapHighlightColor: 'transparent',
         '&:hover': { opacity: 1 },
         '&:focus-visible': {
@@ -213,8 +213,8 @@ function BadgeTile({
           variant="caption"
           sx={{
             ...lineSx,
-            fontWeight: earned ? 750 : 600,
-            color: earned ? 'text.primary' : 'text.disabled',
+            fontWeight: earned ? 750 : 700,
+            color: earned ? 'text.primary' : 'text.secondary',
             fontSize: dense ? '0.58rem' : '0.6rem',
           }}
         >
@@ -241,7 +241,7 @@ function BadgeTile({
             fontWeight: 800,
             mt: 0.15,
             fontSize: dense ? '0.52rem' : '0.55rem',
-            color: earned ? 'primary.main' : 'text.disabled',
+            color: earned ? 'primary.main' : 'text.secondary',
           }}
         >
           {status}

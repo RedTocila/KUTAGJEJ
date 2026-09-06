@@ -55,11 +55,11 @@ export const productButtonSx = {
   '&:active': { transform: 'scale(0.98)' },
 };
 
-/** Shared black paper surface for dark-mode menus / dialogs. */
+/** Shared overlay surface for menus / dialogs — white in light, near-black in dark. */
 export const productSurfacePaperSx = (theme: Theme) => ({
   borderRadius: 3,
   border: 'none',
-  bgcolor: theme.palette.mode === 'dark' ? '#0c0c0c' : 'background.paper',
+  bgcolor: PANEL_BG_LIGHT,
   backgroundImage: 'none',
   color: 'text.primary',
   overflow: 'hidden',
@@ -67,6 +67,9 @@ export const productSurfacePaperSx = (theme: Theme) => ({
     theme.palette.mode === 'dark'
       ? '0 24px 80px rgba(0, 0, 0, 0.55)'
       : '0 20px 56px rgba(15, 23, 10, 0.16)',
+  '.dark &': {
+    bgcolor: '#0c0c0c',
+  },
 });
 
 /** Dialog paper — follows light/dark color scheme. */

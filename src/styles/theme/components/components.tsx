@@ -10,6 +10,7 @@ import { MuiCardHeader } from './card-header';
 import { MuiChip } from './chip';
 import { MuiCssBaseline } from './css-baseline';
 import { MuiDialog } from './dialog';
+import { MuiDrawer } from './drawer';
 import { MuiIconButton } from './icon-button';
 import { MuiLink } from './link';
 import { MuiRating } from './rating';
@@ -30,6 +31,7 @@ export const components = {
   MuiChip,
   MuiCssBaseline,
   MuiDialog,
+  MuiDrawer,
   MuiFab,
   MuiIconButton,
   MuiLink,

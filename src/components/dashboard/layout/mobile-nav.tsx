@@ -25,7 +25,6 @@ export function MobileNav({ open, onClose, sections: sectionsProp }: MobileNavPr
       slotProps={{
         paper: {
           sx: {
-            bgcolor: 'background.paper',
             color: 'text.primary',
             display: 'flex',
             flexDirection: 'column',

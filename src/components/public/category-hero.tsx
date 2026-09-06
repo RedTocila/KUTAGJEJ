@@ -12,10 +12,6 @@ import {
   isHomeVerticalId,
   localizeSearchCategory,
   localizeVertical,
-  OKAZION_ACCENT,
-  OKAZION_ACCENT_SOFT,
-  OKAZION_RED,
-  OKAZION_RED_DARK,
   PROFILES_ACCENT,
   PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
@@ -190,20 +186,16 @@ export function PublicCategoryHero({
                 height: 38,
                 borderRadius: '50%',
                 flexShrink: 0,
-                bgcolor: isOkazion ? OKAZION_RED : 'primary.main',
+                bgcolor: 'primary.main',
                 color: 'primary.contrastText',
                 boxShadow: (theme) =>
-                  isOkazion
-                    ? theme.palette.mode === 'dark'
-                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-                      : '0 2px 8px rgba(247, 47, 53, 0.35)'
-                    : theme.palette.mode === 'dark'
-                      ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-                      : '0 2px 8px rgba(118, 186, 27, 0.35)',
+                  theme.palette.mode === 'dark'
+                    ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                    : '0 2px 8px rgba(118, 186, 27, 0.35)',
                 transition:
                   'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
                 '&:hover': {
-                  bgcolor: isOkazion ? OKAZION_RED_DARK : 'primary.dark',
+                  bgcolor: 'primary.dark',
                   color: 'primary.contrastText',
                   transform: 'scale(1.06)',
                 },
@@ -339,15 +331,13 @@ export function PublicCategoryEmptyState({
                 borderRadius: 2.5,
                 display: 'grid',
                 placeItems: 'center',
-                color: isOkazion ? OKAZION_ACCENT : isProfiles ? PROFILES_ACCENT : 'primary.main',
-                bgcolor: isOkazion
-                  ? OKAZION_ACCENT_SOFT
-                  : isProfiles
-                    ? PROFILES_ACCENT_SOFT
-                    : (theme) =>
-                        theme.palette.mode === 'dark'
-                          ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                          : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+                color: isProfiles ? PROFILES_ACCENT : 'primary.main',
+                bgcolor: isProfiles
+                  ? PROFILES_ACCENT_SOFT
+                  : (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
               }}
             >
               <HomeVerticalIcon verticalId={verticalId} size={32} />
@@ -368,7 +358,6 @@ export function PublicCategoryEmptyState({
                   textTransform: 'none',
                   fontWeight: 600,
                   borderRadius: 2,
-                  ...(isOkazion ? { borderColor: OKAZION_ACCENT, color: OKAZION_ACCENT } : null),
                 }}
               >
                 {t.picker.title}

@@ -5,6 +5,15 @@ export const BUSINESS_CATEGORY_OPTIONS = [
   { value: 'brunch', label: 'Brunch & mëngjes' },
   { value: 'piceri-fast-food', label: 'Piceri & fast food' },
   { value: 'pasticeri', label: 'Pastiçeri & ëmbëlsira' },
+  { value: 'dyqan', label: 'Dyqan' },
+  { value: 'supermarket', label: 'Supermarket & market' },
+  { value: 'farmacie', label: 'Farmaci' },
+  { value: 'salone-bukurie', label: 'Sallon bukurie' },
+  { value: 'palester', label: 'Palestër & fitness' },
+  { value: 'hotel', label: 'Hotel & akomodim' },
+  { value: 'sherbime-auto', label: 'Shërbime auto' },
+  { value: 'sherbime-shtepie', label: 'Shërbime shtëpie' },
+  { value: 'te-tjera', label: 'Të tjera' },
 ] as const;
 
 export const BUSINESS_DAY_LABELS = ['Hën', 'Mar', 'Mër', 'Enj', 'Pre', 'Sht', 'Die'] as const;

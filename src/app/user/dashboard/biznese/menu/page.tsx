@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Stack, Typography } from '@mui/material';
-import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
 
 import { BusinessMenuEditor } from '@/components/businesses/business-menu-editor';
 import { ContentBlockSkeleton } from '@/components/core/content-skeletons';
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import { PostListingHeader } from '@/components/user/post-listing-header';
 import { BusinessAccountRequiredNotice } from '@/components/user/business-account-required-notice';
 import { useUser } from '@/hooks/use-user';
@@ -91,7 +91,7 @@ export default function BusinessMenuPage() {
   return (
     <Stack spacing={2}>
       <PostListingHeader
-        icon={ForkKnifeIcon}
+        icon={BusinessesCategoryIcon}
         title="Menu e biznesit"
         description="Shtoni artikuj manualisht, ose importoni nga foto me AI."
         closeHref={paths.user.myRealEstateListings}

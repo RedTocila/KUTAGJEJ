@@ -16,7 +16,6 @@ import {
 import { CategoryTopViewedSlider } from '@/components/public/category-top-viewed-slider';
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import { PublicShell } from '@/components/public/public-shell';
-import { OkazionTheme } from '@/components/user/okazion-theme';
 
 interface CategoryBrowseLayoutProps {
   verticalId: BrowseCategoryId;
@@ -97,52 +96,50 @@ export function CategoryBrowseLayout({
 
   return (
     <PublicShell hideHeaderBelowMd>
-      <OkazionTheme enabled={isOkazion}>
-        <BrowseLoadProvider recoverEmpty={recoverEmpty} reportResolved={reportResolved}>
-          <PublicCategoryHero
-            verticalId={verticalId}
-            total={liveTotal}
-            cities={cities}
-            pending={pending}
-            heading={heading}
-            intro={intro}
-          />
-          {showTopViewed ? <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} /> : null}
-          {phase === 'empty' ? (
-            <PublicCategoryEmptyState verticalId={verticalId} hasFilters={hasFilters} />
-          ) : (
-            <Container
-              maxWidth="xl"
-              sx={{
-                pt: showTopViewed ? { xs: 2, md: 2.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
-                pb: { xs: 4, md: 6 },
-                position: 'relative',
-              }}
-            >
-              <Stack spacing={showTopViewed ? { xs: 1, md: 1.5 } : 3}>
-                {pending ? (
-                  <Skeleton variant="text" animation="wave" width={168} />
-                ) : (
-                  <BrowseListingsCountCaption
-                    total={liveTotal}
-                    shownCount={liveShown}
-                    page={livePage}
-                    totalPages={liveTotalPages}
-                    pageSize={pageSize}
-                    hasFilters={hasFilters}
-                    countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
-                    emphasized={showTopViewed}
-                  />
-                )}
-                {children}
-                <React.Suspense fallback={null}>
-                  <BrowsePagination page={livePage} totalPages={liveTotalPages} />
-                </React.Suspense>
-              </Stack>
-            </Container>
-          )}
-        </BrowseLoadProvider>
-      </OkazionTheme>
+      <BrowseLoadProvider recoverEmpty={recoverEmpty} reportResolved={reportResolved}>
+        <PublicCategoryHero
+          verticalId={verticalId}
+          total={liveTotal}
+          cities={cities}
+          pending={pending}
+          heading={heading}
+          intro={intro}
+        />
+        {showTopViewed ? <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} /> : null}
+        {phase === 'empty' ? (
+          <PublicCategoryEmptyState verticalId={verticalId} hasFilters={hasFilters} />
+        ) : (
+          <Container
+            maxWidth="xl"
+            sx={{
+              pt: showTopViewed ? { xs: 2, md: 2.5 } : isOkazion ? { xs: 1.5, md: 3 } : { xs: 4, md: 6 },
+              pb: { xs: 4, md: 6 },
+              position: 'relative',
+            }}
+          >
+            <Stack spacing={showTopViewed ? { xs: 1, md: 1.5 } : 3}>
+              {pending ? (
+                <Skeleton variant="text" animation="wave" width={168} />
+              ) : (
+                <BrowseListingsCountCaption
+                  total={liveTotal}
+                  shownCount={liveShown}
+                  page={livePage}
+                  totalPages={liveTotalPages}
+                  pageSize={pageSize}
+                  hasFilters={hasFilters}
+                  countKind={verticalId === 'profiles' ? 'profiles' : 'listings'}
+                  emphasized={showTopViewed}
+                />
+              )}
+              {children}
+              <React.Suspense fallback={null}>
+                <BrowsePagination page={livePage} totalPages={liveTotalPages} />
+              </React.Suspense>
+            </Stack>
+          </Container>
+        )}
+      </BrowseLoadProvider>
     </PublicShell>
   );
 }

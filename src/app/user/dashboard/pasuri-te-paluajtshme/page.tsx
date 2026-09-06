@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Alert, Button, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
@@ -14,6 +13,7 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
@@ -157,7 +157,7 @@ function phaseIcon(phase: Phase): PhosphorIcon {
     case 'marketplace-form':
       return StorefrontIcon;
     case 'businesses-form':
-      return BuildingOfficeIcon;
+      return BusinessesCategoryIcon;
     case 'professionals-form':
       return UsersIcon;
     default:

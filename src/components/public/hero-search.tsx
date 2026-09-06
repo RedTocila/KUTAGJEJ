@@ -21,8 +21,6 @@ import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
   AI_SEARCH_BLUE_ON,
-  OKAZION_RED,
-  OKAZION_RED_DARK,
   isHomeVerticalId,
   localizeSearchCategories,
   type SearchCategoryId,
@@ -50,7 +48,6 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
 
   const active = tab >= 0 ? (heroVerticals[tab] ?? null) : null;
   const isAi = active?.id === 'ai';
-  const isOkazion = active?.id === 'okazion';
 
   const submit = (event?: React.FormEvent) => {
     event?.preventDefault();
@@ -182,13 +179,13 @@ export function HeroSearch({ defaultVertical, onNavigate }: HeroSearchProps) {
               py: 1.5,
               fontWeight: 700,
               fontSize: '1rem',
-              color: isAi ? AI_SEARCH_BLUE_ON : isOkazion ? '#fff' : 'primary.contrastText',
-              bgcolor: isAi ? AI_SEARCH_BLUE : isOkazion ? OKAZION_RED : undefined,
+              color: isAi ? AI_SEARCH_BLUE_ON : 'primary.contrastText',
+              bgcolor: isAi ? AI_SEARCH_BLUE : undefined,
               boxShadow: 'none',
               '&:hover': {
                 boxShadow: 'none',
-                color: isAi ? AI_SEARCH_BLUE_ON : isOkazion ? '#fff' : 'primary.contrastText',
-                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : isOkazion ? OKAZION_RED_DARK : undefined,
+                color: isAi ? AI_SEARCH_BLUE_ON : 'primary.contrastText',
+                bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : undefined,
               },
               '& .MuiButton-startIcon': { color: 'inherit' },
             }}

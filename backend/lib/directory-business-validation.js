@@ -2,7 +2,21 @@ const { randomUUID } = require('crypto');
 const { normalizeWeeklyHours, formatWeeklyHoursLine, TIME_RE } = require('./business-hours');
 
 const BUSINESS_CATEGORIES = new Set([
-  'restorant', 'bar', 'kafe', 'brunch', 'piceri-fast-food', 'pasticeri',
+  'restorant',
+  'bar',
+  'kafe',
+  'brunch',
+  'piceri-fast-food',
+  'pasticeri',
+  'dyqan',
+  'supermarket',
+  'farmacie',
+  'salone-bukurie',
+  'palester',
+  'hotel',
+  'sherbime-auto',
+  'sherbime-shtepie',
+  'te-tjera',
 ]);
 
 function normalizeMenuCategories(input) {

@@ -6,8 +6,9 @@ import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import { OKAZION_RED, OKAZION_RED_DARK, OKAZION_RED_ON } from '@/lib/home-categories';
 
 /**
- * Remaps MUI `primary` + `error` to Okazion button crimson so CTAs stay
- * crimson (accents use `OKAZION_ACCENT` salmon separately) without touching AI Build.
+ * Remaps MUI `primary` + `error` to Okazion button crimson so create/boost CTAs stay
+ * crimson (accents use `OKAZION_ACCENT` salmon separately). Not used on the public
+ * Okazion browse page — that stays brand green.
  */
 export function OkazionTheme({
   children,

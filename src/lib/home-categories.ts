@@ -31,7 +31,7 @@ export interface HomeVertical {
   /** Two-stop gradient used on the category tile. */
   gradient: readonly [string, string];
   /** Phosphor icon name (resolved in `HomeVerticalIcon`). */
-  iconKey: 'buildings' | 'car-profile' | 'briefcase' | 'storefront' | 'fork-knife' | 'handshake';
+  iconKey: 'buildings' | 'car-profile' | 'briefcase' | 'storefront' | 'map-pin-warehouse' | 'handshake';
   /** Public listings page. */
   href: string;
   /** Direct "post a listing" path inside the user dashboard. */
@@ -96,12 +96,12 @@ export const HOME_VERTICALS: readonly HomeVertical[] = [
   {
     id: 'businesses',
     label: 'Biznese',
-    tagline: 'Restorante, bar, kafene — orare, rezervime dhe shërbime',
+    tagline: 'Restorante, dyqane, sallone dhe shërbime',
     gradient: ['#0ea5e9', '#0369a1'] as const,
-    iconKey: 'fork-knife',
+    iconKey: 'map-pin-warehouse',
     href: paths.public.businesses,
     postHref: paths.user.businessesListing,
-    searchPlaceholder: 'Kërko restorant, bar, qytet…',
+    searchPlaceholder: 'Kërko biznes, dyqan, qytet…',
   },
   {
     id: 'professionals',
@@ -135,8 +135,8 @@ export const AI_SEARCH_CATEGORY: SearchCategory = {
 };
 
 /**
- * Soft salmon accent — borders, icons, labels, chips (not solid CTAs).
- * Previous Okazion red before the crimson button fill.
+ * Soft salmon accent — borders, icons, labels, chips (picker, packages, CTAs).
+ * Homepage / Okazion browse page use brand primary green instead.
  */
 export const OKAZION_ACCENT = '#ef4444';
 export const OKAZION_ACCENT_DARK = '#dc2626';

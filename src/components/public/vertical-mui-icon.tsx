@@ -12,7 +12,7 @@ export interface VerticalMuiIconProps {
   sx?: SvgIconProps['sx'];
 }
 
-/** @deprecated Name kept for callers — renders {@link HomeVerticalIcon} (Phosphor bold). */
+/** @deprecated Name kept for callers — renders {@link HomeVerticalIcon} (Phosphor duotone). */
 export function VerticalMuiIcon({ verticalId, fontSize = 'medium' }: VerticalMuiIconProps) {
   const size =
     typeof fontSize === 'number'

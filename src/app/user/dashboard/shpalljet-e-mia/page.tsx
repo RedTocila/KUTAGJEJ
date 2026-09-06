@@ -22,7 +22,6 @@ import {
 } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
-import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
@@ -33,6 +32,8 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Speedometer as SpeedometerIcon } from '@phosphor-icons/react/dist/ssr/Speedometer';
+
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
@@ -877,7 +878,7 @@ function BusinessCard({
       metrics={l}
       status={l.status}
       imageUrl={coverImage(l.imageUrls)}
-      fallbackIcon={BuildingOfficeIcon}
+      fallbackIcon={BusinessesCategoryIcon}
       listingId={l.id}
       kind="businesses"
       isPremium={Boolean(l.isPremium)}
@@ -1541,7 +1542,7 @@ export default function UserMyListingsPage() {
     {
       key: 'businesses',
       label: 'Biznese',
-      icon: <BuildingOfficeIcon size={16} weight="duotone" />,
+      icon: <BusinessesCategoryIcon size={16} weight="duotone" />,
       count: filteredBiz.length,
       pending: filteredBiz.filter((l) => normalizeListingModerationStatus(l.status) === 'pending').length,
     },

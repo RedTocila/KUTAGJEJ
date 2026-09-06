@@ -85,9 +85,9 @@ const DEFAULT_SEO: Record<HomeVerticalId, { title: string; description: string }
       'Shfleto njoftimet e tregut online — elektronikë, mobilje, veshje, libra, sport, lodra dhe shumë më tepër. Shitje të reja çdo ditë në KuTaGjej.',
   },
   businesses: {
-    title: 'Biznese — restorante, bar & kafene',
+    title: 'Biznese — restorante, dyqane & shërbime',
     description:
-      'Gjej restorante, bar, kafene dhe vende ngrënie në KuTaGjej — orare hapjeje, rezervime dhe çfarë ofrojnë. Posto aktivitetin tënd.',
+      'Gjej restorante, dyqane, sallone, hotelë dhe shërbime në KuTaGjej — orare hapjeje, kontakt dhe çfarë ofrojnë. Posto aktivitetin tënd.',
   },
   professionals: {
     title: 'Profesionistë — freelance & shërbime',

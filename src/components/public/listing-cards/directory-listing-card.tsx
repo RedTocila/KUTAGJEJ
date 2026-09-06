@@ -8,9 +8,9 @@ import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import { listingBusinessPublicHref, listingProfessionalPublicHref } from '@/paths';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicDirectoryListing } from '@/lib/public-listings-client';
@@ -115,7 +115,7 @@ function BusinessVenueCardBody({
           listingKind="businesses"
           listingId={listing.id}
           imageUrl={listing.imageUrl}
-          FallbackIcon={StorefrontIcon}
+          FallbackIcon={BusinessesCategoryIcon}
           alt={listing.title}
           height={
             variant === 'browse'

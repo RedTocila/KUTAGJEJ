@@ -12,11 +12,15 @@ import { Motorcycle as MotorcycleIcon } from '@phosphor-icons/react/dist/ssr/Mot
 import { Truck as TruckIcon } from '@phosphor-icons/react/dist/ssr/Truck';
 import { Van as VanIcon } from '@phosphor-icons/react/dist/ssr/Van';
 import { Code as CodeIcon } from '@phosphor-icons/react/dist/ssr/Code';
+import { BeerBottle as BeerBottleIcon } from '@phosphor-icons/react/dist/ssr/BeerBottle';
+import { Barbell as BarbellIcon } from '@phosphor-icons/react/dist/ssr/Barbell';
+import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
+import { Broom as BroomIcon } from '@phosphor-icons/react/dist/ssr/Broom';
 import { Coffee as CoffeeIcon } from '@phosphor-icons/react/dist/ssr/Coffee';
 import { Couch as CouchIcon } from '@phosphor-icons/react/dist/ssr/Couch';
 import { DeviceMobile as DeviceMobileIcon } from '@phosphor-icons/react/dist/ssr/DeviceMobile';
+import { FirstAid as FirstAidIcon } from '@phosphor-icons/react/dist/ssr/FirstAid';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';
-import { BeerBottle as BeerBottleIcon } from '@phosphor-icons/react/dist/ssr/BeerBottle';
 import { Hammer as HammerIcon } from '@phosphor-icons/react/dist/ssr/Hammer';
 import { Headphones as HeadphonesIcon } from '@phosphor-icons/react/dist/ssr/Headphones';
 import { Hospital as HospitalIcon } from '@phosphor-icons/react/dist/ssr/Hospital';
@@ -24,14 +28,14 @@ import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { Money as MoneyIcon } from '@phosphor-icons/react/dist/ssr/Money';
 import { PuzzlePiece as PuzzlePieceIcon } from '@phosphor-icons/react/dist/ssr/PuzzlePiece';
+import { Scissors as ScissorsIcon } from '@phosphor-icons/react/dist/ssr/Scissors';
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { SoccerBall as SoccerBallIcon } from '@phosphor-icons/react/dist/ssr/SoccerBall';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
-import { TShirt as TShirtIcon } from '@phosphor-icons/react/dist/ssr/TShirt';
 import { Toolbox as ToolboxIcon } from '@phosphor-icons/react/dist/ssr/Toolbox';
+import { TShirt as TShirtIcon } from '@phosphor-icons/react/dist/ssr/TShirt';
 import { Tree as TreeIcon } from '@phosphor-icons/react/dist/ssr/Tree';
 import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/UserCircle';
-import { Pizza as PizzaIcon } from '@phosphor-icons/react/dist/ssr/Pizza';
 import { Warehouse as WarehouseIcon } from '@phosphor-icons/react/dist/ssr/Warehouse';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
@@ -100,11 +104,15 @@ export const HOME_SUBCATEGORIES: Record<HomeVerticalId, readonly SubcategoryItem
   ],
   businesses: [
     { label: 'Restorant', labelEn: 'Restaurant', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=restorant` },
+    { label: 'Dyqan', labelEn: 'Shop', Icon: StorefrontIcon, href: `${paths.public.businesses}?type=dyqan` },
+    { label: 'Sallon', labelEn: 'Salon', Icon: ScissorsIcon, href: `${paths.public.businesses}?type=salone-bukurie` },
+    { label: 'Palestër', labelEn: 'Gym', Icon: BarbellIcon, href: `${paths.public.businesses}?type=palester` },
+    { label: 'Hotel', labelEn: 'Hotel', Icon: BedIcon, href: `${paths.public.businesses}?type=hotel` },
+    { label: 'Farmaci', labelEn: 'Pharmacy', Icon: FirstAidIcon, href: `${paths.public.businesses}?type=farmacie` },
+    { label: 'Auto', labelEn: 'Auto services', Icon: WrenchIcon, href: `${paths.public.businesses}?type=sherbime-auto` },
+    { label: 'Shërbime', labelEn: 'Home services', Icon: BroomIcon, href: `${paths.public.businesses}?type=sherbime-shtepie` },
     { label: 'Bar & pub', labelEn: 'Bar & pub', Icon: BeerBottleIcon, href: `${paths.public.businesses}?type=bar` },
     { label: 'Kafene', labelEn: 'Café', Icon: CoffeeIcon, href: `${paths.public.businesses}?type=kafe` },
-    { label: 'Brunch', labelEn: 'Brunch', Icon: ForkKnifeIcon, href: `${paths.public.businesses}?type=brunch` },
-    { label: 'Piceri', labelEn: 'Pizzeria', Icon: PizzaIcon, href: `${paths.public.businesses}?type=piceri-fast-food` },
-    { label: 'Pastiçeri', labelEn: 'Pastry shop', Icon: StorefrontIcon, href: `${paths.public.businesses}?type=pasticeri` },
   ],
   professionals: [
     { label: 'Freelance', labelEn: 'Freelance', Icon: UserCircleIcon, href: `${paths.public.professionals}?type=freelance` },

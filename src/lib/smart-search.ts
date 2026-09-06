@@ -176,7 +176,7 @@ function buildRules(): PhraseRule[] {
 
   addRule(
     rules,
-    ['biznes', 'restorant', 'restaurant', 'bar', 'kafe', 'kafene', 'pastice', 'pasticeri', 'brunch', 'piceri', 'fast food'],
+    ['biznes', 'restorant', 'restaurant', 'bar', 'kafe', 'kafene', 'pastice', 'pasticeri', 'brunch', 'piceri', 'fast food', 'dyqan', 'sallon', 'salon', 'palester', 'gym', 'hotel', 'farmaci', 'supermarket', 'sherbime'],
     'businesses',
     4,
     () => {},

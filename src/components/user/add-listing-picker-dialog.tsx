@@ -12,7 +12,6 @@ import {
   Typography,
 } from '@mui/material';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
-import { BuildingOffice as BuildingOfficeIcon } from '@phosphor-icons/react/dist/ssr/BuildingOffice';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
@@ -24,6 +23,7 @@ import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import {
   listMyBusinessListings,
   listMyProfessionalListings,
@@ -154,7 +154,7 @@ function categoryIcon(key: ListingCategoryKey): PhosphorIcon {
     case 'marketplace':
       return StorefrontIcon;
     case 'businesses':
-      return BuildingOfficeIcon;
+      return BusinessesCategoryIcon;
     case 'professionals':
       return UsersIcon;
     default:

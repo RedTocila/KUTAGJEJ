@@ -17,6 +17,7 @@ import {
   JOB_TYPE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
+import { BUSINESS_CATEGORY_OPTIONS } from '@/lib/business-constants';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { REAL_ESTATE_PROPERTY_CATEGORIES, TRANSACTION_OPTIONS } from '@/lib/real-estate-constants';
 
@@ -125,14 +126,7 @@ export const DIRECTORY_RATING_PRESETS = [
   { value: '4.5', label: '4.5+' },
 ] as const;
 
-export const BUSINESS_FILTER_OPTIONS = [
-  { value: 'restorant', label: 'Restorant' },
-  { value: 'bar', label: 'Bar & pub' },
-  { value: 'kafe', label: 'Kafene' },
-  { value: 'brunch', label: 'Brunch & mëngjes' },
-  { value: 'piceri-fast-food', label: 'Piceri & fast food' },
-  { value: 'pasticeri', label: 'Pastiçeri & ëmbëlsira' },
-] as const;
+export const BUSINESS_FILTER_OPTIONS = BUSINESS_CATEGORY_OPTIONS;
 
 export const PROFESSIONAL_FILTER_OPTIONS = [
   { value: 'freelance', label: 'Freelance' },

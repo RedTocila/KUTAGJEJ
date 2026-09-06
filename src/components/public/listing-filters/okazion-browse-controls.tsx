@@ -11,8 +11,6 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { useLanguage } from '@/hooks/use-language';
 import {
-  OKAZION_ACCENT,
-  OKAZION_ACCENT_SOFT,
   localizeHomeVerticals,
   localizeSearchCategory,
   type HomeVerticalId,
@@ -32,8 +30,6 @@ import {
 } from '@/components/public/product-browse-chrome';
 import { ActiveFilterChips } from '@/components/public/listing-filters/active-filter-chips';
 import { ListingKeywordSearchInput } from '@/components/public/listing-filters/listing-keyword-search-input';
-
-const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
 
 /** Same verticals as create-Okazion — no directory profiles. */
 const OKAZION_BROWSE_VERTICAL_IDS = new Set<HomeVerticalId>([
@@ -132,7 +128,6 @@ export function OkazionBrowseControls() {
             value={formatBrowseKeywords(applied.q)}
             placeholder={searchPlaceholder}
             onChange={applyKeyword}
-            accent={OKAZION_SEARCH_ACCENT}
             commitToChip
             live
           />
@@ -174,7 +169,6 @@ export function OkazionBrowseControls() {
                 icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
                 bareIcon
                 active={active}
-                accent={OKAZION_SEARCH_ACCENT}
               />
             );
           })}

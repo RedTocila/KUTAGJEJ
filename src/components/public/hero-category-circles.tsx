@@ -8,11 +8,10 @@ import { paths } from '@/paths';
 import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
+  AI_SEARCH_BLUE_MUTED,
+  AI_SEARCH_BLUE_SOFT,
   localizeHomeBrowseCategories,
   localizeSearchCategories,
-  OKAZION_ACCENT,
-  OKAZION_ACCENT_SOFT,
-  PROFILES_ACCENT,
 } from '@/lib/home-categories';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -21,7 +20,7 @@ import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
-/** Soft primary green fill for every category circle (Okazion icon stays red). */
+/** Soft primary green fill for listing / Okazion / Profiles circles. */
 const CATEGORY_TILE_BG = 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 const CATEGORY_TILE_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
 const CATEGORY_ICON_COLOR = 'var(--mui-palette-primary-main)';
@@ -40,19 +39,30 @@ export interface HeroCategoryCirclesProps {
   includeAi?: boolean;
 }
 
-type AccentMode = 'ai' | 'okazion' | 'profiles' | 'default';
+type AccentMode = 'ai' | 'default';
 
 function accentColor(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE;
-  if (mode === 'okazion') return OKAZION_ACCENT;
-  if (mode === 'profiles') return PROFILES_ACCENT;
   return 'var(--mui-palette-primary-main)';
+}
+
+function tileBg(mode: AccentMode): string {
+  if (mode === 'ai') return AI_SEARCH_BLUE_MUTED;
+  return CATEGORY_TILE_BG;
+}
+
+function tileHoverBg(mode: AccentMode): string {
+  if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
+  return CATEGORY_TILE_BG_HOVER;
+}
+
+function iconColor(mode: AccentMode): string {
+  if (mode === 'ai') return AI_SEARCH_BLUE;
+  return CATEGORY_ICON_COLOR;
 }
 
 function accentModeFor(id: string): AccentMode {
   if (id === 'ai') return 'ai';
-  if (id === 'okazion') return 'okazion';
-  if (id === 'profiles') return 'profiles';
   return 'default';
 }
 
@@ -141,10 +151,10 @@ export function HeroCategoryCircles({
     return undefined;
   })();
 
-  /** Grey tile; hover washes green (Okazion washes red). */
+  /** Soft green tile (AI uses purple); hover washes a bit stronger. */
   const itemSx = (mode: AccentMode) => {
     const accent = accentColor(mode);
-    const hoverTileBg = mode === 'okazion' ? OKAZION_ACCENT_SOFT : CATEGORY_TILE_BG_HOVER;
+    const hoverBg = tileHoverBg(mode);
     return {
       flexShrink: 0,
       alignItems: 'center',
@@ -157,7 +167,7 @@ export function HeroCategoryCircles({
       WebkitTapHighlightColor: 'transparent',
       touchAction: 'manipulation',
       '&:hover .hero-cat-tile': {
-        bgcolor: hoverTileBg,
+        bgcolor: hoverBg,
       },
       '&:hover .hero-cat-label': {
         color: accent,
@@ -167,7 +177,7 @@ export function HeroCategoryCircles({
         transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-tile': {
-        bgcolor: hoverTileBg,
+        bgcolor: hoverBg,
         transitionDuration: MOTION.press,
       },
       '&:active .hero-cat-label': {
@@ -209,9 +219,7 @@ export function HeroCategoryCircles({
       {heroVerticals.map((v, i) => {
         const selected = selectedIndex >= 0 && i === selectedIndex;
         const mode = accentModeFor(v.id);
-        const isOkazion = v.id === 'okazion';
         const label = heroCategoryLabel(v.id, v.label);
-        const iconColor = isOkazion ? OKAZION_ACCENT : CATEGORY_ICON_COLOR;
         const body = (
           <>
             {/* Mobile: circle tile. Desktop: 4:3 tile matching the banner. */}
@@ -230,7 +238,7 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: isOkazion ? OKAZION_ACCENT_SOFT : CATEGORY_TILE_BG,
+                bgcolor: tileBg(mode),
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
@@ -249,7 +257,7 @@ export function HeroCategoryCircles({
                   },
                 }}
               >
-                <HomeVerticalIcon verticalId={v.id} size={34} weight="regular" color={iconColor} />
+                <HomeVerticalIcon verticalId={v.id} size={34} weight="duotone" color={iconColor(mode)} />
               </Box>
               <Typography
                 className="hero-cat-label"

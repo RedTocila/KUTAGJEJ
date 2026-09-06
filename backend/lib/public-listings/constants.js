@@ -6,6 +6,15 @@ const BUSINESS_CATEGORY_LABELS = {
   brunch: 'Brunch & mëngjes',
   'piceri-fast-food': 'Piceri & fast food',
   pasticeri: 'Pastiçeri & ëmbëlsira',
+  dyqan: 'Dyqan',
+  supermarket: 'Supermarket & market',
+  farmacie: 'Farmaci',
+  'salone-bukurie': 'Sallon bukurie',
+  palester: 'Palestër & fitness',
+  hotel: 'Hotel & akomodim',
+  'sherbime-auto': 'Shërbime auto',
+  'sherbime-shtepie': 'Shërbime shtëpie',
+  'te-tjera': 'Të tjera',
 };
 
 const PROFESSIONAL_CATEGORY_LABELS = {

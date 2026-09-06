@@ -2,8 +2,27 @@
 
 import * as React from 'react';
 import { Box, Grid, IconButton, Portal, Stack, Typography } from '@mui/material';
+import { ArrowsDownUp as ArrowsDownUpIcon } from '@phosphor-icons/react/dist/ssr/ArrowsDownUp';
+import { Bed as BedIcon } from '@phosphor-icons/react/dist/ssr/Bed';
+import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
+import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
+import { CalendarCheck as CalendarCheckIcon } from '@phosphor-icons/react/dist/ssr/CalendarCheck';
+import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/CaretDown';
+import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
+import { CurrencyEur as CurrencyEurIcon } from '@phosphor-icons/react/dist/ssr/CurrencyEur';
 import { Funnel as FunnelIcon } from '@phosphor-icons/react/dist/ssr/Funnel';
+import { GasPump as GasPumpIcon } from '@phosphor-icons/react/dist/ssr/GasPump';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
+import { GraduationCap as GraduationCapIcon } from '@phosphor-icons/react/dist/ssr/GraduationCap';
+import { Key as KeyIcon } from '@phosphor-icons/react/dist/ssr/Key';
+import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
+import { Package as PackageIcon } from '@phosphor-icons/react/dist/ssr/Package';
+import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
+import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
+import { Speedometer as SpeedometerIcon } from '@phosphor-icons/react/dist/ssr/Speedometer';
+import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -66,7 +85,7 @@ export function VerticalFilterSections({
   const t = useCopy();
   const { language } = useLanguage();
   const locationSection = (
-    <FilterSection title={t.browse.location} index={0}>
+    <FilterSection title={t.browse.location} icon={MapPinIcon} index={0}>
       <Grid size={{ xs: 12 }}>
         <LocationSearchInput
           cities={cities}
@@ -84,16 +103,7 @@ export function VerticalFilterSections({
   const primaryValue = getPrimaryFilterValue(verticalId, draft as Record<string, string | undefined>);
 
   const quickPicks = (
-    <Box
-      sx={{
-        p: 2,
-        mb: 2,
-        borderRadius: 3.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-      }}
-    >
+    <Box sx={{ mb: 2 }}>
       <FilterQuickPicks
         verticalId={verticalId}
         selectedValue={primaryValue}
@@ -103,7 +113,7 @@ export function VerticalFilterSections({
   );
 
   const verifiedSection = (
-    <FilterSection title={t.browse.account} index={10}>
+    <FilterSection title={t.browse.account} icon={ShieldCheckIcon} index={10}>
       <FilterChoiceCards
         value={(draft as { verified?: string }).verified ?? ''}
         onChange={(v) => setField('verified', v)}
@@ -124,7 +134,7 @@ export function VerticalFilterSections({
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title={t.browse.transaction} index={1}>
+          <FilterSection title={t.browse.transaction} icon={KeyIcon} index={1}>
             <FilterSegmented
               value={f.tx ?? ''}
               onChange={(v) => setField('tx', v)}
@@ -134,10 +144,10 @@ export function VerticalFilterSections({
               }))}
             />
           </FilterSection>
-          <FilterSection title={t.browse.bedrooms} index={2}>
+          <FilterSection title={t.browse.bedrooms} icon={BedIcon} index={2}>
             <FilterBedroomPicker value={f.bedrooms ?? ''} onChange={(v) => setField('bedrooms', v)} />
           </FilterSection>
-          <FilterSection title={t.browse.price} index={3}>
+          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -151,7 +161,7 @@ export function VerticalFilterSections({
               onMaxChange={(v) => setField('maxPrice', v)}
             />
           </FilterSection>
-          <FilterSection title={t.browse.surface} index={4}>
+          <FilterSection title={t.browse.surface} icon={RulerIcon} index={4}>
             <FilterPresetChips
               value={f.minSurface ?? ''}
               onChange={(v) => setField('minSurface', v)}
@@ -175,17 +185,7 @@ export function VerticalFilterSections({
       const modelOptions = f.type && f.make ? cfg.modelsForTypeMake(f.type, f.make) : [];
       return (
         <Stack spacing={2}>
-          <Box
-            sx={{
-              p: 2,
-              mb: 0,
-              borderRadius: 3.5,
-              border: '1px solid',
-              borderColor: f.type ? 'primary.main' : 'divider',
-              bgcolor: f.type ? primaryMainAlpha(0.06) : 'background.paper',
-              boxShadow: f.type ? `inset 0 0 0 1px ${primaryMainAlpha(0.15)}` : 'none',
-            }}
-          >
+          <Box sx={{ mb: 0 }}>
             <VehicleTypePicker
               label={t.browse.vehicleType}
               value={(f.type as VehicleType) || ''}
@@ -195,14 +195,14 @@ export function VerticalFilterSections({
             />
           </Box>
           {locationSection}
-          <FilterSection title={t.browse.transmission} index={0}>
+          <FilterSection title={t.browse.transmission} icon={GearSixIcon} index={0}>
             <FilterSegmented
               value={f.transmission ?? ''}
               onChange={(v) => setField('transmission', v)}
               options={CAR_TRANSMISSION_VISUAL}
             />
           </FilterSection>
-          <FilterSection title={t.browse.makeAndModel} index={1}>
+          <FilterSection title={t.browse.makeAndModel} icon={CarIcon} index={1}>
             <FilterSelect
               label={t.browse.make}
               value={f.make ?? ''}
@@ -223,7 +223,7 @@ export function VerticalFilterSections({
               disabled={!f.make}
             />
           </FilterSection>
-          <FilterSection title={t.browse.fuel} index={2}>
+          <FilterSection title={t.browse.fuel} icon={GasPumpIcon} index={2}>
             <FilterSelect
               label={t.browse.fuel}
               value={f.fuel ?? ''}
@@ -232,7 +232,7 @@ export function VerticalFilterSections({
               gridSize={{ xs: 12 }}
             />
           </FilterSection>
-          <FilterSection title={t.browse.price} index={3}>
+          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -246,7 +246,7 @@ export function VerticalFilterSections({
               onMaxChange={(v) => setField('maxPrice', v)}
             />
           </FilterSection>
-          <FilterSection title={t.browse.yearAndMileage} index={4}>
+          <FilterSection title={t.browse.yearAndMileage} icon={SpeedometerIcon} index={4}>
             <FilterPresetChips
               value={f.minYear ?? ''}
               onChange={(v) => setField('minYear', v)}
@@ -278,10 +278,10 @@ export function VerticalFilterSections({
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title={t.browse.moreIndustries} index={0}>
+          <FilterSection title={t.browse.moreIndustries} icon={BuildingsIcon} index={0}>
             <FilterSelect label={t.browse.allIndustries} value={f.industry ?? ''} onChange={(v) => setField('industry', v)} options={cfg.industries} gridSize={{ xs: 12 }} />
           </FilterSection>
-          <FilterSection title={t.browse.workLocation} index={1}>
+          <FilterSection title={t.browse.workLocation} icon={MapPinIcon} index={1}>
             <FilterChoiceCards
               value={f.workLocation ?? ''}
               onChange={(v) => setField('workLocation', v)}
@@ -289,14 +289,14 @@ export function VerticalFilterSections({
               columns={3}
             />
           </FilterSection>
-          <FilterSection title={t.browse.jobType} index={2}>
+          <FilterSection title={t.browse.jobType} icon={BriefcaseIcon} index={2}>
             <FilterOptionTiles
               value={f.jobType ?? ''}
               onChange={(v) => setField('jobType', v)}
               options={cfg.jobTypes}
             />
           </FilterSection>
-          <FilterSection title={t.browse.qualifications} index={3}>
+          <FilterSection title={t.browse.qualifications} icon={GraduationCapIcon} index={3}>
             <FilterOptionTiles
               value={f.experience ?? ''}
               onChange={(v) => setField('experience', v)}
@@ -317,7 +317,7 @@ export function VerticalFilterSections({
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title={t.browse.condition} index={1}>
+          <FilterSection title={t.browse.condition} icon={PackageIcon} index={1}>
             <FilterOptionTiles
               value={f.condition ?? ''}
               onChange={(v) => setField('condition', v)}
@@ -327,7 +327,7 @@ export function VerticalFilterSections({
               }))}
             />
           </FilterSection>
-          <FilterSection title={t.browse.price} index={2}>
+          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={2}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -355,7 +355,7 @@ export function VerticalFilterSections({
         <Stack spacing={2}>
           {quickPicks}
           {locationSection}
-          <FilterSection title={t.browse.sort} index={1}>
+          <FilterSection title={t.browse.sort} icon={ArrowsDownUpIcon} index={1}>
             <FilterOptionTiles
               value={f.sort && f.sort !== 'newest' ? f.sort : 'newest'}
               onChange={(v) => setField('sort', v === 'newest' ? '' : v)}
@@ -365,14 +365,14 @@ export function VerticalFilterSections({
               })}
             />
           </FilterSection>
-          <FilterSection title={t.browse.minRating} index={2}>
+          <FilterSection title={t.browse.minRating} icon={StarIcon} index={2}>
             <FilterPresetChips
               value={f.minRating ?? ''}
               onChange={(v) => setField('minRating', v)}
               presets={DIRECTORY_RATING_PRESETS}
             />
           </FilterSection>
-          <FilterSection title={t.browse.hasAnnouncement} index={3}>
+          <FilterSection title={t.browse.hasAnnouncement} icon={MegaphoneIcon} index={3}>
             <FilterChoiceCards
               value={f.announcement ?? ''}
               onChange={(v) => setField('announcement', v)}
@@ -385,7 +385,7 @@ export function VerticalFilterSections({
             />
           </FilterSection>
           {verticalId === 'businesses' ? (
-            <FilterSection title={t.browse.hasReservations} index={4}>
+            <FilterSection title={t.browse.hasReservations} icon={CalendarCheckIcon} index={4}>
               <FilterChoiceCards
                 value={f.reservations ?? ''}
                 onChange={(v) => setField('reservations', v)}
@@ -398,7 +398,7 @@ export function VerticalFilterSections({
               />
             </FilterSection>
           ) : (
-            <FilterSection title={t.browse.fastResponse} index={4}>
+            <FilterSection title={t.browse.fastResponse} icon={ClockIcon} index={4}>
               <FilterChoiceCards
                 value={f.fastResponse ?? ''}
                 onChange={(v) => setField('fastResponse', v)}
@@ -478,30 +478,15 @@ function FilterScrollArea({
             left: 0,
             right: 0,
             bottom: 0,
-            height: 64,
+            height: 40,
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
             pb: 0.75,
-            background:
-              'linear-gradient(to top, rgb(var(--mui-palette-background-defaultChannel) / 1) 28%, rgb(var(--mui-palette-background-defaultChannel) / 0) 100%)',
+            color: 'primary.main',
           }}
         >
-          <Box
-            sx={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              display: 'grid',
-              placeItems: 'center',
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
-              color: 'primary.main',
-            }}
-          >
-            <CaretDownIcon size={14} weight="bold" />
-          </Box>
+          <CaretDownIcon size={18} weight="bold" />
         </Box>
       ) : null}
     </Box>
@@ -609,8 +594,6 @@ export function FilterDrawerPanel({
             pt: 2.5,
             pb: 2,
             flexShrink: 0,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
           }}
         >
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -675,8 +658,6 @@ export function FilterDrawerPanel({
             px: 2.5,
             py: 2,
             flexShrink: 0,
-            borderTop: '1px solid',
-            borderColor: 'divider',
             bgcolor: 'background.default',
             backgroundImage: 'none',
           }}

@@ -11,6 +11,7 @@ import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Hands
 import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import {
   SearchHitCard,
   searchHitListTextSx,
@@ -308,7 +309,7 @@ export function SearchListingCard({
           title={listing.title}
           subtitle={joinMeta([listing.categoryLabel || listing.category, location])}
           imageUrl={listing.imageUrl}
-          FallbackIcon={item.kind === 'businesses' ? StorefrontIcon : HandshakeIcon}
+          FallbackIcon={item.kind === 'businesses' ? BusinessesCategoryIcon : HandshakeIcon}
           verified={Boolean(listing.sellerVerified)}
           ratingAverage={listing.ratingAverage}
           reviewCount={listing.reviewCount}

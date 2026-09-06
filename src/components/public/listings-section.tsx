@@ -10,10 +10,6 @@ import {
   isHomeVerticalId,
   localizeSearchCategory,
   localizeVertical,
-  OKAZION_ACCENT,
-  OKAZION_ACCENT_SOFT,
-  PROFILES_ACCENT,
-  PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
   type SearchCategoryId,
 } from '@/lib/home-categories';
@@ -55,12 +51,16 @@ function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguag
   if (verticalId === 'okazion' || verticalId === 'profiles') {
     const cat = localizeSearchCategory(verticalId satisfies SearchCategoryId, language);
     const isOkazion = verticalId === 'okazion';
+    const isProfiles = verticalId === 'profiles';
     return {
       label: cat.label,
       href: cat.href,
       postHref: isOkazion ? `${paths.user.realEstateListing}?okazion=1` : undefined,
-      accent: isOkazion ? OKAZION_ACCENT : PROFILES_ACCENT,
-      accentSoft: isOkazion ? OKAZION_ACCENT_SOFT : PROFILES_ACCENT_SOFT,
+      /** Homepage Profiles: green icon, default title color; Okazion uses default green icon. */
+      accent: undefined as string | undefined,
+      accentSoft: undefined as string | undefined,
+      iconColor: isProfiles ? 'var(--mui-palette-primary-main)' : undefined,
+      titleColor: isProfiles ? 'text.primary' : undefined,
     };
   }
   const vertical = localizeVertical(verticalId, language);
@@ -68,8 +68,10 @@ function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguag
     label: vertical.label,
     href: vertical.href,
     postHref: vertical.postHref,
-    accent: undefined,
-    accentSoft: undefined,
+    accent: undefined as string | undefined,
+    accentSoft: undefined as string | undefined,
+    iconColor: undefined as string | undefined,
+    titleColor: undefined as string | undefined,
   };
 }
 
@@ -100,7 +102,8 @@ export function ListingsSection({
           : (titleOverride ?? meta.label);
 
   const showPills = !hideSubcategoryPills && isHomeVerticalId(verticalId);
-  const usePhosphorIcon = useMuiVerticalIcon || Boolean(meta.accent);
+  const usePhosphorIcon =
+    useMuiVerticalIcon || Boolean(meta.accent) || verticalId === 'okazion' || verticalId === 'profiles';
 
   return (
     <Box
@@ -117,7 +120,7 @@ export function ListingsSection({
           <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
             {!hideVerticalIcon ? (
               usePhosphorIcon ? (
-                <HomeVerticalIcon verticalId={verticalId} size={28} />
+                <HomeVerticalIcon verticalId={verticalId} size={28} color={meta.iconColor} />
               ) : (
                 <VerticalIcon verticalId={verticalId as HomeVerticalId} size={42} decorative />
               )
@@ -131,9 +134,7 @@ export function ListingsSection({
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
-                  ...(meta.accent
-                    ? { color: verticalId === 'okazion' ? 'text.primary' : meta.accent }
-                    : null),
+                  ...(meta.titleColor ? { color: meta.titleColor } : null),
                 }}
               >
                 {title}
@@ -201,7 +202,7 @@ function EmptyPlaceholder({ verticalId }: { verticalId: ListingsSectionVerticalI
       }}
     >
       <Stack spacing={1.5} sx={{ alignItems: 'center' }}>
-        <HomeVerticalIcon verticalId={verticalId} size={48} />
+        <HomeVerticalIcon verticalId={verticalId} size={48} color={meta.iconColor} />
         <Typography variant="body2" color="text.secondary">
           {t.common.noListingsYet(meta.label.toLowerCase())}
         </Typography>

@@ -40,8 +40,8 @@ const verticalsSq: Record<SearchCategoryId, VerticalCopy> = {
   },
   businesses: {
     label: 'Biznese',
-    tagline: 'Restorante, bar, kafene — orare, rezervime dhe shërbime',
-    searchPlaceholder: 'Kërko restorant, bar, qytet…',
+    tagline: 'Restorante, dyqane, sallone dhe shërbime',
+    searchPlaceholder: 'Kërko biznes, dyqan, qytet…',
   },
   professionals: {
     label: 'Profesionistë',
@@ -88,8 +88,8 @@ const verticalsEn: Record<SearchCategoryId, VerticalCopy> = {
   },
   businesses: {
     label: 'Businesses',
-    tagline: 'Restaurants, bars, cafés — hours, bookings and services',
-    searchPlaceholder: 'Search restaurant, bar, city…',
+    tagline: 'Restaurants, shops, salons and services',
+    searchPlaceholder: 'Search business, shop, city…',
   },
   professionals: {
     label: 'Professionals',
@@ -637,7 +637,7 @@ const sq = {
     marketplace: 'Tregu',
     marketplaceHint: 'Elektronikë, mobilje, veshje dhe më shumë',
     businesses: 'Biznese',
-    businessesHint: 'Restorante, bar, kafene dhe lokale',
+    businessesHint: 'Restorante, dyqane, sallone dhe shërbime',
     professionals: 'Profesionistë',
     professionalsHint: 'Freelance, konsulence dhe shërbime',
     quotaUnavailable: 'Jo e disponueshme',
@@ -1461,7 +1461,7 @@ const en: AppMessages = {
     marketplace: 'Marketplace',
     marketplaceHint: 'Electronics, furniture, clothing and more',
     businesses: 'Businesses',
-    businessesHint: 'Restaurants, bars, cafés and venues',
+    businessesHint: 'Restaurants, shops, salons and services',
     professionals: 'Professionals',
     professionalsHint: 'Freelance, consulting and services',
     quotaUnavailable: 'Unavailable',

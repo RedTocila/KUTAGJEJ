@@ -8,6 +8,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { useCopy } from '@/hooks/use-copy';
@@ -40,23 +41,19 @@ const selectFieldSx = {
 
 export function FilterSection({
   title,
+  icon: Icon,
   children,
   index = 0,
 }: {
   title: string;
+  icon: PhosphorIcon;
   children: React.ReactNode;
   index?: number;
 }) {
   return (
     <Box
       sx={{
-        p: 2,
-        borderRadius: 3.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
         position: 'relative',
-        overflow: 'hidden',
         animation: 'filterSectionIn 0.45s ease both',
         animationDelay: `${index * 0.07}s`,
         '@keyframes filterSectionIn': {
@@ -68,12 +65,15 @@ export function FilterSection({
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.75 }}>
         <Box
           sx={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            bgcolor: 'primary.main',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'primary.main',
+            flexShrink: 0,
           }}
-        />
+        >
+          <Icon size={14} weight="duotone" />
+        </Box>
         <Typography
           variant="caption"
           sx={{

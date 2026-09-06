@@ -60,6 +60,14 @@ const BUSINESS_TYPE_MAP = [
   { re: /\b(cafe|coffee)\b/i, category: 'kafe' },
   { re: /\b(bar|pub|night_club|wine_bar|cocktail)\b/i, category: 'bar' },
   { re: /\b(restaurant|food|dining|bistro|grill|steakhouse|seafood)\b/i, category: 'restorant' },
+  { re: /\b(beauty_salon|hair_care|hair_salon|nail_salon|spa|barber)\b/i, category: 'salone-bukurie' },
+  { re: /\b(gym|fitness|yoga|sports_club)\b/i, category: 'palester' },
+  { re: /\b(lodging|hotel|motel|guest_house|hostel)\b/i, category: 'hotel' },
+  { re: /\b(pharmacy|drugstore)\b/i, category: 'farmacie' },
+  { re: /\b(supermarket|grocery|convenience_store|market)\b/i, category: 'supermarket' },
+  { re: /\b(car_repair|car_wash|gas_station|auto_parts)\b/i, category: 'sherbime-auto' },
+  { re: /\b(laundry|plumber|electrician|cleaning|home_services)\b/i, category: 'sherbime-shtepie' },
+  { re: /\b(store|shop|clothing|boutique|shopping)\b/i, category: 'dyqan' },
 ];
 
 function isGoogleMapsUrl(input) {

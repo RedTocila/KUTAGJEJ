@@ -28,7 +28,7 @@ const overlayChipSx = {
   WebkitBackdropFilter: 'blur(12px)',
   boxShadow: '0 2px 12px rgba(0,0,0,0.28)',
   color: '#fff',
-  bgcolor: '#F72F35',
+  bgcolor: OKAZION_ACCENT,
   borderColor: alpha('#fff', 0.3),
   '& .MuiChip-icon': {
     color: '#fff',

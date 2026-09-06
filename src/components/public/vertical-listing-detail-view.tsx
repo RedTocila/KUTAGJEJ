@@ -18,6 +18,8 @@ import { Palette as PaletteIcon } from '@phosphor-icons/react/dist/ssr/Palette';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
+
+import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
 import { WhatsappLogo as WhatsappLogoIcon } from '@phosphor-icons/react/dist/ssr/WhatsappLogo';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
@@ -875,7 +877,7 @@ function summarySpecsFor(l: AnyPublicListingDetail): SummarySpec[] {
     default:
       if (l.kind === 'businesses') {
         return [
-          { Icon: BuildingsIcon, label: 'Lloji', value: l.categoryLabel },
+          { Icon: BusinessesCategoryIcon, label: 'Lloji', value: l.categoryLabel },
           ...(l.openingHours ? [{ Icon: ClockIcon, label: 'Orari', value: l.openingHours }] : []),
           ...(l.servicesHighlight ? [{ Icon: SparkleIcon, label: 'Veçori', value: l.servicesHighlight }] : []),
           ...(l.cityName ? [{ Icon: MapPinIcon, label: 'Qyteti', value: l.cityName }] : []),

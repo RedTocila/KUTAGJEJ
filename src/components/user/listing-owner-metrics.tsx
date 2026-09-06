@@ -313,7 +313,7 @@ export function ListingOwnerMetrics({
   isPremium?: boolean;
   premiumUntil?: string | null;
   onPremiumApplied?: (result: { premiumUntil: string }) => void;
-  /** Active OKAZION window from plan or add-on. */
+  /** Active Okazion window from plan or add-on. */
   isOkazion?: boolean;
   okazionUntil?: string | null;
   onOkazionApplied?: (result: { okazionUntil: string }) => void;
@@ -374,7 +374,7 @@ export function ListingOwnerMetrics({
     return () => window.clearInterval(timer);
   }, [refreshLocked]);
 
-  /** Directory profiles (businesses / professionals) cannot be OKAZION. */
+  /** Directory profiles (businesses / professionals) cannot be Okazion. */
   const okazionSupported = kind === 'real-estate' || kind === 'car' || kind === 'job' || kind === 'marketplace';
 
   const refreshTierFlags = React.useMemo(
@@ -443,7 +443,7 @@ export function ListingOwnerMetrics({
       const res = await applyOkazionFromPlan({ kind, listingId });
       if (res.error || !res.okazionUntil) {
         setConfirmBoost(null);
-        setError(res.error || 'Aplikimi i OKAZION dështoi.');
+        setError(res.error || 'Aplikimi i Okazion dështoi.');
         return;
       }
       setOkazionOn(true);
@@ -548,7 +548,7 @@ export function ListingOwnerMetrics({
                     ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
                     : 'Premium aktiv'
                   : okazionOn
-                    ? 'Nuk mund të aktivizoni Premium kur OKAZION është aktiv.'
+                    ? 'Nuk mund të aktivizoni Premium kur Okazion është aktiv.'
                     : 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
               }
             >
@@ -582,11 +582,11 @@ export function ListingOwnerMetrics({
                 title={
                   okazionOn
                     ? okazionUntil
-                      ? `OKAZION aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
-                      : 'OKAZION aktiv'
+                      ? `Okazion aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
+                      : 'Okazion aktiv'
                     : premiumOn
-                      ? 'Nuk mund të aktivizoni OKAZION kur Premium është aktiv.'
-                      : 'Bëje OKAZION me vendin nga paketa (Grow/Elite · 5 ditë)'
+                      ? 'Nuk mund të aktivizoni Okazion kur Premium është aktiv.'
+                      : 'Bëje Okazion me vendin nga paketa (Grow/Elite · 5 ditë)'
                 }
               >
                 <span>
@@ -594,7 +594,7 @@ export function ListingOwnerMetrics({
                     size="small"
                     variant="contained"
                     color="error"
-                    aria-label="OKAZION"
+                    aria-label="Okazion"
                     disabled={okazionDisabled}
                     onClick={() => {
                       setError(null);

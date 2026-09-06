@@ -81,7 +81,7 @@ function applyTextSearch(spec, query, fields) {
   }
 }
 
-/** Keyword search → relevance only (no OKAZION / Premium pin to the top). */
+/** Keyword search → relevance only (no Okazion / Premium pin to the top). */
 function featuredBoostForQuery(query) {
   const searching = parseQueryKeywords(query).some((q) => q.length >= 2);
   if (!searching) return {};

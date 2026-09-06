@@ -144,11 +144,11 @@ export interface CardMediaProps {
   saved?: boolean;
   /** Premium listing — amber card chrome (bookmark stays primary green). */
   premium?: boolean;
-  /** OKAZION listing — red badge / countdown (bookmark stays primary green). */
+  /** Okazion listing — red badge / countdown (bookmark stays primary green). */
   okazion?: boolean;
-  /** Hide OKAZION countdown on homepage-style compact cards. */
+  /** Hide Okazion countdown on homepage-style compact cards. */
   hideOkazionBadge?: boolean;
-  /** When OKAZION ends (ISO). Countdown falls back to 7 days if omitted. */
+  /** When Okazion ends (ISO). Countdown falls back to 7 days if omitted. */
   okazionUntil?: string | null;
   /** Seller verification status. Rendered at bottom-right of the image. */
   sellerVerified?: boolean;
@@ -281,12 +281,16 @@ export function CardMedia({
 
   const showOkazionBadge = okazion && !hideOkazionBadge;
   const countdownCompact = okazionCountdownCompact ?? compact;
-  // OKAZION badge wins when both are active (same priority as before for chrome).
-  const showPremiumBadge = premium && !showOkazionBadge;
-  // Keep the OKAZION countdown in the media badge so it remains visible without
+  // Job timer overlay can include the premium seal as its icon; skip the standalone crown then.
+  const showPremiumBadge = premium && !showOkazionBadge && !topLeftOverlay;
+  // Keep the Okazion countdown in the media badge so it remains visible without
   // competing with the listing price.
   const showBottomRight = Boolean(bottomRightOverlay);
   const showSellerBadges = sellerVerified;
+  const showJobExpiryOverlay = Boolean(topLeftOverlay) && !showOkazionBadge;
+  const showTopLeftStack = Boolean(
+    showOkazionBadge || showPremiumBadge || showJobExpiryOverlay || (!compact && topLeftBadge)
+  );
 
   return (
     <Box
@@ -341,7 +345,7 @@ export function CardMedia({
         </Stack>
       )}
 
-      {showOkazionBadge || showPremiumBadge || (!compact && (topLeftOverlay || topLeftBadge)) ? (
+      {showTopLeftStack ? (
         <Stack
           spacing={0.6}
           sx={{
@@ -357,7 +361,7 @@ export function CardMedia({
             <OkazionCountdown expiresAt={okazionUntil} compact={countdownCompact} />
           ) : showPremiumBadge ? (
             <ListingPremiumBadge size={compact ? 22 : 28} aria-label="Premium" />
-          ) : topLeftOverlay ? (
+          ) : showJobExpiryOverlay ? (
             <Box sx={{ lineHeight: 0 }}>{topLeftOverlay}</Box>
           ) : topLeftBadge ? (
             <Chip

@@ -53,7 +53,7 @@ import type { AppMessages } from '@/lib/i18n/messages';
 
 export type AddListingPickOptions = { okazion?: boolean; premium?: boolean };
 
-/** OKAZION is for sellable ads only — not directory profiles. */
+/** Okazion is for sellable ads only — not directory profiles. */
 const OKAZION_CATEGORY_KEYS = new Set<ListingCategoryKey>([
   'real-estate',
   'cars',
@@ -174,11 +174,11 @@ export function AddListingPickerDialog({
   onClose: () => void;
   /** When set, called instead of navigating to the post-listing page. */
   onPick?: (key: ListingCategoryKey, opts?: AddListingPickOptions) => void;
-  /** Deep-link: open already in “pick category for OKAZION” mode. */
+  /** Deep-link: open already in “pick category for Okazion” mode. */
   initialOkazion?: boolean;
   /** Deep-link: open already in “pick category for Premium” mode. */
   initialPremium?: boolean;
-  /** When set, scopes the dialog directly to that category (Free, AI Build, OKAZION, Premium). */
+  /** When set, scopes the dialog directly to that category (Free, AI Build, Okazion, Premium). */
   category?: ListingCategoryKey | null;
 }) {
   const t = useCopy();

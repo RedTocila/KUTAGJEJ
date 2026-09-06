@@ -210,7 +210,7 @@ export function ContractFormDialog(props: {
     if (qProducts === '__bad__') return;
     const qPremium = readQuota(maxPremiumListings, 'Premium');
     if (qPremium === '__bad__') return;
-    const qOkazion = readQuota(maxOkazionListings, 'OKAZION');
+    const qOkazion = readQuota(maxOkazionListings, 'Okazion');
     if (qOkazion === '__bad__') return;
 
     const readOptionalPrice = (raw: string, labelSq: string): number | null | '__bad__' => {
@@ -434,7 +434,7 @@ export function ContractFormDialog(props: {
                   <QuotaField label="Premium" value={maxPremiumListings} onChange={setMaxPremiumListings} />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 4 }}>
-                  <QuotaField label="OKAZION" value={maxOkazionListings} onChange={setMaxOkazionListings} />
+                  <QuotaField label="Okazion" value={maxOkazionListings} onChange={setMaxOkazionListings} />
                 </Grid>
               </Grid>
             </Box>

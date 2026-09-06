@@ -77,7 +77,14 @@ export function HomepageBelowFold({
       <LazyHomeSection verticalId="cars" initialListings={cars} initialTotal={totals?.cars} initialOk={ssrOk} />
 
       <HomepageCommunityBanner
-        activeListingsCount={(totals?.realEstate ?? 0) + (totals?.cars ?? 0) + (totals?.jobs ?? 0)}
+        activeListingsCount={
+          (totals?.realEstate ?? 0) +
+          (totals?.cars ?? 0) +
+          (totals?.jobs ?? 0) +
+          (totals?.marketplace ?? 0) +
+          (totals?.businesses ?? 0) +
+          (totals?.professionals ?? 0)
+        }
       />
 
       <LazyHomeSection verticalId="jobs" initialListings={jobs} initialTotal={totals?.jobs} initialOk={ssrOk} />

@@ -4,7 +4,7 @@ import * as React from 'react';
 
 /**
  * One shared 1Hz clock for all live countdowns on the page.
- * Avoids N× setInterval when many OKAZION cards are visible at once.
+ * Avoids N× setInterval when many Okazion cards are visible at once.
  */
 let subscribers = 0;
 let intervalId: number | null = null;

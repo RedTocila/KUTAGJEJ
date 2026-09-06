@@ -1,5 +1,6 @@
-import { formatPrice } from '@/components/public/listing-cards/format-helpers';
+import { formatPrice, relativeListingDate } from '@/components/public/listing-cards/format-helpers';
 import { formatRatingDisplay } from '@/lib/format-rating';
+import { DEFAULT_LANGUAGE, type AppLanguage } from '@/lib/language';
 import type { PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 
 export function professionalDisplayName(listing: PublicDirectoryListingDetail): string {
@@ -104,15 +105,8 @@ export type ProfessionalReviewView = {
   initials: string;
 };
 
-function reviewDateLabel(createdAt: string): string {
-  const created = new Date(createdAt);
-  const diffMs = Date.now() - created.getTime();
-  const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  if (days <= 0) return 'Sot';
-  if (days <= 7) return `${days} ditë më parë`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 8) return `${weeks} javë më parë`;
-  return created.toLocaleDateString('sq-AL', { day: 'numeric', month: 'short', year: 'numeric' });
+function reviewDateLabel(createdAt: string, language: AppLanguage = DEFAULT_LANGUAGE): string {
+  return relativeListingDate(createdAt, language);
 }
 
 export function initialsFromName(name: string): string {
@@ -126,19 +120,22 @@ export function initialsFromName(name: string): string {
   );
 }
 
-export function mapApiReviewToView(review: {
-  id: string;
-  reviewerName: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-}): ProfessionalReviewView {
+export function mapApiReviewToView(
+  review: {
+    id: string;
+    reviewerName: string;
+    rating: number;
+    comment: string;
+    createdAt: string;
+  },
+  language: AppLanguage = DEFAULT_LANGUAGE
+): ProfessionalReviewView {
   const author = review.reviewerName?.trim() || 'Klient';
   return {
     id: review.id,
     author,
     rating: review.rating,
-    dateLabel: reviewDateLabel(review.createdAt),
+    dateLabel: reviewDateLabel(review.createdAt, language),
     text: review.comment?.trim() || '',
     initials: initialsFromName(author),
   };

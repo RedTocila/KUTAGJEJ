@@ -270,7 +270,7 @@ async function grantOkazionVouchers(payment) {
       priceBc: Number(payment.metadata?.okazionPriceBc) || null,
     });
     if (!created.ok) {
-      const err = new Error(created.message || 'Nuk u krijua voucher OKAZION.');
+      const err = new Error(created.message || 'Nuk u krijua voucher Okazion.');
       err.statusCode = created.status || 400;
       throw err;
     }

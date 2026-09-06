@@ -67,7 +67,7 @@ const TABLE_CATALOG = {
     probe: 'id, status',
   },
   okazion_listing_vouchers: {
-    label: 'Kupona OKAZION',
+    label: 'Kupona Okazion',
     select: 'id, user_id, status, listing_kind, listing_id, days, source, created_at',
     filterColumns: ['id', 'user_id', 'status'],
     probe: 'id, status',

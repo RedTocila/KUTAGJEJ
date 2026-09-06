@@ -468,6 +468,8 @@ export function HomepageBanner({
 // ---------------------------------------------------------------------------
 
 function BannerStats({ stats }: { stats: BannerStat[] }) {
+  const solo = stats.length === 1;
+
   return (
     <Stack
       direction="row"
@@ -483,10 +485,12 @@ function BannerStats({ stats }: { stats: BannerStat[] }) {
           <Typography
             sx={{
               fontWeight: 800,
-              fontSize: { xs: '1.5rem', md: '1.75rem' },
-              letterSpacing: '-0.015em',
+              fontSize: solo
+                ? { xs: '2.75rem', sm: '3.5rem', md: '4.25rem' }
+                : { xs: '1.5rem', md: '1.75rem' },
+              letterSpacing: '-0.02em',
               color: 'primary.main',
-              lineHeight: 1.1,
+              lineHeight: 1,
             }}
           >
             <CountUp value={stat.value} />
@@ -506,7 +510,14 @@ function BannerStats({ stats }: { stats: BannerStat[] }) {
           </Typography>
           <Typography
             variant="caption"
-            sx={{ color: 'text.secondary', fontWeight: 500, letterSpacing: '0.01em' }}
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 500,
+              letterSpacing: '0.01em',
+              ...(solo
+                ? { fontSize: { xs: '0.875rem', md: '1rem' }, mt: 0.5 }
+                : null),
+            }}
           >
             {stat.label}
           </Typography>

@@ -208,7 +208,7 @@ function CardImageHeader({
       return (
         <Chip
           size="small"
-          label="OKAZION"
+          label="Okazion"
           color="error"
           sx={{ fontWeight: 800, height: 24, fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
         />

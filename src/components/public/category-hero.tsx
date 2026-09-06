@@ -33,7 +33,7 @@ import { CategoryBrowseControls } from './listing-filters/category-browse-contro
 import { MembersBrowseControls } from './listing-filters/members-browse-controls';
 import { OkazionBrowseControls, OkazionBrowseControlsFallback } from './listing-filters/okazion-browse-controls';
 
-/** Browse pages that share the quiet category hero (listing verticals + OKAZION + profiles). */
+/** Browse pages that share the quiet category hero (listing verticals + Okazion + profiles). */
 export type BrowseCategoryId = HomeVerticalId | 'okazion' | 'profiles';
 
 function toListingCategoryKey(id: BrowseCategoryId): ListingCategoryKey | null {
@@ -44,7 +44,7 @@ function toListingCategoryKey(id: BrowseCategoryId): ListingCategoryKey | null {
 
 /**
  * Quiet header used by every public browse page (Real Estate, Cars, Jobs,
- * Marketplace, OKAZION) — page title, count, and browse controls.
+ * Marketplace, Okazion) — page title, count, and browse controls.
  *
  * On mobile, fixes to the top and hides while scrolling down / reveals on scroll up
  * (back | category + search/tags). Desktop keeps a static in-flow hero.

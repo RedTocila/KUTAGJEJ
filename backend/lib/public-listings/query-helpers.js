@@ -161,7 +161,7 @@ function parseSort(value) {
   return SORT_VALUES.has(raw) ? raw : 'newest';
 }
 
-/** Active OKAZION, then Premium, float above the rest (sellable ads). */
+/** Active Okazion, then Premium, float above the rest (sellable ads). */
 function premiumSortPrefix({ includeOkazion = true, includePremium = true } = {}) {
   const prefix = [];
   if (includeOkazion) {
@@ -192,7 +192,7 @@ function buildSort(sort, field = 'price', { includeOkazion = true, includePremiu
   return [...premiumFirst, { column: newestCol, ascending: false }];
 }
 
-/** Directory profiles (businesses / professionals) — Premium only, no OKAZION. */
+/** Directory profiles (businesses / professionals) — Premium only, no Okazion. */
 function buildDirectorySort(sort, { includePremium = true } = {}) {
   if (sort === 'rating-desc') return [{ column: 'rating_average', ascending: false }];
   if (sort === 'rating-asc') return [{ column: 'rating_average', ascending: true }];
@@ -258,10 +258,10 @@ function sortDocsByBumpDesc(docs) {
 }
 
 /**
- * Stable partition: active OKAZION first, then Premium, then the rest.
+ * Stable partition: active Okazion first, then Premium, then the rest.
  * Needed because DB order by *_until also floats *expired* timestamps above nulls.
  * When `sortRestByBump` is true (category "newest" browse), each tier is
- * re-sorted by bumped_at so refresh / new posts sit on top within OKAZION,
+ * re-sorted by bumped_at so refresh / new posts sit on top within Okazion,
  * Premium, and free listings respectively.
  */
 function prioritizeActivePremium(docs, { sortRestByBump = false } = {}) {

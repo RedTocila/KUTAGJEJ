@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * OKAZION listing packs — backed by `addon_packages` (DB) with in-memory cache.
+ * Okazion listing packs — backed by `addon_packages` (DB) with in-memory cache.
  */
 const {
   listOkazionPackages,

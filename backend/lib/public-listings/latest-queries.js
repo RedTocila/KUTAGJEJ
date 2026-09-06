@@ -344,7 +344,7 @@ const LATEST_VERTICAL_SPECS = [
 
 /**
  * Newest card rows for every homepage vertical — one shared city/metrics/badge round-trip.
- * No exact counts, no OKAZION. Used by `/public/listings/recommended`.
+ * No exact counts, no Okazion. Used by `/public/listings/recommended`.
  */
 async function queryLatestVerticals(limit) {
   const docGroups = await Promise.all(
@@ -444,7 +444,7 @@ async function topRatedDirectoryByKind(kind, limit) {
   }
 
   if (orderedDocs.length === 0) return [];
-  // Keep pure rating order — do not float OKAZION/Premium above higher-rated listings.
+  // Keep pure rating order — do not float Okazion/Premium above higher-rated listings.
   return formatDocsForKind(kind, orderedDocs);
 }
 
@@ -632,7 +632,7 @@ async function latestDirectory(vertical, limit) {
 }
 
 /**
- * Active OKAZION deals across all verticals (okazion_until in the future).
+ * Active Okazion deals across all verticals (okazion_until in the future).
  * Optional filters: `kind` (home vertical id) and free-text `q`.
  */
 async function queryOkazionListings(limit = 48, skip = 0, query = {}) {

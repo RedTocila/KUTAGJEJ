@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Seed one active OKAZION listing per eligible category
+ * Seed one active Okazion listing per eligible category
  * (real-estate, cars, jobs, marketplace — not businesses/professionals).
  *
  * Usage (from backend/):
@@ -173,7 +173,7 @@ async function seedOkazionListings(sb, posterId, cities) {
       row: {
         poster_id: posterId,
         property_category: 'apartment',
-        title: 'OKAZION — Apartament 2+1 te Blloku',
+        title: 'Okazion — Apartament 2+1 te Blloku',
         description: `${SEED_TAG} Çmim i ulur për 7 ditë. Apartament i ndriçuar, i mobiluar pjesërisht. Ideal për banim ose investim.`,
         transaction_type: 'sale',
         price: 119000,
@@ -204,7 +204,7 @@ async function seedOkazionListings(sb, posterId, cities) {
         make: 'Audi',
         model: 'A4',
         variant: 'S line',
-        description: `${SEED_TAG} OKAZION 7-ditor. Makina e mirëmbajtur, e rregjistruar në Shqipëri. Shërbime të dokumentuara.`,
+        description: `${SEED_TAG} Okazion 7-ditor. Makina e mirëmbajtur, e rregjistruar në Shqipëri. Shërbime të dokumentuara.`,
         year: 2019,
         kilometers: 82000,
         transmission: 'automatic',
@@ -228,7 +228,7 @@ async function seedOkazionListings(sb, posterId, cities) {
       table: 'job_listings',
       row: {
         poster_id: posterId,
-        title: 'OKAZION — Full-stack Developer',
+        title: 'Okazion — Full-stack Developer',
         description: `${SEED_TAG} Vend i hapur me bonus fillimi. Pozicion hybrid në Tiranë me pagë konkurruese.`,
         industry: 'teknologji-informacioni',
         education: 'bachelor',
@@ -259,7 +259,7 @@ async function seedOkazionListings(sb, posterId, cities) {
       row: {
         poster_id: posterId,
         transaction_type: 'shes',
-        title: 'OKAZION — iPhone 14 Pro 256GB',
+        title: 'Okazion — iPhone 14 Pro 256GB',
         description: `${SEED_TAG} Çmim i ulur për 7 ditë. Telefon në gjendje shumë të mirë, me kuti dhe faturë.`,
         category: 'elektronike',
         condition: 'si-i-ri',
@@ -278,12 +278,12 @@ async function seedOkazionListings(sb, posterId, cities) {
 
   for (const job of jobs) {
     if (await hasSeedOkazion(sb, job.table)) {
-      console.log(`Skip ${job.label} (active seed OKAZION already present)`);
+      console.log(`Skip ${job.label} (active seed Okazion already present)`);
       continue;
     }
     const { error } = await sb.from(job.table).insert(job.row);
     if (error) throw error;
-    console.log(`Inserted OKAZION ${job.label} (until ${until})`);
+    console.log(`Inserted Okazion ${job.label} (until ${until})`);
   }
 }
 

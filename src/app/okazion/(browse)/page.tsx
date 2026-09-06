@@ -24,8 +24,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const filters = parseOkazionBrowseParams(sp);
   const page = parseBrowsePage(sp);
   return {
-    title: 'OKAZION | KuTaGjej',
-    description: 'Oferta të shpejta — njoftime OKAZION për 7 ditë: prona, makina, punë dhe tregu.',
+    title: 'Okazion | KuTaGjej',
+    description: 'Oferta të shpejta — njoftime Okazion për 7 ditë: prona, makina, punë dhe tregu.',
     alternates: { canonical: paths.public.okazion },
     robots: { index: !hasActiveBrowseFilters(filters) && page === 1, follow: true },
   };

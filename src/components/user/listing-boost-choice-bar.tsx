@@ -94,9 +94,9 @@ function filledAccentBtnSx(bg: string, hoverBg: string, onColor: string) {
 }
 
 /**
- * Premium + OKAZION shortcuts above the normal Posto button.
+ * Premium + Okazion shortcuts above the normal Posto button.
  * Uses a plan/voucher slot immediately when available; otherwise opens a pay popup.
- * Directory profiles (businesses / professionals) pass hideOkazion — OKAZION is sellable-only.
+ * Directory profiles (businesses / professionals) pass hideOkazion — Okazion is sellable-only.
  */
 export function ListingBoostChoiceBar({
   submitting = false,
@@ -207,7 +207,7 @@ export function ListingBoostChoiceBar({
             }
             sx={filledAccentBtnSx(OKAZION_RED, OKAZION_RED_DARK, '#000000')}
           >
-            OKAZION
+            Okazion
           </Button>
         )}
       </Stack>

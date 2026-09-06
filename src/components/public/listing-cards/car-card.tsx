@@ -12,6 +12,7 @@ import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/P
 import { listingCarPublicHref } from '@/paths';
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
 import type { PublicCarListing } from '@/lib/public-listings-client';
+import { useLanguage } from '@/hooks/use-language';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
@@ -41,6 +42,7 @@ export function CarCard({
   variant?: CarCardVariant;
   hideOkazionBadge?: boolean;
 }) {
+  const { language } = useLanguage();
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
@@ -210,7 +212,7 @@ export function CarCard({
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
+                {listingCardRelativeDate(listing, language)}
               </Typography>
               <CardLocationBadge cityName={listing.cityName} iconSize={14} />
             </Stack>

@@ -53,7 +53,7 @@ const submitBtnSx = {
 } as const;
 
 /**
- * Optional OKAZION upsell while creating a normal listing (not from OKAZION picker).
+ * Optional Okazion upsell while creating a normal listing (not from Okazion picker).
  */
 export function OkazionBoostUpsell({
   value,
@@ -141,7 +141,7 @@ export function OkazionBoostUpsell({
 }
 
 /**
- * OKAZION create flow footer.
+ * Okazion create flow footer.
  * Uses a Grow/Elite package slot when available; otherwise card / Boost Coins.
  */
 export function OkazionPostActions({
@@ -306,7 +306,7 @@ export async function activateOkazionAfterCreate(params: {
   if (mode === 'plan') {
     const res = await applyOkazionFromPlan({ kind, listingId });
     if (res.error || !res.okazionUntil) {
-      return { ok: false, message: res.error || 'Aplikimi i OKAZION dështoi.' };
+      return { ok: false, message: res.error || 'Aplikimi i Okazion dështoi.' };
     }
     return { ok: true, okazionUntil: res.okazionUntil, message: res.message };
   }
@@ -314,14 +314,14 @@ export async function activateOkazionAfterCreate(params: {
   if (mode === 'voucher') {
     const vouchers = await listOkazionVouchers(true);
     const unused = (vouchers.vouchers ?? []).find((v) => v.status === 'unused');
-    if (!unused) return { ok: false, message: 'Nuk u gjet voucher OKAZION.' };
+    if (!unused) return { ok: false, message: 'Nuk u gjet voucher Okazion.' };
     const res = await applyOkazionVoucher({
       voucherId: unused.id,
       kind,
       listingId,
     });
     if (res.error || !res.okazionUntil) {
-      return { ok: false, message: res.error || 'Aplikimi i OKAZION dështoi.' };
+      return { ok: false, message: res.error || 'Aplikimi i Okazion dështoi.' };
     }
     return { ok: true, okazionUntil: res.okazionUntil, message: res.message };
   }
@@ -337,7 +337,7 @@ export async function activateOkazionAfterCreate(params: {
       listingId,
     });
     if (res.error || !res.okazionUntil) {
-      return { ok: false, message: res.error || 'Aplikimi i OKAZION dështoi.' };
+      return { ok: false, message: res.error || 'Aplikimi i Okazion dështoi.' };
     }
     return { ok: true, okazionUntil: res.okazionUntil, message: res.message };
   }

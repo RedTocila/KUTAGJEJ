@@ -7,8 +7,8 @@ import { MOTION } from '@/styles/motion';
 
 /**
  * Shared chrome for the public listing cards: a quiet bordered card that
- * lifts subtly and tints its border on hover. Premium / OKAZION are marked
- * on media (premium badge / OKAZION chip), not via card frame.
+ * lifts subtly and tints its border on hover. Premium / Okazion are marked
+ * on media (premium badge / Okazion chip), not via card frame.
  */
 export function CardShell({
   children,
@@ -24,7 +24,7 @@ export function CardShell({
   bare?: boolean;
   /** @deprecated Ignored — premium is shown via Premium Badge on media. */
   premium?: boolean;
-  /** @deprecated Ignored — OKAZION is shown via the media badge / price countdown. */
+  /** @deprecated Ignored — Okazion is shown via the media badge / price countdown. */
   okazion?: boolean;
 }) {
   const frameless = compact || bare;

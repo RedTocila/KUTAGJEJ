@@ -5,6 +5,8 @@ import { Stack, Typography } from '@mui/material';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
+import { useLanguage } from '@/hooks/use-language';
+
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { listingCardRelativeDate } from './format-helpers';
@@ -40,10 +42,11 @@ export function CardPostedViewsRow({
   listing: { bumpedAt?: string | null; createdAt: string };
   viewCount: number;
 }) {
+  const { language } = useLanguage();
   return (
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
       <Typography variant="caption" color="text.disabled" noWrap sx={{ minWidth: 0 }}>
-        {listingCardRelativeDate(listing)}
+        {listingCardRelativeDate(listing, language)}
       </Typography>
       <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
         <EyeIcon size={14} weight="regular" />

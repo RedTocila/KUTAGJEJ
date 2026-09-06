@@ -156,13 +156,14 @@ export function ProfessionalRatingSummary({
   rating: string;
   reviewCount: number;
   starSize?: number;
-  /** When true, shows `(N vlerësime)` instead of `(N)`. */
+  /** @deprecated Count is always `(N)` — kept for call-site compatibility. */
   showReviewLabel?: boolean;
-  /** Compact “+” to the left of the stars — leave a review. */
+  /** Compact “+” to the left of the score — leave a review. */
   onLeaveReview?: () => void;
   /** White type for overlaying on a photo. */
   onMedia?: boolean;
 }) {
+  void showReviewLabel;
   const numberSx = {
     fontWeight: 800,
     lineHeight: 1.25,
@@ -193,18 +194,18 @@ export function ProfessionalRatingSummary({
       >
         {rating}
       </Typography>
-      <ProfessionalFiveStarRating value={rating} size={starSize} />
       <Typography
         sx={{
           ...numberSx,
-          fontSize: showReviewLabel ? '0.85rem' : '0.625rem',
+          fontSize: '0.625rem',
           color: onMedia ? 'rgba(255,255,255,0.86)' : 'text.secondary',
           fontWeight: 600,
           whiteSpace: 'nowrap',
         }}
       >
-        {showReviewLabel ? `(${reviewCount} vlerësime)` : `(${reviewCount})`}
+        ({reviewCount})
       </Typography>
+      <ProfessionalFiveStarRating value={rating} size={starSize} />
     </Stack>
   );
 }
@@ -389,11 +390,33 @@ export function ProfessionalRatingBadge({
   );
 }
 
-export function ProfessionalReviewsSectionHeader({ rating, reviewCount }: { rating: string; reviewCount: number }) {
+export function ProfessionalReviewsSectionHeader({
+  rating,
+  reviewCount,
+  onLeaveReview,
+}: {
+  rating: string;
+  reviewCount: number;
+  onLeaveReview?: () => void;
+}) {
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-      <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY }}>Vlerësimet</Typography>
-      <ProfessionalRatingSummary rating={rating} reviewCount={reviewCount} starSize={16} showReviewLabel />
+    <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, width: '100%', minWidth: 0 }}>
+      <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, flexShrink: 0 }}>Vlerësimet</Typography>
+      {onLeaveReview ? <LeaveReviewIconButton onClick={onLeaveReview} /> : null}
+      <Typography sx={{ fontWeight: 800, fontSize: FONT_BODY, flexShrink: 0 }}>{rating}</Typography>
+      <Typography
+        sx={{
+          fontWeight: 600,
+          fontSize: '0.85rem',
+          color: 'text.secondary',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        ({reviewCount})
+      </Typography>
+      <Box sx={{ flex: 1, minWidth: 8 }} />
+      <ProfessionalFiveStarRating value={rating} size={16} />
     </Stack>
   );
 }

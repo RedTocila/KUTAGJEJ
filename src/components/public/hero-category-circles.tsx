@@ -21,7 +21,7 @@ import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
-/** Soft primary green fill for every category circle (OKAZION icon stays red). */
+/** Soft primary green fill for every category circle (Okazion icon stays red). */
 const CATEGORY_TILE_BG = 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 const CATEGORY_TILE_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
 const CATEGORY_ICON_COLOR = 'var(--mui-palette-primary-main)';
@@ -141,7 +141,7 @@ export function HeroCategoryCircles({
     return undefined;
   })();
 
-  /** Grey tile; hover washes green (OKAZION washes red). */
+  /** Grey tile; hover washes green (Okazion washes red). */
   const itemSx = (mode: AccentMode) => {
     const accent = accentColor(mode);
     const hoverTileBg = mode === 'okazion' ? OKAZION_ACCENT_SOFT : CATEGORY_TILE_BG_HOVER;

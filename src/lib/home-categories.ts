@@ -19,7 +19,7 @@ export type HomeVerticalId =
   | 'businesses'
   | 'professionals';
 
-/** Search tabs include AI, listing verticals, and public profiles (OKAZION is a home browse section). */
+/** Search tabs include AI, listing verticals, and public profiles (Okazion is a home browse section). */
 export type SearchCategoryId = 'ai' | 'okazion' | 'profiles' | HomeVerticalId;
 
 export interface HomeVertical {
@@ -47,7 +47,7 @@ export interface SearchCategory {
   gradient: readonly [string, string];
   iconKey: HomeVertical['iconKey'] | 'sparkle' | 'seal-percent' | 'users';
   href: string;
-  /** Listing verticals have a post path; AI / OKAZION / profiles search do not. */
+  /** Listing verticals have a post path; AI / Okazion / profiles search do not. */
   postHref?: string;
   searchPlaceholder: string;
 }
@@ -136,7 +136,7 @@ export const AI_SEARCH_CATEGORY: SearchCategory = {
 
 /**
  * Soft salmon accent — borders, icons, labels, chips (not solid CTAs).
- * Previous OKAZION red before the crimson button fill.
+ * Previous Okazion red before the crimson button fill.
  */
 export const OKAZION_ACCENT = '#ef4444';
 export const OKAZION_ACCENT_DARK = '#dc2626';
@@ -146,16 +146,16 @@ export const OKAZION_ACCENT_SOFT = 'rgba(239, 68, 68, 0.18)';
 export const OKAZION_RED = '#F72F35';
 export const OKAZION_RED_DARK = '#D9262C';
 export const OKAZION_RED_SOFT = 'rgba(247, 47, 53, 0.18)';
-/** Text / icons on solid OKAZION red buttons. */
+/** Text / icons on solid Okazion red buttons. */
 export const OKAZION_RED_ON = '#ffffff';
 export const OKAZION_SEARCH_CATEGORY: SearchCategory = {
   id: 'okazion',
-  label: 'OKAZION',
+  label: 'Okazion',
   tagline: 'Oferta të shpejta — 7 ditë · prona, makina, punë, tregu',
   gradient: [OKAZION_ACCENT, OKAZION_ACCENT_DARK] as const,
   iconKey: 'seal-percent',
   href: paths.public.okazion,
-  searchPlaceholder: 'Kërko oferta OKAZION…',
+  searchPlaceholder: 'Kërko oferta Okazion…',
 };
 
 /** Public member profiles — homepage slider + `/anetares` browse. */
@@ -178,7 +178,7 @@ export const SEARCH_CATEGORIES: readonly SearchCategory[] = [
   ...HOME_VERTICALS,
 ];
 
-/** Home category pickers: OKAZION + listing verticals (no AI). */
+/** Home category pickers: Okazion + listing verticals (no AI). */
 export const HOME_BROWSE_CATEGORIES: readonly SearchCategory[] = [
   OKAZION_SEARCH_CATEGORY,
   ...HOME_VERTICALS,

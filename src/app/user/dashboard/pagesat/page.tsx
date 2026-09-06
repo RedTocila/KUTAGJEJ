@@ -70,7 +70,7 @@ const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
   credits: 'Boost Coins',
   'auto-refresh': 'Auto-Refresh',
   premium: 'Premium',
-  okazion: 'OKAZION',
+  okazion: 'Okazion',
 };
 
 function formatDate(value?: string | null): string {
@@ -152,7 +152,7 @@ export default function MyPaymentsPage() {
         rows.push({
           id: `okazion-${v.id}`,
           kind: 'okazion',
-          description: `OKAZION listing · ${v.days} ditë`,
+          description: `Okazion listing · ${v.days} ditë`,
           amountBc: bc,
           status: v.status,
           createdAt: v.createdAt,
@@ -425,7 +425,7 @@ export default function MyPaymentsPage() {
                               {row.description}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35 }}>
-                              {row.kind === 'premium' ? 'Premium' : 'OKAZION'} · {formatDate(row.createdAt)}
+                              {row.kind === 'premium' ? 'Premium' : 'Okazion'} · {formatDate(row.createdAt)}
                             </Typography>
                           </Box>
                           <Stack

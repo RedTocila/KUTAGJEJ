@@ -765,7 +765,7 @@ export function PackageCheckoutCard({
   details?: FeatureListItem[];
   /** Optional row under details (e.g. cancel subscription). */
   footer?: React.ReactNode;
-  /** Hover / active border & wash — e.g. `warning` Premium, `error` OKAZION. */
+  /** Hover / active border & wash — e.g. `warning` Premium, `error` Okazion. */
   accent?: PlanAccent;
   /** Current / selected plan — accent border + corner checkmark. */
   selected?: boolean;
@@ -1183,8 +1183,8 @@ export function ExtraPackageCard({
                     sx={{
                       fontWeight: 750,
                       fontSize: '0.64rem',
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
+                      letterSpacing: '0.02em',
+                      textTransform: 'none',
                       color: (t) => resolveAccent(t, accent),
                       lineHeight: 1.2,
                     }}
@@ -1205,8 +1205,8 @@ export function ExtraPackageCard({
                       fontWeight: 850,
                       fontSize: '0.58rem',
                       lineHeight: 1.3,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
+                      letterSpacing: '0.02em',
+                      textTransform: 'none',
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     }}

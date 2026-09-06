@@ -29,7 +29,7 @@ export function ListingKeywordSearchInput({
   value: string;
   placeholder: string;
   onChange: (next: string) => void;
-  /** Optional accent (e.g. OKAZION red) for icon + active/focus chrome. */
+  /** Optional accent (e.g. Okazion red) for icon + active/focus chrome. */
   accent?: ProductSearchAccent;
   /** Applied keyword is shown as a chip when this field is not live. */
   commitToChip?: boolean;

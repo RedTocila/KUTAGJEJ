@@ -30,8 +30,9 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
-import { relativeAlbanianDate } from '@/components/public/listing-cards/format-helpers';
+import { relativeListingDate } from '@/components/public/listing-cards/format-helpers';
 import { brandLogoSrc, config } from '@/config';
+import { useLanguage } from '@/hooks/use-language';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { brandWordmarkFontFamily } from '@/styles/brand-font';
@@ -712,9 +713,10 @@ function SavePhotoCard({ payload }: { payload: ListingSharePayload }) {
  * Share Story card — same layout as home/dashboard listing cards.
  */
 function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
+  const { language } = useLanguage();
   const specs = (payload.specs ?? []).filter((s) => s.label).slice(0, 5);
   const viewCount = payload.viewCount ?? 0;
-  const posted = payload.createdAt ? relativeAlbanianDate(payload.createdAt) : null;
+  const posted = payload.createdAt ? relativeListingDate(payload.createdAt, language) : null;
   const imageSrc = resolveStoryImageSrc(payload.imageUrl);
   const accent = normalizeShareThemeColor(payload.themeColor);
 

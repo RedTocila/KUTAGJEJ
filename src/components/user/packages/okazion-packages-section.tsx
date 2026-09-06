@@ -59,8 +59,8 @@ const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
     days: 7,
     priceBc: 250,
     priceEur: 19,
-    labelSq: '7 ditë OKAZION',
-    labelEn: '7 Days OKAZION Listing',
+    labelSq: '7 ditë Okazion',
+    labelEn: '7 Days Okazion Listing',
   },
 ];
 
@@ -263,7 +263,7 @@ export function OkazionPackagesSection() {
     }
     await checkSession();
     setConfirmPackage(null);
-    setSuccess(result.message || 'OKAZION u blë me Boost Coins.');
+    setSuccess(result.message || 'Okazion u blë me Boost Coins.');
     await reloadVouchers();
     if (result.voucher && quantity === 1) {
       openAssign(result.voucher);
@@ -287,7 +287,7 @@ export function OkazionPackagesSection() {
       setError(result.error);
       return;
     }
-    setSuccess(result.message || 'Njoftimi u bë OKAZION.');
+    setSuccess(result.message || 'Njoftimi u bë Okazion.');
     await reloadVouchers();
     closeAssign();
   };
@@ -309,7 +309,7 @@ export function OkazionPackagesSection() {
 
       <ExtraPackageCard
         icon={SealPercentIcon}
-        category="OKAZION"
+        category="Okazion"
         title={
           quantity > 1 ? `${t.packages.okazionCardTitle(pkg.days)} ×${quantity}` : t.packages.okazionCardTitle(pkg.days)
         }
@@ -327,7 +327,7 @@ export function OkazionPackagesSection() {
               vouchers={unused}
               accent="error"
               label={(days, count) =>
-                count === 1 ? `${days} ditë OKAZION · e papërdorur` : `${count} × ${days} ditë OKAZION · të papërdorura`
+                count === 1 ? `${days} ditë Okazion · e papërdorur` : `${count} × ${days} ditë Okazion · të papërdorura`
               }
               onSelect={openAssign}
             />
@@ -443,10 +443,10 @@ export function OkazionPackagesSection() {
         <ProductDialogTitle
           onClose={closeAssign}
           subtitle={
-            activeVoucher ? `${activeVoucher.days} ditë OKAZION do të aplikohen në njoftimin e zgjedhur` : undefined
+            activeVoucher ? `${activeVoucher.days} ditë Okazion do të aplikohen në njoftimin e zgjedhur` : undefined
           }
         >
-          Zgjidh njoftimin OKAZION
+          Zgjidh njoftimin Okazion
         </ProductDialogTitle>
         {!pickerLoading && pickerListings.length > 0 ? (
           <Box sx={{ px: 2.5, pb: 1 }}>
@@ -543,7 +543,7 @@ export function OkazionPackagesSection() {
             startIcon={applying ? <CircularProgress size={16} color="inherit" /> : <SealPercentIcon size={18} />}
             sx={{ fontWeight: 800 }}
           >
-            Apliko OKAZION
+            Apliko Okazion
           </Button>
         </ProductDialogActions>
       </ProductDialog>

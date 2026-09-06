@@ -34,8 +34,8 @@ const DEFAULT_ADDON_PACKAGES = [
     slots: null,
     priceEur: 19,
     priceBc: 250,
-    labelSq: '7 ditë OKAZION',
-    labelEn: '7 Days OKAZION Listing',
+    labelSq: '7 ditë Okazion',
+    labelEn: '7 Days Okazion Listing',
     sortOrder: 0,
   },
   {

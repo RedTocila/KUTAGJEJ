@@ -33,7 +33,7 @@ const TYPE_LABEL: Record<PaymentType, string> = {
   credits: 'Boost Coins',
   'auto-refresh': 'Auto-Refresh',
   premium: 'Premium',
-  okazion: 'OKAZION',
+  okazion: 'Okazion',
 };
 
 function formatDate(value?: string | null): string {
@@ -150,7 +150,7 @@ export function PaymentsAdminPage() {
           <MenuItem value="credits">Boost Coins</MenuItem>
           <MenuItem value="auto-refresh">Auto-Refresh</MenuItem>
           <MenuItem value="premium">Premium</MenuItem>
-          <MenuItem value="okazion">OKAZION</MenuItem>
+          <MenuItem value="okazion">Okazion</MenuItem>
         </TextField>
       </Stack>
 

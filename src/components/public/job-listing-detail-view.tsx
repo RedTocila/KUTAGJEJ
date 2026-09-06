@@ -29,12 +29,13 @@ import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placehold
 import { nextShareCount } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
+import { useLanguage } from '@/hooks/use-language';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
 import { JobListingDetailDesktop } from '@/components/public/job-listing-detail-desktop';
-import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatPrice, postedLabel } from '@/components/public/listing-cards/format-helpers';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingDetailTitleBadges } from '@/components/public/listing-detail-title-badges';
 import { ListingMetricsTracker } from '@/components/public/listing-metrics-tracker';
@@ -115,6 +116,7 @@ export function JobListingDetailView({
   ownerPreview?: boolean;
   ownerEdit?: OwnerEditHandlers;
 }) {
+  const { language } = useLanguage();
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
@@ -393,7 +395,7 @@ export function JobListingDetailView({
                 >
                   <CalendarIcon size={16} weight="regular" aria-hidden />
                   <Typography sx={{ fontSize: FONT_CAPTION, color: 'text.secondary', fontWeight: 600 }}>
-                    {postedLabelSq(listing.createdAt)}
+                    {postedLabel(listing.createdAt, language)}
                   </Typography>
                 </Stack>
                 <Stack

@@ -72,9 +72,9 @@ async function getRefreshWindowHours(sb, userId) {
 }
 
 /**
- * Spend boost credits to bump a listing within its tier (free / Premium / OKAZION)
+ * Spend boost credits to bump a listing within its tier (free / Premium / Okazion)
  * by setting bumped_at to now — public "newest" sort uses bumped_at per tier.
- * Cost: 1 BC free, 5 BC active Premium, 10 BC active OKAZION.
+ * Cost: 1 BC free, 5 BC active Premium, 10 BC active Okazion.
  * Does not rewrite created_at (publish date / job expiry) or engagement metrics.
  */
 async function refreshListingWithBoost({ userId, kind, listingId }) {

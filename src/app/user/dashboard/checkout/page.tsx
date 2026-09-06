@@ -194,7 +194,7 @@ export default function UserCheckoutPage() {
         }
         const pkg = (pkgs ?? []).find((p) => p.id === packageId);
         if (!pkg) {
-          setError('Paketa OKAZION nuk u gjet.');
+          setError('Paketa Okazion nuk u gjet.');
           setLoading(false);
           return;
         }
@@ -264,7 +264,7 @@ export default function UserCheckoutPage() {
         : checkout?.kind === 'premium'
           ? 'Bli Premium'
           : checkout?.kind === 'okazion'
-            ? 'Bli OKAZION'
+            ? 'Bli Okazion'
             : 'Bli kredite';
 
   return (
@@ -359,7 +359,7 @@ export default function UserCheckoutPage() {
                     variant="overline"
                     sx={{ fontWeight: 800, letterSpacing: 0.6, color: 'error.main', lineHeight: 1.2 }}
                   >
-                    OKAZION
+                    Okazion
                   </Typography>
                   <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', lineHeight: 1.25, mt: 0.25 }}>
                     {checkout.quantity > 1

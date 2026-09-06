@@ -14,6 +14,7 @@ import {
   type ProfessionalReview,
 } from '@/lib/professional-reviews-client';
 import { useUser } from '@/hooks/use-user';
+import { useLanguage } from '@/hooks/use-language';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -22,6 +23,7 @@ import {
 } from '@/components/core/product-dialog';
 import { TransientNotification } from '@/components/core/transient-success-alert';
 import {
+  LeaveReviewIconButton,
   ProfessionalFiveStarRating,
   ProfessionalReviewsSectionHeader,
 } from '@/components/public/professional-listing-detail-ui';
@@ -66,6 +68,7 @@ export const ProfessionalReviewSection = React.forwardRef<
 ) {
   const router = useRouter();
   const { user } = useUser();
+  const { language } = useLanguage();
   const [reviews, setReviews] = React.useState<ProfessionalReview[]>([]);
   const [reviewsLoaded, setReviewsLoaded] = React.useState(false);
   const [viewerHasReviewed, setViewerHasReviewed] = React.useState(false);
@@ -139,7 +142,7 @@ export const ProfessionalReviewSection = React.forwardRef<
         ? formatRatingDisplay(Number(ratingAverage))
         : null;
 
-  const views = reviews.map(mapApiReviewToView);
+  const views = reviews.map((review) => mapApiReviewToView(review, language));
   const showLeaveReview = !viewerHasReviewed && !isOwnListing;
 
   React.useEffect(() => {
@@ -148,14 +151,21 @@ export const ProfessionalReviewSection = React.forwardRef<
 
   return (
     <Stack spacing={1.5}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+      <Stack spacing={1}>
         {avg ? (
-          <ProfessionalReviewsSectionHeader rating={avg} reviewCount={count} />
+          <ProfessionalReviewsSectionHeader
+            rating={avg}
+            reviewCount={count}
+            onLeaveReview={showLeaveReview ? openDialog : undefined}
+          />
         ) : (
-          <Typography sx={{ fontWeight: 800, fontSize: '0.875rem' }}>Vlerësimet</Typography>
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: '0.875rem' }}>Vlerësimet</Typography>
+            {showLeaveReview ? <LeaveReviewIconButton onClick={openDialog} /> : null}
+          </Stack>
         )}
         {showLeaveReview ? (
-          <Button size="small" variant="outlined" onClick={openDialog}>
+          <Button size="small" variant="outlined" onClick={openDialog} sx={{ alignSelf: 'flex-start' }}>
             Lini vlerësim
           </Button>
         ) : null}

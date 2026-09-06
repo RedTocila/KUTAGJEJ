@@ -42,7 +42,7 @@ function CarouselSkeleton() {
   );
 }
 
-/** Homepage OKAZION strip — active flash deals across sellable categories. */
+/** Homepage Okazion strip — active flash deals across sellable categories. */
 export function HomepageOkazionSection({
   listings: initialListings,
   total: initialTotal,

@@ -38,10 +38,11 @@ import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placehold
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { AnyPublicListingDetail, PublicCarListing, PublicMarketplaceListing } from '@/lib/public-listings-client';
+import { useLanguage } from '@/hooks/use-language';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
 import { CarCard } from '@/components/public/listing-cards/car-card';
-import { findOptionLabel, formatKilometers, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatKilometers, postedLabel } from '@/components/public/listing-cards/format-helpers';
 import { JobListingCountdown } from '@/components/public/listing-cards/job-listing-countdown';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
@@ -301,6 +302,7 @@ export function VerticalListingDetailView(props: {
     ownerPreview = false,
     ownerEdit,
   } = props;
+  const { language } = useLanguage();
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
@@ -560,7 +562,7 @@ export function VerticalListingDetailView(props: {
                     sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
                   >
                     <CalendarIcon size={17} weight="regular" aria-hidden />
-                    <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                    <Typography variant="body2">{postedLabel(listing.createdAt, language)}</Typography>
                   </Stack>
                   <Stack
                     direction="row"

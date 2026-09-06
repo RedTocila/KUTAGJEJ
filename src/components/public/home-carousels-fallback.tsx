@@ -103,7 +103,7 @@ export function HomeRecommendedFallback(): React.JSX.Element {
 }
 
 /**
- * Instant OKAZION row from session cache, otherwise recover via client fetch.
+ * Instant Okazion row from session cache, otherwise recover via client fetch.
  */
 export function HomeOkazionFallback(): React.JSX.Element {
   const stored = useHomepageCache();

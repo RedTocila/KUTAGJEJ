@@ -561,7 +561,7 @@ export function BusinessReviewSection({
               <Typography sx={{ fontWeight: 800, fontSize: '0.875rem', lineHeight: 1 }}>{avgLabel}</Typography>
             ) : null}
             <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-              ({count} vlerësime)
+              ({count})
             </Typography>
           </Stack>
           {showLeaveReview ? (

@@ -13,7 +13,7 @@ export type ListingMetricsFields = ListingMetrics & {
   /** Active Premium boost window — listing floats to the top of public feeds. */
   isPremium?: boolean;
   premiumUntil?: string | null;
-  /** Active OKAZION window — red-themed short deal (7 days). */
+  /** Active Okazion window — red-themed short deal (7 days). */
   isOkazion?: boolean;
   okazionUntil?: string | null;
   /** Last refresh / premium / okazion / announce bump — drives “newest” + card footer time. */
@@ -343,7 +343,7 @@ export type AnyPublicListingDetail =
   | PublicMarketplaceListingDetail
   | PublicDirectoryListingDetail;
 
-/** OKAZION applies to sellable ads only — not businesses / professionals. */
+/** Okazion applies to sellable ads only — not businesses / professionals. */
 export type PublicOkazionListing =
   | PublicRealEstateListing
   | PublicCarListing
@@ -402,7 +402,7 @@ export async function fetchHomepageListings(limit = 8): Promise<PublicListingsBu
   };
 }
 
-/** Slim first-row payload — no OKAZION, no exact category counts. */
+/** Slim first-row payload — no Okazion, no exact category counts. */
 export const fetchHomepageRecommended = cache(async function fetchHomepageRecommended(
   limit = 8
 ): Promise<PublicListingsBundle & { ok: boolean }> {

@@ -358,7 +358,7 @@ export function RealEstateCard({
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
+                {listingCardRelativeDate(listing, language)}
               </Typography>
               <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
                 <EyeIcon size={14} weight="regular" />

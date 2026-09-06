@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
-import { Stack, Typography } from '@mui/material';
+import { Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
@@ -34,33 +34,9 @@ const JobListingCountdown = dynamic(
   () => import('./job-listing-countdown').then((m) => ({ default: m.JobListingCountdown })),
   {
     ssr: false,
-    loading: () => <JobListingCountdownPlaceholder variant="overlay" bare showClock />,
+    loading: () => <JobListingCountdownPlaceholder variant="overlay" />,
   }
 );
-
-/** Full-width expiry strip along the bottom edge of the job card image. */
-function JobExpiryAnnouncementBar({ expiresAt }: { expiresAt: string }) {
-  return (
-    <Stack
-      direction="row"
-      spacing={0.75}
-      sx={{
-        width: '100%',
-        boxSizing: 'border-box',
-        alignItems: 'center',
-        justifyContent: 'center',
-        px: 1.1,
-        py: 0.65,
-        bgcolor: 'rgba(0,0,0,0.72)',
-        borderTop: '1px solid rgba(255,255,255,0.16)',
-        backdropFilter: 'blur(8px)',
-        color: '#fff',
-      }}
-    >
-      <JobListingCountdown expiresAt={expiresAt} variant="overlay" bare showClock />
-    </Stack>
-  );
-}
 
 function SalarySuffix({ salary }: { salary: number | null | undefined }) {
   if (salary == null) return null;
@@ -196,8 +172,14 @@ export function JobCard({
           okazion={Boolean(listing.isOkazion)}
           okazionUntil={listing.okazionUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
-          bottomOverlay={
-            listing.isOkazion ? undefined : <JobExpiryAnnouncementBar expiresAt={expiresAt} />
+          topLeftOverlay={
+            listing.isOkazion ? undefined : (
+              <JobListingCountdown
+                expiresAt={expiresAt}
+                variant="overlay"
+                premium={Boolean(listing.isPremium)}
+              />
+            )
           }
           priority={imagePriority}
           sharePayload={sharePayload}

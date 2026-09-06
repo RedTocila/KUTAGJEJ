@@ -30,10 +30,11 @@ import { JOB_LISTING_COVER_ASPECT_RATIO, jobListingCoverImageUrl } from '@/lib/j
 import { LISTING_DETAIL_STICKY_TOP_MD } from '@/lib/listing-detail-layout';
 import type { PublicJobListing, PublicJobListingDetail } from '@/lib/public-listings-client';
 import { listingHeroImageUrl } from '@/lib/storage-image';
+import { useLanguage } from '@/hooks/use-language';
 import { JobListingFallback } from '@/components/jobs/job-listing-fallback';
 
 import { JobListingDetailCountdown } from '@/components/public/job-listing-detail-countdown';
-import { findOptionLabel, formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { findOptionLabel, formatPrice, postedLabel } from '@/components/public/listing-cards/format-helpers';
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { ListingMediaActionButton } from '@/components/public/listing-media-action-button';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
@@ -91,6 +92,7 @@ export function JobListingDetailDesktop({
   canonicalUrl?: string;
   ownerPreview?: boolean;
 }) {
+  const { language } = useLanguage();
   const sections = React.useMemo(() => buildJobDetailSections(listing), [listing]);
   const metaRows = React.useMemo(() => jobDetailMetaRows(listing), [listing]);
   const mapLocation = React.useMemo(
@@ -313,7 +315,7 @@ export function JobListingDetailDesktop({
                   >
                     <CalendarIcon size={16} weight="regular" aria-hidden />
                     <Typography sx={{ fontSize: '0.8125rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
-                      {postedLabelSq(listing.createdAt)}
+                      {postedLabel(listing.createdAt, language)}
                     </Typography>
                   </Stack>
                   <Stack

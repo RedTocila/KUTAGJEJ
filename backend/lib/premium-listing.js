@@ -189,7 +189,7 @@ async function purchasePremiumWithBoostCoins({ userId, packageId }) {
 
 async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
   const table = TABLE_BY_KIND[kind];
-  // directory_listings no longer has okazion_until (OKAZION is sellable-only).
+  // directory_listings no longer has okazion_until (Okazion is sellable-only).
   const isDirectory = kind === 'businesses' || kind === 'professionals';
   const selectCols = isDirectory
     ? ['id', 'poster_id', 'status', 'premium_until']
@@ -231,7 +231,7 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message: 'Ky njoftim është OKAZION aktiv. Nuk mund të bëhet Premium derisa të mbarojë OKAZION.',
+      message: 'Ky njoftim është Okazion aktiv. Nuk mund të bëhet Premium derisa të mbarojë Okazion.',
     };
   }
   return { ok: true, listing, table };

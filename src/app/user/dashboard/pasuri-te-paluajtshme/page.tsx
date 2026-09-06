@@ -375,7 +375,7 @@ export default function UserPostListingPage() {
             }
             title={
               wantsOkazion
-                ? 'Posto OKAZION'
+                ? 'Posto Okazion'
                 : wantsPremium
                   ? 'Posto Premium'
                   : activeMeta.title

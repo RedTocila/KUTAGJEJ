@@ -104,7 +104,7 @@ export function writeHomepageListingsCache(bundle: PublicListingsBundle): void {
   patchHomepageListingsCache(bundle);
 }
 
-/** Merge a partial homepage payload so recommended / OKAZION / lazy rows can update independently. */
+/** Merge a partial homepage payload so recommended / Okazion / lazy rows can update independently. */
 export function patchHomepageListingsCache(patch: Partial<PublicListingsBundle>): void {
   const prev = getHomepageListingsCacheSnapshot() ?? EMPTY_BUNDLE;
   const next: PublicListingsBundle = {

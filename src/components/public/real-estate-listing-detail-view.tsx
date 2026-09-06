@@ -19,9 +19,10 @@ import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap 
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
 import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
 import type { PublicRealEstateListing, PublicRealEstateListingDetail } from '@/lib/public-listings-client';
+import { useLanguage } from '@/hooks/use-language';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
-import { formatPrice, postedLabelSq } from '@/components/public/listing-cards/format-helpers';
+import { formatPrice, postedLabel } from '@/components/public/listing-cards/format-helpers';
 import { ListingPrice } from '@/components/public/listing-cards/listing-price';
 import { OkazionCountdown } from '@/components/public/listing-cards/okazion-countdown';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
@@ -319,6 +320,7 @@ export function RealEstateListingDetailView({
   ownerPreview?: boolean;
   ownerEdit?: OwnerEditHandlers;
 }) {
+  const { language } = useLanguage();
   const onEditInfo = ownerEdit?.onEditInfo;
   const onEditPrice = ownerEdit?.onEditPrice ?? onEditInfo;
   const onEditSpecs = ownerEdit?.onEditSpecs ?? onEditInfo;
@@ -641,7 +643,7 @@ export function RealEstateListingDetailView({
                       sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
                     >
                       <CalendarIcon size={17} weight="regular" aria-hidden />
-                      <Typography variant="body2">{postedLabelSq(listing.createdAt)}</Typography>
+                      <Typography variant="body2">{postedLabel(listing.createdAt, language)}</Typography>
                     </Stack>
                     <Stack
                       direction="row"

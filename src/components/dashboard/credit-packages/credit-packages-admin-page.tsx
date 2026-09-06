@@ -209,7 +209,7 @@ export function CreditPackagesAdminPage() {
         icon={<BoostCoinIcon size={22} />}
         eyebrow="Financa"
         title="Boost Coins"
-        description="Paketat Boost Coins që shfaqen te dyqani i përdoruesit — blihen për Premium, OKAZION dhe fuqizim njoftimesh."
+        description="Paketat Boost Coins që shfaqen te dyqani i përdoruesit — blihen për Premium, Okazion dhe fuqizim njoftimesh."
         actions={
           <Button
             variant="contained"

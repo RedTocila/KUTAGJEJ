@@ -134,7 +134,7 @@ router.get('/premium-packages', async (_req, res) => {
   }
 });
 
-/** Public: OKAZION listing packs. */
+/** Public: Okazion listing packs. */
 router.get('/okazion-packages', async (_req, res) => {
   try {
     res.json({ packages: listOkazionPackages(), pokEnv: pokClient.getConfig().env });
@@ -778,7 +778,7 @@ router.post('/premium/apply-from-plan', async (req, res) => {
   }
 });
 
-/** Create a POK order for OKAZION packs (supports quantity stacking). */
+/** Create a POK order for Okazion packs (supports quantity stacking). */
 router.post('/okazion/order', async (req, res) => {
   try {
     if (!pokClient.isConfigured()) {
@@ -786,13 +786,13 @@ router.post('/okazion/order', async (req, res) => {
     }
     const { packageId, quantity } = req.body || {};
     const pkg = getOkazionPackage(packageId);
-    if (!pkg) return res.status(400).json({ message: 'Paketa OKAZION është e pavlefshme.' });
+    if (!pkg) return res.status(400).json({ message: 'Paketa Okazion është e pavlefshme.' });
     const qty = clampQuantity(quantity);
 
     const priced = await priceWithLifetimeDiscount(req.user, Number(pkg.priceEur) * qty);
     const amount = priced.amount;
     const amountMinor = priced.amountMinor;
-    const description = qty > 1 ? `OKAZION ×${qty}: ${pkg.labelSq}` : `OKAZION listing: ${pkg.labelSq}`;
+    const description = qty > 1 ? `Okazion ×${qty}: ${pkg.labelSq}` : `Okazion listing: ${pkg.labelSq}`;
 
     const sb = getSupabaseAdmin();
     const { data: paymentRow, error: pErr } = await sb
@@ -857,7 +857,7 @@ router.post('/okazion/order', async (req, res) => {
   }
 });
 
-/** Buy OKAZION pack(s) with Boost Coins (no card). */
+/** Buy Okazion pack(s) with Boost Coins (no card). */
 router.post('/okazion/buy-with-credits', async (req, res) => {
   try {
     const { packageId, quantity } = req.body || {};
@@ -879,8 +879,8 @@ router.post('/okazion/buy-with-credits', async (req, res) => {
       cost: result.cost,
       message:
         qty > 1
-          ? `${qty} OKAZION u blenë me Boost Coins. Mund t'i aplikoni më vonë.`
-          : 'OKAZION u blë me Boost Coins. Zgjidhni njoftimin për ta aktivizuar.',
+          ? `${qty} Okazion u blenë me Boost Coins. Mund t'i aplikoni më vonë.`
+          : 'Okazion u blë me Boost Coins. Zgjidhni njoftimin për ta aktivizuar.',
     });
   } catch (error) {
     console.error('POST /payments/okazion/buy-with-credits:', error?.message || error);
@@ -928,7 +928,7 @@ router.post('/okazion/apply', async (req, res) => {
       voucher: result.voucher,
       okazionUntil: result.okazionUntil,
       refreshedAt: result.refreshedAt,
-      message: 'Njoftimi u bë OKAZION për 7 ditë.',
+      message: 'Njoftimi u bë Okazion për 7 ditë.',
     });
   } catch (error) {
     console.error('POST /payments/okazion/apply:', error?.message || error);
@@ -956,8 +956,8 @@ router.post('/okazion/apply-from-plan', async (req, res) => {
       refreshedAt: result.refreshedAt,
       quota: result.quota,
       message: result.alreadyActive
-        ? 'Ky njoftim është tashmë OKAZION.'
-        : 'Njoftimi u bë OKAZION për 7 ditë nga paketa.',
+        ? 'Ky njoftim është tashmë Okazion.'
+        : 'Njoftimi u bë Okazion për 7 ditë nga paketa.',
     });
   } catch (error) {
     console.error('POST /payments/okazion/apply-from-plan:', error?.message || error);

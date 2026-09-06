@@ -287,7 +287,7 @@ function formatDirectory(doc, cityById, reviewStats) {
     imageUrls: coverImageUrls(doc),
     ...bumpTimeFields(doc),
     permalinkPath: listingPermalinkFromDoc(doc, doc.title),
-    // Directory profiles support Premium only — OKAZION is for sellable ads.
+    // Directory profiles support Premium only — Okazion is for sellable ads.
     ...premiumCardFields(doc),
   };
   if (vertical === 'businesses') {

@@ -130,7 +130,7 @@ router.get('/top-viewed', optionalAuth, async (req, res) => {
   }
 });
 
-/** GET /api/public/listings/okazion — active OKAZION deals across all categories. */
+/** GET /api/public/listings/okazion — active Okazion deals across all categories. */
 router.get('/okazion', optionalAuth, async (req, res) => {
   try {
     const { limit, page, skip } = parsePagination(req.query);
@@ -153,7 +153,7 @@ router.get('/okazion', optionalAuth, async (req, res) => {
   }
 });
 
-/** GET /api/public/listings/recommended — slim homepage first row (no counts / OKAZION). */
+/** GET /api/public/listings/recommended — slim homepage first row (no counts / Okazion). */
 router.get('/recommended', optionalAuth, async (req, res) => {
   try {
     const limit = clampLimit(req.query.limit);

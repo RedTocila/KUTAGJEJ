@@ -16,7 +16,12 @@ export function HomepageCommunityBanner({
   const t = useCopy();
   const cached = getHomepageListingsCacheSnapshot();
   const fromCache = cached
-    ? cached.totals.realEstate + cached.totals.cars + cached.totals.jobs
+    ? cached.totals.realEstate +
+      cached.totals.cars +
+      cached.totals.jobs +
+      cached.totals.marketplace +
+      cached.totals.businesses +
+      cached.totals.professionals
     : 0;
   const count = activeListingsCount > 0 ? activeListingsCount : fromCache;
   const stats =
@@ -24,16 +29,10 @@ export function HomepageCommunityBanner({
       ? [
           {
             value: count,
-            suffix: '+',
             label: t.home.activeListings,
           },
-          { value: 6, label: t.home.mainCategories },
-          { value: 12, suffix: '+', label: t.home.citiesCovered },
         ]
-      : [
-          { value: 6, label: t.home.mainCategories },
-          { value: 12, suffix: '+', label: t.home.citiesCovered },
-        ];
+      : undefined;
 
   return (
     <HomepageBanner

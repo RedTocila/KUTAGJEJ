@@ -66,8 +66,8 @@ const KIND_META: Record<
     Icon: ArrowClockwiseIcon,
   },
   okazion: {
-    title: 'OKAZION',
-    blurb: 'Oferta të shkurtra OKAZION (zakonisht 7 ditë).',
+    title: 'Okazion',
+    blurb: 'Oferta të shkurtra Okazion (zakonisht 7 ditë).',
     accent: OKAZION_ACCENT,
     Icon: SealPercentIcon,
   },
@@ -211,7 +211,7 @@ function AddonDialog({
               kind === 'auto-refresh'
                 ? 'p.sh. 10 njoftime Auto-Refresh'
                 : kind === 'okazion'
-                  ? 'p.sh. 7 ditë OKAZION'
+                  ? 'p.sh. 7 ditë Okazion'
                   : 'p.sh. 15 ditë Premium'
             }
             sx={productFieldSx}
@@ -508,7 +508,7 @@ export function AddonPackagesAdminSection({ kind }: AddonPackagesAdminSectionPro
         <Box>
           <Typography sx={{ fontWeight: 800 }}>Paketat shtesë</Typography>
           <Typography variant="body2" color="text.secondary">
-            Të njëjtat paketa që shfaqen te dyqani i përdoruesit (Premium, Auto-Refresh, OKAZION).
+            Të njëjtat paketa që shfaqen te dyqani i përdoruesit (Premium, Auto-Refresh, Okazion).
           </Typography>
         </Box>
         {!kind ? (

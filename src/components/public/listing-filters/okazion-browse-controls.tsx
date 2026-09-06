@@ -35,7 +35,7 @@ import { ListingKeywordSearchInput } from '@/components/public/listing-filters/l
 
 const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
 
-/** Same verticals as create-OKAZION — no directory profiles. */
+/** Same verticals as create-Okazion — no directory profiles. */
 const OKAZION_BROWSE_VERTICAL_IDS = new Set<HomeVerticalId>([
   'real-estate',
   'cars',

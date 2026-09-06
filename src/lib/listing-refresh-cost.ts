@@ -36,7 +36,7 @@ export function refreshCostTooltipSq(flags: {
 }): string {
   const cost = refreshCostBc(flags);
   if (flags.isOkazion) {
-    return `Vendose njoftimin në krye të OKAZION · kushton ${cost} BC`;
+    return `Vendose njoftimin në krye të Okazion · kushton ${cost} BC`;
   }
   if (flags.isPremium) {
     return `Vendose njoftimin në krye të Premium · kushton ${cost} BC`;

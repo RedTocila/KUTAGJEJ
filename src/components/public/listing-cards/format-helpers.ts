@@ -2,8 +2,10 @@
 
 export { findOptionLabel } from '@/lib/find-option-label';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
+import { getMessages } from '@/lib/i18n/messages';
+import { DEFAULT_LANGUAGE, languageHtmlLang, type AppLanguage } from '@/lib/language';
 
-/** Price/salary color: OKAZION red, else Premium amber, else platform green. */
+/** Price/salary color: Okazion red, else Premium amber, else platform green. */
 export function listingPriceAccentColor(flags: { isPremium?: boolean | null; isOkazion?: boolean | null }): string {
   if (flags.isOkazion) return OKAZION_ACCENT;
   if (flags.isPremium) return 'var(--mui-palette-warning-main)';
@@ -23,35 +25,56 @@ export function formatKilometers(value: number | null | undefined): string {
   return `${new Intl.NumberFormat('en-GB').format(Number(value))} km`;
 }
 
-export function relativeAlbanianDate(iso: string): string {
+/** Relative posted/bumped time — follows active UI language. */
+export function relativeListingDate(iso: string, language: AppLanguage = DEFAULT_LANGUAGE): string {
+  const t = getMessages(language).common;
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return 'Tani';
-  if (minutes < 60) return `${minutes} min më parë`;
+  if (minutes < 1) return t.relativeJustNow;
+  if (minutes < 60) return t.relativeMinutesAgo(minutes);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} orë më parë`;
+  if (hours < 24) return t.relativeHoursAgo(hours);
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} ditë më parë`;
+  if (days < 7) return t.relativeDaysAgo(days);
   const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks} javë më parë`;
-  return date.toLocaleDateString('sq-AL', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (weeks < 5) return t.relativeWeeksAgo(weeks);
+  return date.toLocaleDateString(languageHtmlLang(language), {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/** @deprecated Prefer `relativeListingDate(iso, language)`. */
+export function relativeAlbanianDate(iso: string): string {
+  return relativeListingDate(iso, 'sq');
 }
 
 /** Card footer time: prefer last bump/reorder, else publish date. */
-export function listingCardRelativeDate(listing: { bumpedAt?: string | null; createdAt: string }): string {
-  return relativeAlbanianDate(listing.bumpedAt || listing.createdAt);
+export function listingCardRelativeDate(
+  listing: { bumpedAt?: string | null; createdAt: string },
+  language: AppLanguage = DEFAULT_LANGUAGE
+): string {
+  return relativeListingDate(listing.bumpedAt || listing.createdAt, language);
 }
 
 function calendarDayKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-/** Relative posted label for listing detail pages (`Postuar sot` / `2 ditë më parë`). */
-export function postedLabelSq(iso: string): string {
+/** Relative posted label for listing detail pages. */
+export function postedLabel(iso: string, language: AppLanguage = DEFAULT_LANGUAGE): string {
   const d = new Date(iso);
-  if (calendarDayKey(d) === calendarDayKey(new Date())) return 'Postuar sot';
-  return relativeAlbanianDate(iso);
+  if (calendarDayKey(d) === calendarDayKey(new Date())) {
+    return getMessages(language).common.postedToday;
+  }
+  return relativeListingDate(iso, language);
+}
+
+/** @deprecated Prefer `postedLabel(iso, language)`. */
+export function postedLabelSq(iso: string): string {
+  return postedLabel(iso, 'sq');
 }
 
 /**

@@ -5,7 +5,7 @@ import * as React from 'react';
 import { patchHomepageListingsCache } from '@/lib/homepage-session-cache';
 import type { PublicListingsBundle } from '@/lib/public-listings-client';
 
-/** Persist listing rows for instant back-to-home. OKAZION is stored by its own section. */
+/** Persist listing rows for instant back-to-home. Okazion is stored by its own section. */
 export function HomepageCacheSync({ bundle }: { bundle: PublicListingsBundle }) {
   React.useEffect(() => {
     patchHomepageListingsCache({

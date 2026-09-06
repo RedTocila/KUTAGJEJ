@@ -8,7 +8,7 @@ const { applyListingBump } = require('./listing-bump');
 const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
 const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
-/** OKAZION slots included with Grow / Elite stay featured for 7 days. */
+/** Okazion slots included with Grow / Elite stay featured for 7 days. */
 const PLAN_OKAZION_PACKAGE_ID = 'plan-okazion';
 const PLAN_OKAZION_DAYS = 7;
 
@@ -56,7 +56,7 @@ async function createOkazionVoucher({
   } else {
     const pkg = getOkazionPackage(packageId);
     if (!pkg) {
-      return { ok: false, status: 400, message: 'Paketa OKAZION nuk është e vlefshme.' };
+      return { ok: false, status: 400, message: 'Paketa Okazion nuk është e vlefshme.' };
     }
     resolvedPackageId = pkg.id;
     resolvedDays = pkg.days;
@@ -130,7 +130,7 @@ function clampQuantity(raw) {
 async function purchaseOkazionWithBoostCoins({ userId, packageId, quantity = 1 }) {
   const pkg = getOkazionPackage(packageId);
   if (!pkg) {
-    return { ok: false, status: 400, message: 'Paketa OKAZION nuk është e vlefshme.' };
+    return { ok: false, status: 400, message: 'Paketa Okazion nuk është e vlefshme.' };
   }
   if (!userId || !isUuid(String(userId))) {
     return { ok: false, status: 401, message: 'Auth required' };
@@ -225,7 +225,7 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message: 'OKAZION nuk ofrohet për biznese ose profesionistë.',
+      message: 'Okazion nuk ofrohet për biznese ose profesionistë.',
     };
   }
   const table = TABLE_BY_KIND[kind];
@@ -241,7 +241,7 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
       return {
         ok: false,
         status: 503,
-        message: 'Skema OKAZION nuk është gati. Aplikoni migrimin e databazës.',
+        message: 'Skema Okazion nuk është gati. Aplikoni migrimin e databazës.',
       };
     }
     throw listingErr;
@@ -250,13 +250,13 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     return { ok: false, status: 404, message: 'Njoftimi nuk u gjet.' };
   }
   if (String(listing.poster_id) !== String(userId)) {
-    return { ok: false, status: 403, message: 'Nuk mund të aplikoni OKAZION në këtë njoftim.' };
+    return { ok: false, status: 403, message: 'Nuk mund të aplikoni Okazion në këtë njoftim.' };
   }
   if (String(listing.status || '') !== 'approved') {
     return {
       ok: false,
       status: 400,
-      message: 'Vetëm njoftimet e aprovuara mund të bëhen OKAZION.',
+      message: 'Vetëm njoftimet e aprovuara mund të bëhen Okazion.',
     };
   }
   const jobActive = kind !== 'job' || isJobListingActive(listing);
@@ -264,7 +264,7 @@ async function loadOwnedApprovedListing(sb, { userId, kind, listingId }) {
     return {
       ok: false,
       status: 400,
-      message: 'Ky njoftim është Premium aktiv. Nuk mund të bëhet OKAZION derisa të mbarojë Premium.',
+      message: 'Ky njoftim është Premium aktiv. Nuk mund të bëhet Okazion derisa të mbarojë Premium.',
     };
   }
   if (kind === 'job') {
@@ -440,7 +440,7 @@ async function applyOkazionVoucher({ userId, voucherId, kind, listingId }) {
 }
 
 /**
- * Spend one Grow/Elite OKAZION slot: feature the post for 7 days.
+ * Spend one Grow/Elite Okazion slot: feature the post for 7 days.
  */
 async function applyOkazionFromPlan({ userId, kind, listingId }) {
   if (!userId || !isUuid(String(userId))) {
@@ -472,7 +472,7 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
       return {
         ok: false,
         status: 400,
-        message: 'Paketa juaj nuk përfshin OKAZION. Upgrade në Grow/Elite ose blini një paketë ekstra.',
+        message: 'Paketa juaj nuk përfshin Okazion. Upgrade në Grow/Elite ose blini një paketë ekstra.',
       };
     }
     return {
@@ -480,7 +480,7 @@ async function applyOkazionFromPlan({ userId, kind, listingId }) {
       status: consumed.status || 400,
       message:
         consumed.message ||
-        `Keni përdorur të gjitha vendet OKAZION të paketës (${consumed.used}/${consumed.max}).`,
+        `Keni përdorur të gjitha vendet Okazion të paketës (${consumed.used}/${consumed.max}).`,
     };
   }
 

@@ -25,7 +25,7 @@ import { HomeVerticalIcon } from './home-vertical-icon';
 import { SubcategoryPills } from './subcategory-pills';
 import { VerticalIcon } from './vertical-icon';
 
-/** Homepage / browse section ids — listing verticals plus OKAZION / profiles. */
+/** Homepage / browse section ids — listing verticals plus Okazion / profiles. */
 export type ListingsSectionVerticalId = HomeVerticalId | 'okazion' | 'profiles';
 
 export interface ListingsSectionProps {

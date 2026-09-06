@@ -35,7 +35,7 @@ function CarouselRowSkeleton() {
   );
 }
 
-/** One homepage carousel placeholder (recommended / OKAZION suspense). */
+/** One homepage carousel placeholder (recommended / Okazion suspense). */
 export function HomeCarouselRowSkeleton({ compactTop = false }: { compactTop?: boolean }): React.JSX.Element {
   return (
     <Box sx={{ bgcolor: 'background.default', pt: compactTop ? 0 : { xs: 3, md: 4 }, pb: { xs: 3, md: 4 } }} aria-busy>

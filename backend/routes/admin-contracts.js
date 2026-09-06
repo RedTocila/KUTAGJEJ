@@ -136,7 +136,7 @@ function parseQuotaBody(body) {
     ['maxApartmentListings', 'Kuota e apartamenteve', 'max_apartment_listings'],
     ['maxProductListings', 'Kuota e produkteve', 'max_product_listings'],
     ['maxPremiumListings', 'Kuota e njoftimeve premium', 'max_premium_listings'],
-    ['maxOkazionListings', 'Kuota e njoftimeve OKAZION', 'max_okazion_listings'],
+    ['maxOkazionListings', 'Kuota e njoftimeve Okazion', 'max_okazion_listings'],
   ];
   const out = {};
   for (const [key, label, snake] of fields) {

@@ -10,6 +10,7 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { listingMarketplacePublicHref } from '@/paths';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
+import { useLanguage } from '@/hooks/use-language';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
@@ -44,6 +45,7 @@ export function MarketplaceCard({
   variant?: MarketplaceCardVariant;
   hideOkazionBadge?: boolean;
 }) {
+  const { language } = useLanguage();
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
@@ -211,7 +213,7 @@ export function MarketplaceCard({
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing)}
+                {listingCardRelativeDate(listing, language)}
               </Typography>
               <CardLocationBadge cityName={listing.cityName} iconSize={14} />
             </Stack>

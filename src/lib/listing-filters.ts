@@ -197,6 +197,58 @@ export function addBrowseKeyword(filters: BrowseFilters, keyword: string): Brows
   return { ...filters, q: [...current, nextKeyword] } as BrowseFilters;
 }
 
+/**
+ * Merge a parsed search token into existing browse filters.
+ * Scalars overwrite; `zone` unions; `q` appends; changing `city` clears prior zones
+ * unless the patch also supplies zones.
+ */
+export function mergeBrowseFilters(current: BrowseFilters, patch: BrowseFilters): BrowseFilters {
+  let next: BrowseFilters = { ...current };
+  const patchRecord = patch as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(patchRecord)) {
+    if (value == null) continue;
+    if (key === 'q') {
+      for (const keyword of normalizeBrowseKeywords(value as string | string[])) {
+        next = addBrowseKeyword(next, keyword);
+      }
+      continue;
+    }
+    if (key === 'zone') {
+      const existing = normalizeZoneIds((next as BrowseRealEstateFilters).zone);
+      const incoming = normalizeZoneIds(value as string | string[]);
+      const merged = [...new Set([...existing, ...incoming])];
+      next = {
+        ...next,
+        zone: merged.length ? merged : undefined,
+      } as BrowseFilters;
+      continue;
+    }
+    if (key === 'city') {
+      const city = String(value).trim();
+      if (!city) continue;
+      const prevCity = String((next as { city?: string }).city ?? '').trim();
+      if (city !== prevCity) {
+        const zonesFromPatch = normalizeZoneIds(patchRecord.zone as string | string[] | undefined);
+        const { zone: _clearedZone, ...withoutZone } = next as BrowseRealEstateFilters;
+        next = {
+          ...withoutZone,
+          city,
+          ...(zonesFromPatch.length ? { zone: zonesFromPatch } : {}),
+        } as BrowseFilters;
+      } else {
+        next = { ...next, city } as BrowseFilters;
+      }
+      continue;
+    }
+    if (Array.isArray(value) && value.length === 0) continue;
+    if (typeof value === 'string' && !value.trim()) continue;
+    next = { ...next, [key]: value } as BrowseFilters;
+  }
+
+  return next;
+}
+
 /** Preserves repeated query keys (e.g. multiple `zone` values). */
 export function searchParamsToRecord(params: URLSearchParams): SearchParamsInput {
   const record: SearchParamsInput = {};

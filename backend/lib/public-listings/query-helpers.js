@@ -360,7 +360,6 @@ async function locationOrForNeedle(q) {
       const zoneName = zone?.name;
       if (!zoneName || !namesMatch(needle, zoneName)) continue;
       zoneIds.add(zone.id);
-      cityIds.add(city.id);
     }
   }
 

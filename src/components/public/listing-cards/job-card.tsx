@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import dynamic from 'next/dynamic';
 import { Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
@@ -23,20 +22,12 @@ import { ListingCardLink } from '@/components/public/listing-card-link';
 import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
 import { findOptionLabel, formatPrice } from './format-helpers';
-import { JobListingCountdownPlaceholder } from './job-listing-countdown';
+import { JobListingCountdown } from './job-listing-countdown';
 import type { ListingCardRatingSummary } from './listing-card-rating';
 import { ListingCardHomepageBody } from './listing-card-homepage-body';
 import { type Spec } from './spec-row';
 
 export type JobCardVariant = 'default' | 'cover' | 'compact' | 'carousel' | 'homepage' | 'browse';
-
-const JobListingCountdown = dynamic(
-  () => import('./job-listing-countdown').then((m) => ({ default: m.JobListingCountdown })),
-  {
-    ssr: false,
-    loading: () => <JobListingCountdownPlaceholder variant="overlay" />,
-  }
-);
 
 function SalarySuffix({ salary }: { salary: number | null | undefined }) {
   if (salary == null) return null;

@@ -11,6 +11,7 @@ import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/l
 import {
   buildBrowseUrlQuery,
   BUSINESS_FILTER_OPTIONS,
+  mergeBrowseFilters,
   PROFESSIONAL_FILTER_OPTIONS,
   type BrowseCarFilters,
   type BrowseDirectoryFilters,
@@ -363,34 +364,78 @@ function extractNumericPatterns(text: string, bag: FilterBag, scores: VerticalSc
   return remaining.replace(/\s+/g, ' ').trim();
 }
 
+/** English / colloquial spellings folded to Albanian city forms used in `cities`. */
+const CITY_SEARCH_ALIASES: Record<string, string[]> = {
+  tirane: ['tirana'],
+  durres: ['durres', 'durresi'],
+  vlore: ['vlora'],
+  shkoder: ['shkodra', 'shkoderi'],
+  korce: ['korca', 'korcha'],
+  gjirokaster: ['gjirokastra'],
+  sarande: ['saranda'],
+  himare: ['himara'],
+  kavaje: ['kavaja'],
+  lushnje: ['lushnja'],
+  lezhe: ['lezha'],
+  kukes: ['kukesi'],
+  kamez: ['kamza', 'kamenza'],
+  elbasan: ['elbasani'],
+  berat: ['berati'],
+  fier: ['fieri'],
+  pogradec: ['pogradeci'],
+};
+
+function cityAliasPhrases(cityNorm: string, slugNorm: string): string[] {
+  const bases = new Set([cityNorm, slugNorm].filter(Boolean));
+  const out = new Set<string>();
+  for (const base of bases) {
+    out.add(base);
+    for (const alias of CITY_SEARCH_ALIASES[base] ?? []) out.add(alias);
+  }
+  return [...out];
+}
+
 function matchCities(
   text: string,
   cities: RealEstateCityDto[],
 ): { remaining: string; cityId?: string; zoneIds?: string[]; label?: string } {
-  let remaining = text;
-  let best: { cityId: string; zoneIds?: string[]; label: string; len: number } | null = null;
+  let best: {
+    cityId: string;
+    zoneIds?: string[];
+    label: string;
+    len: number;
+    phrase: string;
+  } | null = null;
 
   for (const city of cities) {
     const cityNorm = normalizeSearchText(city.name);
-    const next = consumePhrase(remaining, cityNorm);
-    if (next && cityNorm.length > (best?.len ?? 0)) {
-      best = { cityId: city.id, label: city.name, len: cityNorm.length };
-      remaining = next;
+    const slugNorm = normalizeSearchText(city.slug ?? '');
+    for (const phrase of cityAliasPhrases(cityNorm, slugNorm)) {
+      // `consumePhrase` returns "" when the whole string matched — still a hit (`!== null`).
+      if (phrase && consumePhrase(text, phrase) !== null && phrase.length > (best?.len ?? 0)) {
+        best = { cityId: city.id, label: city.name, len: phrase.length, phrase };
+      }
     }
 
     for (const zone of city.zones ?? []) {
-      const zoneNorm = normalizeSearchText(zone.name);
-      const zoneNext = consumePhrase(remaining, zoneNorm);
-      if (zoneNext && zoneNorm.length > (best?.len ?? 0)) {
-        best = { cityId: city.id, zoneIds: [zone.id], label: `${zone.name}, ${city.name}`, len: zoneNorm.length };
-        remaining = zoneNext;
+      const zonePhrases = [zone.name, zone.slug].map((v) => normalizeSearchText(v ?? '')).filter(Boolean);
+      for (const zoneNorm of zonePhrases) {
+        if (consumePhrase(text, zoneNorm) !== null && zoneNorm.length > (best?.len ?? 0)) {
+          best = {
+            cityId: city.id,
+            zoneIds: [zone.id],
+            label: `${zone.name}, ${city.name}`,
+            len: zoneNorm.length,
+            phrase: zoneNorm,
+          };
+        }
       }
     }
   }
 
-  if (!best) return { remaining };
+  if (!best) return { remaining: text };
   return {
-    remaining,
+    remaining: consumePhrase(text, best.phrase) ?? text,
     cityId: best.cityId,
     zoneIds: best.zoneIds,
     label: best.label,
@@ -461,7 +506,7 @@ export function parseSmartSearchQuery(
     for (const rule of PHRASE_RULES) {
       for (const phrase of rule.phrases) {
         const next = consumePhrase(remaining, phrase);
-        if (!next) continue;
+        if (next === null) continue;
         remaining = next;
         rule.apply(bag);
         boost(scores, rule.vertical, rule.weight);
@@ -489,6 +534,72 @@ export function parseSmartSearchQuery(
     filters,
     matched,
   };
+}
+
+/**
+ * Interpret one typed token for an already-open browse vertical
+ * (city/zone, category phrases, numeric hints, leftover → `q`).
+ */
+export function interpretBrowseSearchToken(
+  verticalId: HomeVerticalId,
+  rawQuery: string,
+  cities: RealEstateCityDto[] = [],
+): BrowseFilters {
+  const normalized = normalizeSearchText(rawQuery);
+  if (!normalized) return {};
+
+  const scores = emptyScores();
+  const bag = emptyBag();
+  let remaining = extractNumericPatterns(normalized, bag, scores);
+
+  const cityMatch = matchCities(remaining, cities);
+  remaining = cityMatch.remaining;
+  if (cityMatch.cityId) {
+    const filters = bag[verticalId] as Record<string, unknown>;
+    filters.city = cityMatch.cityId;
+    if (cityMatch.zoneIds?.length && verticalId === 'real-estate') {
+      filters.zone = cityMatch.zoneIds;
+    }
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const rule of PHRASE_RULES) {
+      if (rule.vertical !== verticalId) continue;
+      for (const phrase of rule.phrases) {
+        const next = consumePhrase(remaining, phrase);
+        if (next === null) continue;
+        // Skip vertical-routing-only rules (empty apply) so "apartament" sets `cat`, not a no-op.
+        const before = JSON.stringify(bag[verticalId]);
+        rule.apply(bag);
+        if (JSON.stringify(bag[verticalId]) === before) continue;
+        remaining = next;
+        changed = true;
+        break;
+      }
+      if (changed) break;
+    }
+  }
+
+  const filters = pruneFilters({ ...bag[verticalId] }) as BrowseFilters;
+  const leftover = remaining.trim();
+  if (leftover.length >= 2) {
+    (filters as { q?: string[] }).q = [leftover];
+  }
+  return filters;
+}
+
+/** Enter-to-add: merge one typed token into the current browse URL filters. */
+export function applyBrowseSearchToken(
+  verticalId: HomeVerticalId,
+  current: BrowseFilters,
+  rawQuery: string,
+  cities: RealEstateCityDto[] = [],
+): BrowseFilters {
+  const trimmed = rawQuery.trim();
+  if (!trimmed) return current;
+  return mergeBrowseFilters(current, interpretBrowseSearchToken(verticalId, trimmed, cities));
 }
 
 export function buildSmartSearchUrl(result: SmartSearchResult): string {

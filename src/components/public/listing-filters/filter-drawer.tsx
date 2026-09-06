@@ -26,12 +26,12 @@ import { Star as StarIcon } from '@phosphor-icons/react/dist/ssr/Star';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { DIRECTORY_RATING_PRESETS, getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { productChromeIdleBg, productChromeIdleHoverBg } from '@/components/public/product-browse-chrome';
 
 import {
   FilterNumberField,
@@ -132,9 +132,7 @@ export function VerticalFilterSections({
       const f = draft as import('@/lib/listing-filters').BrowseRealEstateFilters;
       return (
         <Stack spacing={2}>
-          {quickPicks}
-          {locationSection}
-          <FilterSection title={t.browse.transaction} icon={KeyIcon} index={1}>
+          <FilterSection title={t.browse.transaction} icon={KeyIcon} index={0}>
             <FilterSegmented
               value={f.tx ?? ''}
               onChange={(v) => setField('tx', v)}
@@ -144,10 +142,12 @@ export function VerticalFilterSections({
               }))}
             />
           </FilterSection>
+          {quickPicks}
+          {locationSection}
           <FilterSection title={t.browse.bedrooms} icon={BedIcon} index={2}>
             <FilterBedroomPicker value={f.bedrooms ?? ''} onChange={(v) => setField('bedrooms', v)} />
           </FilterSection>
-          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={3}>
+          <FilterSection id="browse-filter-price" title={t.browse.price} icon={CurrencyEurIcon} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -232,7 +232,7 @@ export function VerticalFilterSections({
               gridSize={{ xs: 12 }}
             />
           </FilterSection>
-          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={3}>
+          <FilterSection id="browse-filter-price" title={t.browse.price} icon={CurrencyEurIcon} index={3}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -327,7 +327,7 @@ export function VerticalFilterSections({
               }))}
             />
           </FilterSection>
-          <FilterSection title={t.browse.price} icon={CurrencyEurIcon} index={2}>
+          <FilterSection id="browse-filter-price" title={t.browse.price} icon={CurrencyEurIcon} index={2}>
             <FilterPresetChips
               value={f.maxPrice ?? ''}
               onChange={(v) => setField('maxPrice', v)}
@@ -507,6 +507,7 @@ export function FilterDrawerPanel({
   hasAppliedFilters,
   onApply,
   onClear,
+  scrollToSection,
 }: {
   open: boolean;
   onClose: () => void;
@@ -521,6 +522,8 @@ export function FilterDrawerPanel({
   hasAppliedFilters: boolean;
   onApply: () => void;
   onClear: () => void;
+  /** When opening, scroll the panel to this section (e.g. price from the Price pill). */
+  scrollToSection?: 'price' | null;
 }) {
   const t = useCopy();
   React.useEffect(() => {
@@ -533,6 +536,14 @@ export function FilterDrawerPanel({
       window.removeEventListener('keydown', onKey);
     };
   }, [open, onClose]);
+
+  React.useEffect(() => {
+    if (!open || scrollToSection !== 'price') return undefined;
+    const timer = window.setTimeout(() => {
+      document.getElementById('browse-filter-price')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 420);
+    return () => window.clearTimeout(timer);
+  }, [open, scrollToSection]);
 
   useLockBodyScroll(open);
 
@@ -568,14 +579,13 @@ export function FilterDrawerPanel({
           left: 0,
           bottom: 0,
           zIndex: (theme) => theme.zIndex.modal + 2,
-          width: { xs: '80vw', sm: 440, md: 460 },
+          width: { xs: '90vw', sm: 440, md: 460 },
           maxWidth: '100vw',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
           bgcolor: 'background.default',
-          borderRight: '1px solid',
-          borderColor: 'divider',
+          borderRight: 'none',
           // Shadow only while open — a closed off-screen drawer still bled its
           // blur onto the left edge of every browse page.
           boxShadow: open ? '32px 0 80px rgba(0,0,0,0.45)' : 'none',
@@ -617,9 +627,6 @@ export function FilterDrawerPanel({
                 <Typography sx={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                   {t.browse.refineTitle}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 0.25 }}>
-                  {t.browse.refineSubtitle}
-                </Typography>
               </Box>
             </Stack>
             <IconButton
@@ -629,11 +636,10 @@ export function FilterDrawerPanel({
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'action.hover',
+                border: 'none',
+                bgcolor: productChromeIdleBg,
                 color: 'text.primary',
-                '&:hover': { bgcolor: primaryMainAlpha(0.1) },
+                '&:hover': { bgcolor: productChromeIdleHoverBg },
               }}
             >
               <XIcon size={16} weight="bold" />

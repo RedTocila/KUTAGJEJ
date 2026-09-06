@@ -24,6 +24,7 @@ import {
   type BrowseFilters,
   type BrowseRealEstateFilters,
 } from '@/lib/listing-filters';
+import { applyBrowseSearchToken } from '@/lib/smart-search';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import {
   PRODUCT_BROWSE_CONTROL_HEIGHT,
@@ -87,10 +88,21 @@ export function CategoryBrowseControls({
 
   const [draft, setDraft] = React.useState<BrowseFilters>(applied);
   const [open, setOpen] = React.useState(false);
+  const [scrollToSection, setScrollToSection] = React.useState<'price' | null>(null);
 
   React.useEffect(() => {
     setDraft(applied);
   }, [applied]);
+
+  const openFilters = React.useCallback((section: 'price' | null = null) => {
+    setScrollToSection(section);
+    setOpen(true);
+  }, []);
+
+  const closeFilters = React.useCallback(() => {
+    setOpen(false);
+    setScrollToSection(null);
+  }, []);
 
   const setField = (key: string, value: string) => {
     setDraft((prev) => {
@@ -127,7 +139,7 @@ export function CategoryBrowseControls({
     React.startTransition(() => {
       router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
     });
-    if (closePanel) setOpen(false);
+    if (closePanel) closeFilters();
   };
 
   const apply = () => applyDraft(draft, true);
@@ -135,7 +147,7 @@ export function CategoryBrowseControls({
     React.startTransition(() => {
       router.replace(pathname, { scroll: false });
     });
-    setOpen(false);
+    closeFilters();
   };
 
   const removeChip = (key: string) => {
@@ -148,16 +160,14 @@ export function CategoryBrowseControls({
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
       const trimmed = nextQ.trim();
-      const next = {
-        ...applied,
-        q: trimmed ? [trimmed] : undefined,
-      } as BrowseFilters;
+      if (!trimmed) return;
+      const next = applyBrowseSearchToken(verticalId, applied, trimmed, cities);
       setDraft(next);
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
     },
-    [applied, pathname, router],
+    [applied, cities, pathname, router, verticalId],
   );
 
   const activeCount = countActiveBrowseFilters(applied);
@@ -172,6 +182,9 @@ export function CategoryBrowseControls({
     (applied as { make?: string }).make ??
     (applied as { industry?: string }).industry ??
     (applied as { type?: string }).type;
+  const priceFilterActive = Boolean(
+    (applied as { minPrice?: string }).minPrice || (applied as { maxPrice?: string }).maxPrice
+  );
 
   return (
     <>
@@ -189,7 +202,8 @@ export function CategoryBrowseControls({
               placeholder={vertical.searchPlaceholder}
               onChange={applyKeyword}
               commitToChip
-              live
+              verticalId={verticalId}
+              cities={cities}
             />
           </Box>
 
@@ -214,7 +228,7 @@ export function CategoryBrowseControls({
             }}
           >
             <IconButton
-              onClick={() => setOpen(true)}
+              onClick={() => openFilters(null)}
               aria-label={t.browse.openFiltersAria}
               sx={productFilterButtonSx(activeCount > 0)}
             >
@@ -224,7 +238,15 @@ export function CategoryBrowseControls({
         </Box>
 
         <Box sx={{ '& > [role=navigation]': { mt: { xs: 2, md: 2.5 }, mb: 0 } }}>
-          <SubcategoryPills verticalId={verticalId} />
+          <SubcategoryPills
+            verticalId={verticalId}
+            onOpenPriceFilter={
+              verticalId === 'real-estate' || verticalId === 'cars' || verticalId === 'marketplace'
+                ? () => openFilters('price')
+                : undefined
+            }
+            priceFilterActive={priceFilterActive}
+          />
         </Box>
 
         {activeChips.length > 0 ? (
@@ -236,7 +258,7 @@ export function CategoryBrowseControls({
 
       <FilterDrawerPanel
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={closeFilters}
         verticalId={verticalId}
         draft={draft}
         setField={setField}
@@ -248,6 +270,7 @@ export function CategoryBrowseControls({
         hasAppliedFilters={hasActiveBrowseFilters(applied)}
         onApply={apply}
         onClear={clear}
+        scrollToSection={scrollToSection}
       />
     </>
   );

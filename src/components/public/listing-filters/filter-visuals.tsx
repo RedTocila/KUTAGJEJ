@@ -49,9 +49,8 @@ export function FilterSegmented({
           gap: 0.75,
           p: 0.5,
           borderRadius: 999,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: primaryMainAlpha(0.04),
+          border: 'none',
+          bgcolor: productChromeIdleBg,
         }}
       >
         {options.map((opt) => {
@@ -136,17 +135,15 @@ export function FilterChoiceCards({
                 p: 1.25,
                 minHeight: 76,
                 borderRadius: 2.5,
-                border: '1px solid',
-                borderColor: active ? 'primary.main' : 'divider',
-                bgcolor: active ? primaryMainAlpha(0.12) : 'transparent',
+                border: 'none',
+                bgcolor: active ? primaryMainAlpha(0.14) : productChromeIdleBg,
                 color: 'text.primary',
                 textAlign: 'left',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'border-color 0.15s, background-color 0.15s, transform 0.15s',
+                transition: 'background-color 0.15s, transform 0.15s',
                 '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: primaryMainAlpha(0.08),
+                  bgcolor: active ? primaryMainAlpha(0.18) : productChromeIdleHoverBg,
                   transform: 'translateY(-1px)',
                 },
               }}

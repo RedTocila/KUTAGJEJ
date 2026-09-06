@@ -11,16 +11,20 @@ import {
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { productChromeIdleBg } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
 const fieldSx = {
   '& .MuiOutlinedInput-root': {
     borderRadius: 999,
-    bgcolor: 'transparent',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
+    bgcolor: productChromeIdleBg,
+    transition: 'background-color 0.2s, box-shadow 0.2s',
+    '& fieldset': { border: 'none' },
+    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
     '&.Mui-focused': {
       boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
+      bgcolor: productChromeIdleBg,
     },
   },
   '& .MuiInputLabel-root': {
@@ -31,10 +35,13 @@ const fieldSx = {
 const selectFieldSx = {
   '& .MuiOutlinedInput-root': {
     borderRadius: 2.5,
-    bgcolor: 'transparent',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
+    bgcolor: productChromeIdleBg,
+    transition: 'background-color 0.2s, box-shadow 0.2s',
+    '& fieldset': { border: 'none' },
+    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
     '&.Mui-focused': {
       boxShadow: `0 0 0 3px ${primaryMainAlpha(0.12)}`,
+      bgcolor: productChromeIdleBg,
     },
   },
 } as const;
@@ -44,14 +51,17 @@ export function FilterSection({
   icon: Icon,
   children,
   index = 0,
+  id,
 }: {
   title: string;
   icon: PhosphorIcon;
   children: React.ReactNode;
   index?: number;
+  id?: string;
 }) {
   return (
     <Box
+      id={id}
       sx={{
         position: 'relative',
         animation: 'filterSectionIn 0.45s ease both',

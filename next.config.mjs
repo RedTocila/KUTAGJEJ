@@ -43,7 +43,12 @@ const config = {
   // AI import (and similar) can exceed the default 30s rewrite proxy timeout.
   experimental: {
     proxyTimeout: 180_000,
-    optimizePackageImports: ['@mui/material', '@mui/icons-material', '@mui/system'],
+    optimizePackageImports: [
+      '@mui/material',
+      '@mui/icons-material',
+      '@mui/system',
+      '@phosphor-icons/react',
+    ],
   },
 
   images: {

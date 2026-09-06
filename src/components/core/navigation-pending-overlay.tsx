@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
@@ -19,10 +20,26 @@ import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-brow
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
 import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
 import { HeroSection } from '@/components/public/hero-section';
-import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallback';
-import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
+import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
 import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
-import { PostListingFormSkeleton } from '@/components/user/post-listing-header';
+
+// Lazy: SoftNavigateBridge sits in RootLayout — do not eagerly pull homepage
+// carousels / Phosphor icons into every page (Turbopack HMR otherwise breaks the shell).
+const HomeCarouselsFallback = dynamic(
+  () =>
+    import('@/components/public/home-carousels-fallback').then((m) => ({
+      default: m.HomeCarouselsFallback,
+    })),
+  { loading: () => <HomeCarouselsSkeleton />, ssr: false }
+);
+
+const PostListingFormSkeleton = dynamic(
+  () =>
+    import('@/components/user/post-listing-header').then((m) => ({
+      default: m.PostListingFormSkeleton,
+    })),
+  { ssr: false }
+);
 
 const PENDING_TIMEOUT_MS = 10_000;
 /** Soft-nav to home that never commits → full document load (avoids eternal skeletons). */

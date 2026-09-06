@@ -10,6 +10,7 @@ import { Motorcycle as MotorcycleIcon } from '@phosphor-icons/react/dist/ssr/Mot
 import { Truck as TruckIcon } from '@phosphor-icons/react/dist/ssr/Truck';
 import { Van as VanIcon } from '@phosphor-icons/react/dist/ssr/Van';
 
+import { productChromeIdleBg, productChromeIdleHoverBg } from '@/components/public/product-browse-chrome';
 import { VEHICLE_TYPES, type VehicleType } from '@/lib/car-constants';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 
@@ -119,17 +120,19 @@ export function VehicleTypePicker({
                 gap: compact ? 0.4 : 0.65,
                 p: compact ? 0.75 : 1,
                 borderRadius: 2.25,
-                border: '1.5px solid',
-                borderColor: active ? 'primary.main' : error ? 'error.main' : 'divider',
-                bgcolor: active ? primaryMainAlpha(0.16) : 'background.paper',
-                color: active ? 'primary.main' : 'text.primary',
-                boxShadow: active ? `0 0 0 3px ${primaryMainAlpha(0.22)}, 0 4px 14px ${primaryMainAlpha(0.2)}` : 'none',
+                border: 'none',
+                bgcolor: active
+                  ? primaryMainAlpha(0.16)
+                  : error
+                    ? primaryMainAlpha(0.08)
+                    : productChromeIdleBg,
+                color: active ? 'primary.main' : error ? 'error.main' : 'text.primary',
+                boxShadow: 'none',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'border-color 0.15s, background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s',
+                transition: 'background-color 0.15s, color 0.15s, transform 0.15s',
                 '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: primaryMainAlpha(0.1),
+                  bgcolor: active ? primaryMainAlpha(0.2) : productChromeIdleHoverBg,
                   transform: 'translateY(-1px)',
                 },
               }}

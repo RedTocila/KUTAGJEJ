@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
@@ -22,12 +21,7 @@ import { ListingPremiumBadge } from '@/components/public/listing-premium-badge';
 import { ListingSharePage } from '@/components/public/listing-share/listing-share-page';
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 
-import { OkazionCountdownPlaceholder } from './okazion-countdown';
-
-const OkazionCountdown = dynamic(() => import('./okazion-countdown').then((m) => ({ default: m.OkazionCountdown })), {
-  ssr: false,
-  loading: () => <OkazionCountdownPlaceholder />,
-});
+import { OkazionCountdown } from './okazion-countdown';
 
 function CardMediaOverlayAction({
   'aria-label': ariaLabel,

@@ -16,6 +16,7 @@ import {
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import {
+  addBrowseKeyword,
   buildBrowseUrlQuery,
   formatBrowseKeywords,
   normalizeBrowseKeywords,
@@ -23,6 +24,7 @@ import {
   searchParamsToRecord,
   type BrowseOkazionFilters,
 } from '@/lib/listing-filters';
+import { parseSmartSearchQuery } from '@/lib/smart-search';
 import { paths } from '@/paths';
 import {
   PRODUCT_BROWSE_CONTROL_HEIGHT,
@@ -83,10 +85,19 @@ export function OkazionBrowseControls() {
   const applyKeyword = React.useCallback(
     (nextQ: string) => {
       const trimmed = nextQ.trim();
-      const next: BrowseOkazionFilters = {
-        ...applied,
-        q: trimmed ? [trimmed] : undefined,
-      };
+      if (!trimmed) return;
+
+      const parsed = parseSmartSearchQuery(trimmed);
+      const kindOnly =
+        !applied.kind &&
+        OKAZION_BROWSE_VERTICAL_IDS.has(parsed.verticalId) &&
+        Object.keys(parsed.filters).length === 0 &&
+        parsed.matched.length > 0;
+
+      const next: BrowseOkazionFilters = kindOnly
+        ? { ...applied, kind: parsed.verticalId }
+        : (addBrowseKeyword(applied, trimmed) as BrowseOkazionFilters);
+
       React.startTransition(() => {
         router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
@@ -129,7 +140,6 @@ export function OkazionBrowseControls() {
             placeholder={searchPlaceholder}
             onChange={applyKeyword}
             commitToChip
-            live
           />
         </Box>
       </Box>

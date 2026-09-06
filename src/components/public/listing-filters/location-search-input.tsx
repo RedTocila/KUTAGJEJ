@@ -18,13 +18,14 @@ import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { MapPinArea as MapPinAreaIcon } from '@phosphor-icons/react/dist/ssr/MapPinArea';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
-import { ProductSearchIcon, productSearchBarSx, productTagSx } from '@/components/public/product-browse-chrome';
+import { ProductSearchIcon, productChromeIdleBg, productSearchBarSx, productTagSx } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { cleanLocationPart } from '@/lib/location-display';
 import { normalizeZoneIds } from '@/lib/listing-filters';
 import { normalizeSearchText } from '@/lib/smart-search';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { productSurfacePaperSx } from '@/styles/product-sx';
 
 const pillSx = productSearchBarSx(false);
 
@@ -282,8 +283,8 @@ export function LocationSearchInput({
             py: 0.25,
             cursor: 'text',
             overflow: 'hidden',
-            borderColor: active ? 'primary.main' : 'divider',
-            bgcolor: active ? primaryMainAlpha(0.08) : 'background.paper',
+            border: 'none',
+            bgcolor: active ? primaryMainAlpha(0.08) : productChromeIdleBg,
           }}
         >
           {!cityId ? (
@@ -362,10 +363,11 @@ export function LocationSearchInput({
           sx={{ zIndex: 1600, width: Math.max(anchorEl?.offsetWidth ?? 220, 220) }}
         >
           <Paper
-            elevation={8}
+            elevation={0}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
-            sx={{
+            sx={(theme) => ({
+              ...productSurfacePaperSx(theme),
               mt: 0.75,
               display: 'flex',
               flexDirection: 'column',
@@ -373,9 +375,7 @@ export function LocationSearchInput({
               minHeight: 0,
               overflow: 'hidden',
               borderRadius: 2.5,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
+            })}
           >
             <Box
               sx={{

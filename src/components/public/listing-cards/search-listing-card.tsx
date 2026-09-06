@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import dynamic from 'next/dynamic';
 import { Avatar, Box, Stack, Typography } from '@mui/material';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
@@ -48,16 +47,9 @@ import {
 } from '@/paths';
 
 import { findOptionLabel } from './format-helpers';
-import { JobListingCountdownPlaceholder } from './job-listing-countdown';
+import { JobListingCountdown } from './job-listing-countdown';
 import { ListingPrice } from './listing-price';
 
-const JobListingCountdown = dynamic(
-  () => import('./job-listing-countdown').then((m) => ({ default: m.JobListingCountdown })),
-  {
-    ssr: false,
-    loading: () => <JobListingCountdownPlaceholder variant="compact" />,
-  },
-);
 
 export type SearchListingItem =
   | { kind: 'real-estate'; listing: PublicRealEstateListing }

@@ -13,11 +13,14 @@ import { MOTION } from '@/styles/motion';
  * - Touch / trackpad: native horizontal scroll with momentum + scroll-snap.
  * - Desktop: floating prev/next buttons appear when there is room to scroll.
  * - Mobile: a soft fade on each side hints at more content.
+ * - Optional autoplay advances one snap card at a time (homepage-banner style).
  *
  * Each direct child gets wrapped in a fixed-width slot so cards are perfectly
  * aligned across browsers regardless of their internal markup.
  */
 const DEFAULT_SLOT_WIDTH = { xs: 260, sm: 280, md: 300 } as const;
+const DEFAULT_AUTOPLAY_MS = 5000;
+const AUTOPLAY_RESUME_MS = 6000;
 
 export interface ListingsCarouselProps {
   /** Pre-rendered listing cards (one per slide). */
@@ -32,6 +35,10 @@ export interface ListingsCarouselProps {
   slotWidth?: Partial<Record<keyof typeof DEFAULT_SLOT_WIDTH, number>>;
   /** Fires when the nearest snap-aligned slide changes (0-based). */
   onActiveIndexChange?: (index: number) => void;
+  /** Auto-advance one card at a time (loops). Off by default. */
+  autoplay?: boolean;
+  /** Interval between autoplay advances. Defaults to homepage banner timing. */
+  autoplayMs?: number;
 }
 
 function nearestSlideIndex(el: HTMLDivElement): number {
@@ -55,6 +62,8 @@ export function ListingsCarousel({
   slotWidth,
   equalMediaHeight = false,
   onActiveIndexChange,
+  autoplay = false,
+  autoplayMs = DEFAULT_AUTOPLAY_MS,
 }: ListingsCarouselProps) {
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
@@ -65,8 +74,15 @@ export function ListingsCarousel({
   const activeIndexRef = React.useRef(0);
   const onActiveIndexChangeRef = React.useRef(onActiveIndexChange);
   onActiveIndexChangeRef.current = onActiveIndexChange;
+  const autoplayTimerRef = React.useRef<number | null>(null);
+  const resumeTimerRef = React.useRef<number | null>(null);
+  const reduceMotionRef = React.useRef(false);
+  const pausedByUserRef = React.useRef(false);
+  const inViewRef = React.useRef(true);
 
   const widths = { ...DEFAULT_SLOT_WIDTH, ...slotWidth };
+  const childArray = React.Children.toArray(children);
+  const slideCount = childArray.length;
 
   const refresh = React.useCallback(() => {
     const el = scrollRef.current;
@@ -97,6 +113,66 @@ export function ListingsCarousel({
     });
   }, [refresh]);
 
+  const scrollToIndex = React.useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const count = el.children.length;
+    if (count === 0) return;
+    const safe = ((index % count) + count) % count;
+    const slot = el.children[safe] as HTMLElement | undefined;
+    if (!slot) return;
+    const useSmooth = behavior === 'smooth' && !reduceMotionRef.current;
+    el.scrollTo({ left: slot.offsetLeft, behavior: useSmooth ? 'smooth' : 'auto' });
+  }, []);
+
+  const clearAutoplay = React.useCallback(() => {
+    if (autoplayTimerRef.current != null) {
+      window.clearInterval(autoplayTimerRef.current);
+      autoplayTimerRef.current = null;
+    }
+  }, []);
+
+  const clearResume = React.useCallback(() => {
+    if (resumeTimerRef.current != null) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+  }, []);
+
+  const startAutoplay = React.useCallback(() => {
+    clearAutoplay();
+    if (
+      !autoplay ||
+      slideCount < 2 ||
+      reduceMotionRef.current ||
+      pausedByUserRef.current ||
+      !inViewRef.current
+    ) {
+      return;
+    }
+    autoplayTimerRef.current = window.setInterval(() => {
+      const el = scrollRef.current;
+      if (!el || el.children.length < 2) return;
+      const next = (nearestSlideIndex(el) + 1) % el.children.length;
+      scrollToIndex(next, 'smooth');
+    }, autoplayMs);
+  }, [autoplay, autoplayMs, clearAutoplay, scrollToIndex, slideCount]);
+
+  const pauseAutoplayForInteraction = React.useCallback(() => {
+    if (!autoplay) return;
+    pausedByUserRef.current = true;
+    clearAutoplay();
+    clearResume();
+    resumeTimerRef.current = window.setTimeout(() => {
+      pausedByUserRef.current = false;
+      startAutoplay();
+    }, AUTOPLAY_RESUME_MS);
+  }, [autoplay, clearAutoplay, clearResume, startAutoplay]);
+
+  React.useEffect(() => {
+    reduceMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
   React.useEffect(() => {
     refresh();
     const el = scrollRef.current;
@@ -109,18 +185,56 @@ export function ListingsCarousel({
       ro.disconnect();
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
     };
-  }, [refresh, scheduleRefresh]);
+  }, [refresh, scheduleRefresh, slideCount]);
 
-  const scrollBy = (direction: 1 | -1) => {
+  React.useEffect(() => {
+    if (!autoplay) {
+      clearAutoplay();
+      clearResume();
+      return;
+    }
     const el = scrollRef.current;
     if (!el) return;
-    // Scroll roughly by the visible width minus one card so the user always
-    // has a card of context between pages.
+
+    const onPointer = () => pauseAutoplayForInteraction();
+    el.addEventListener('pointerdown', onPointer, { passive: true });
+    el.addEventListener('wheel', onPointer, { passive: true });
+    el.addEventListener('touchstart', onPointer, { passive: true });
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        inViewRef.current = Boolean(entry?.isIntersecting);
+        if (inViewRef.current) startAutoplay();
+        else clearAutoplay();
+      },
+      { threshold: 0.35 },
+    );
+    io.observe(el);
+
+    startAutoplay();
+    return () => {
+      el.removeEventListener('pointerdown', onPointer);
+      el.removeEventListener('wheel', onPointer);
+      el.removeEventListener('touchstart', onPointer);
+      io.disconnect();
+      clearAutoplay();
+      clearResume();
+    };
+  }, [autoplay, clearAutoplay, clearResume, pauseAutoplayForInteraction, slideCount, startAutoplay]);
+
+  const scrollBy = (direction: 1 | -1) => {
+    pauseAutoplayForInteraction();
+    const el = scrollRef.current;
+    if (!el) return;
+    // One snap card at a time when autoplay is on (matches “1-10” counter UX);
+    // otherwise page by roughly the visible width.
+    if (autoplay) {
+      scrollToIndex(activeIndexRef.current + direction, 'smooth');
+      return;
+    }
     const step = Math.max(el.clientWidth - widths.md, widths.md);
     el.scrollBy({ left: direction * step, behavior: 'smooth' });
   };
-
-  const childArray = React.Children.toArray(children);
 
   const maskImage = (() => {
     if (canScrollPrev && canScrollNext) {

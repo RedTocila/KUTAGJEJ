@@ -122,6 +122,7 @@ export function CategoryTopViewedSlider({
         <ListingsCarousel
           slotWidth={{ xs: 260, sm: 280, md: 300 }}
           onActiveIndexChange={setActiveIndex}
+          autoplay
         >
           {listings.map((listing) => (
             <TopViewedCard key={listing.id} verticalId={verticalId} listing={listing} />

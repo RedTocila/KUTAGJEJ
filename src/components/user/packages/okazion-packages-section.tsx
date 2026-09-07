@@ -24,8 +24,8 @@ import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/di
 import { Minus as MinusIcon } from '@phosphor-icons/react/dist/ssr/Minus';
 import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 
+import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import type { OkazionPackage, OkazionVoucher } from '@/types/payment';
 import { paths } from '@/paths';
 import { OKAZION_ACCENT } from '@/lib/home-categories';
@@ -87,7 +87,7 @@ function pickerKindIcon(kind: ListingMetricKind): PhosphorIcon {
     case 'job':
       return BriefcaseIcon;
     case 'marketplace':
-      return StorefrontIcon;
+      return MarketplaceCategoryIcon;
     default:
       return BuildingsIcon;
   }

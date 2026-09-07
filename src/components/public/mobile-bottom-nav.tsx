@@ -3,7 +3,7 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Badge, Box, Stack } from '@mui/material';
+import { Badge, Box } from '@mui/material';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
@@ -40,7 +40,8 @@ let persistedFromIndex = 0;
 interface NavItem {
   id: string;
   ariaLabel: string;
-  href: string;
+  href?: string;
+  kind?: 'link' | 'search';
   activeWhen: (pathname: string | null) => boolean;
   icon: React.ComponentType<{ size?: number; weight?: 'fill' | 'regular'; color?: string }>;
 }
@@ -72,7 +73,7 @@ export function MobileBottomNav() {
         id: 'home',
         ariaLabel: t.chrome.navHome,
         href: paths.home,
-        activeWhen: (p) => p === paths.home,
+        activeWhen: (p) => p === paths.home && !searchActive,
         icon: HouseIcon,
       },
       {
@@ -81,6 +82,13 @@ export function MobileBottomNav() {
         href: isAuthed ? paths.user.savedListings : paths.user.auth,
         activeWhen: (p) => Boolean(p?.startsWith(paths.user.savedListings)),
         icon: BookmarkSimpleIcon,
+      },
+      {
+        id: 'search',
+        kind: 'search',
+        ariaLabel: t.common.search,
+        activeWhen: () => searchActive,
+        icon: MagnifyingGlassIcon,
       },
       {
         id: 'messages',
@@ -102,7 +110,7 @@ export function MobileBottomNav() {
         icon: UserCircleIcon,
       },
     ],
-    [isAuthed, t],
+    [isAuthed, searchActive, t],
   );
 
   const activeIndex = items.findIndex((item) => item.activeWhen(displayPathname));
@@ -150,9 +158,25 @@ export function MobileBottomNav() {
     setIndicatorIndex(index);
   };
 
+  const handleSearchClick = (event: React.MouseEvent, index: number) => {
+    event.preventDefault();
+    moveIndicatorTo(index);
+    if (pathname === paths.public.search) {
+      hardRefreshToTop(event);
+      return;
+    }
+    if (searchOverlay?.open) return;
+    searchOverlay?.openSearch();
+  };
+
   const handleTabClick = (event: React.MouseEvent, item: NavItem, index: number) => {
+    if (item.kind === 'search') {
+      handleSearchClick(event, index);
+      return;
+    }
     moveIndicatorTo(index);
     if (!item.activeWhen(pathname)) return;
+    if (!item.href) return;
 
     // Already on this tab's root → scroll to top + soft refresh.
     // Active on a nested route (e.g. settings under Profile) → go to tab root.
@@ -174,16 +198,6 @@ export function MobileBottomNav() {
     hardNavigate(item.href, event);
   };
 
-  const handleSearchClick = (event: React.MouseEvent) => {
-    event.preventDefault();
-    if (pathname === paths.public.search) {
-      hardRefreshToTop(event);
-      return;
-    }
-    if (searchOverlay?.open) return;
-    searchOverlay?.openSearch();
-  };
-
   const isSearchPage = Boolean(displayPathname.startsWith(paths.public.search));
   if (isSearchPage) return null;
 
@@ -203,171 +217,157 @@ export function MobileBottomNav() {
         pointerEvents: 'none',
       })}
     >
-      <Stack
-        direction="row"
-        spacing={1.25}
+      <Box
         sx={{
           width: '100%',
           maxWidth: 420,
-          alignItems: 'center',
+          height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+          boxSizing: 'border-box',
+          p: `${NAV_INSET_PX}px`,
+          overflow: 'hidden',
+          borderRadius: 999,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
           pointerEvents: 'auto',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          boxShadow: 'none',
         }}
       >
         <Box
           sx={{
-            flex: 1,
-            height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-            boxSizing: 'border-box',
-            p: `${NAV_INSET_PX}px`,
-            overflow: 'hidden',
-            borderRadius: 999,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            backdropFilter: 'none',
-            WebkitBackdropFilter: 'none',
-            boxShadow: 'none',
+            position: 'relative',
+            width: '100%',
+            height: '100%',
           }}
         >
           <Box
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: `${100 / slotCount}%`,
+              borderRadius: 999,
+              bgcolor: primaryMainAlpha(0.18),
+              opacity: hasActiveTab ? 1 : 0,
+              transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
+              transition: transitionReady
+                ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
+                : 'none',
+              pointerEvents: 'none',
+              zIndex: 0,
+              '@media (prefers-reduced-motion: reduce)': {
+                transition: 'none',
+              },
+            }}
+          />
+
+          <Box
             sx={{
               position: 'relative',
-              width: '100%',
+              zIndex: 1,
+              display: 'grid',
+              gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
               height: '100%',
             }}
           >
-            <Box
-              aria-hidden
-              sx={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: `${100 / slotCount}%`,
-                borderRadius: 999,
-                bgcolor: primaryMainAlpha(0.18),
-                opacity: hasActiveTab ? 1 : 0,
-                transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
-                transition: transitionReady
-                  ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
-                  : 'none',
-                pointerEvents: 'none',
-                zIndex: 0,
-                '@media (prefers-reduced-motion: reduce)': {
-                  transition: 'none',
-                },
-              }}
-            />
-
-            <Box
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                display: 'grid',
-                gridTemplateColumns: `repeat(${slotCount}, minmax(0, 1fr))`,
+            {items.map((item, index) => {
+              const Icon = item.icon;
+              const active = item.activeWhen(displayPathname);
+              const isMessages = item.id === 'messages';
+              const iconColor = active
+                ? 'var(--mui-palette-primary-main)'
+                : 'var(--mui-palette-text-secondary)';
+              const sharedSx = {
+                minWidth: 0,
                 height: '100%',
-              }}
-            >
-              {items.map((item, index) => {
-                const Icon = item.icon;
-                const active = item.activeWhen(displayPathname);
-                const isMessages = item.id === 'messages';
-                const iconColor = active
-                  ? 'var(--mui-palette-primary-main)'
-                  : 'var(--mui-palette-text-secondary)';
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 999,
+                color: 'inherit',
+                textDecoration: 'none',
+                border: 'none',
+                p: 0,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                bgcolor: 'transparent',
+                cursor: 'pointer',
+                transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
+                '&:link, &:visited, &:hover, &:active': {
+                  color: 'inherit',
+                },
+                '&:active': {
+                  transform: 'scale(0.94)',
+                },
+              } as const;
 
-                return (
+              const content = (
+                <Badge
+                  color="error"
+                  badgeContent={unreadMessages > 99 ? '99+' : unreadMessages}
+                  invisible={!isMessages || unreadMessages <= 0}
+                  overlap="circular"
+                >
                   <Box
-                    key={item.id}
-                    component={RouterLink}
-                    href={item.href}
-                    aria-label={item.ariaLabel}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={(event) => handleTabClick(event, item, index)}
+                    component="span"
                     sx={{
-                      minWidth: 0,
-                      height: '100%',
                       display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 999,
-                      color: 'inherit',
-                      textDecoration: 'none',
-                      transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
-                      '&:link, &:visited, &:hover, &:active': {
-                        color: 'inherit',
-                      },
-                      '&:active': {
-                        transform: 'scale(0.94)',
+                      color: iconColor,
+                      '& svg': {
+                        color: iconColor,
+                        fill: iconColor,
                       },
                     }}
                   >
-                    <Badge
-                      color="error"
-                      badgeContent={unreadMessages > 99 ? '99+' : unreadMessages}
-                      invisible={!isMessages || unreadMessages <= 0}
-                      overlap="circular"
-                    >
-                      <Box
-                        component="span"
-                        sx={{
-                          display: 'inline-flex',
-                          color: iconColor,
-                          '& svg': {
-                            color: iconColor,
-                            fill: iconColor,
-                          },
-                        }}
-                      >
-                        <Icon
-                          key={active ? 'fill' : 'regular'}
-                          size={24}
-                          weight={active ? 'fill' : 'regular'}
-                          color={iconColor}
-                        />
-                      </Box>
-                    </Badge>
+                    <Icon
+                      key={active ? 'fill' : 'regular'}
+                      size={24}
+                      weight={active ? 'fill' : 'regular'}
+                      color={iconColor}
+                    />
+                  </Box>
+                </Badge>
+              );
+
+              if (item.kind === 'search') {
+                return (
+                  <Box
+                    key={item.id}
+                    component="button"
+                    type="button"
+                    aria-label={item.ariaLabel}
+                    aria-haspopup="dialog"
+                    aria-expanded={Boolean(searchOverlay?.open)}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={(event) => handleTabClick(event, item, index)}
+                    sx={sharedSx}
+                  >
+                    {content}
                   </Box>
                 );
-              })}
-            </Box>
+              }
+
+              return (
+                <Box
+                  key={item.id}
+                  component={RouterLink}
+                  href={item.href || paths.home}
+                  aria-label={item.ariaLabel}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={(event) => handleTabClick(event, item, index)}
+                  sx={sharedSx}
+                >
+                  {content}
+                </Box>
+              );
+            })}
           </Box>
         </Box>
-
-        <Box
-          component="button"
-          type="button"
-          aria-label={t.common.search}
-          aria-haspopup="dialog"
-          aria-expanded={Boolean(searchOverlay?.open)}
-          aria-current={searchActive ? 'page' : undefined}
-          onClick={handleSearchClick}
-          sx={{
-            width: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-            height: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-            flexShrink: 0,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: 'none',
-            p: 0,
-            appearance: 'none',
-            WebkitAppearance: 'none',
-            cursor: 'pointer',
-            borderRadius: '50%',
-            color: 'primary.contrastText',
-            bgcolor: 'primary.main',
-            boxShadow: 'none',
-            textDecoration: 'none',
-            transition: 'background-color 160ms ease, transform 160ms ease',
-            '&:active': {
-              transform: 'scale(0.96)',
-            },
-          }}
-        >
-          <MagnifyingGlassIcon size={24} weight={searchActive ? 'fill' : 'regular'} />
-        </Box>
-      </Stack>
+      </Box>
     </Box>
   );
 }

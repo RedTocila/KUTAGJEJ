@@ -7,6 +7,7 @@ import { Box, type SxProps, type Theme } from '@mui/material';
 import { MainTabsGuestPane } from '@/components/main-tabs/main-tabs-guest-pane';
 import { MainTabsHomePreview } from '@/components/main-tabs/main-tabs-home-preview';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
+import { UserNotificationsFab } from '@/components/user/layout/user-notifications-menu';
 import { SavedListingsView } from '@/components/user/saved-listings-view';
 import { UserMessagesView } from '@/components/user/messages/user-messages-view';
 import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
@@ -529,7 +530,12 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   );
 
   if (!hosted) {
-    return <MainTabsContext.Provider value={ctx}>{children}</MainTabsContext.Provider>;
+    return (
+      <MainTabsContext.Provider value={ctx}>
+        {children}
+        <UserNotificationsFab />
+      </MainTabsContext.Provider>
+    );
   }
 
   return (
@@ -647,6 +653,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
           </Box>
         </Box>
         {pagerActive ? <MobileBottomNav /> : null}
+        {!threadOpen ? <UserNotificationsFab /> : null}
       </MessagesThreadChromeProvider>
     </MainTabsContext.Provider>
   );

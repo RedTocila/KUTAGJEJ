@@ -28,10 +28,9 @@ import { CaretRight as CaretRightIcon } from '@phosphor-icons/react/dist/ssr/Car
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/ShieldCheck';
 import { StarFour as StarFourIcon } from '@phosphor-icons/react/dist/ssr/StarFour';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import type { PremiumPackage, PremiumVoucher } from '@/types/payment';
 import { paths } from '@/paths';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
@@ -125,7 +124,7 @@ function pickerKindIcon(kind: ListingMetricKind): PhosphorIcon {
     case 'job':
       return BriefcaseIcon;
     case 'marketplace':
-      return StorefrontIcon;
+      return MarketplaceCategoryIcon;
     case 'businesses':
       return BusinessesCategoryIcon;
     case 'professionals':

@@ -7,10 +7,8 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
-import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import {
   SearchHitCard,
   searchHitListTextSx,
@@ -276,7 +274,7 @@ export function SearchListingCard({
           title={listing.title}
           subtitle={joinMeta([listing.cityName, categoryLabel])}
           imageUrl={listing.imageUrl}
-          FallbackIcon={ShoppingBagIcon}
+          FallbackIcon={MarketplaceCategoryIcon}
           verified={Boolean(listing.sellerVerified)}
           price={listing.price}
           originalPrice={listing.originalPrice}

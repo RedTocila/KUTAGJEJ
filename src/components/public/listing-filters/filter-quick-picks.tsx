@@ -7,9 +7,9 @@ import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Brief
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { House as HouseIcon } from '@phosphor-icons/react/dist/ssr/House';
 import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
-import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { Wrench as WrenchIcon } from '@phosphor-icons/react/dist/ssr/Wrench';
 
+import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
 import type { HomeVerticalId } from '@/lib/home-categories';
@@ -38,7 +38,7 @@ const SECTION_ICON: Record<HomeVerticalId, PhosphorIcon> = {
   'real-estate': HouseIcon,
   cars: CarIcon,
   jobs: BriefcaseIcon,
-  marketplace: TagIcon,
+  marketplace: MarketplaceCategoryIcon,
   businesses: StorefrontIcon,
   professionals: WrenchIcon,
 };

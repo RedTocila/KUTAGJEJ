@@ -18,12 +18,11 @@ import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import {
   listMyBusinessListings,
   listMyProfessionalListings,
@@ -152,7 +151,7 @@ function categoryIcon(key: ListingCategoryKey): PhosphorIcon {
     case 'cars':
       return CarIcon;
     case 'marketplace':
-      return StorefrontIcon;
+      return MarketplaceCategoryIcon;
     case 'businesses':
       return BusinessesCategoryIcon;
     case 'professionals':

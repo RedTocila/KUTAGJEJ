@@ -6,9 +6,9 @@ import { Box, Stack } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { CarProfile as CarProfileIcon } from '@phosphor-icons/react/dist/ssr/CarProfile';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { useLanguage } from '@/hooks/use-language';
 import {
   localizeHomeVerticals,
@@ -48,7 +48,7 @@ const OKAZION_VERTICAL_ICONS: Record<
   'real-estate': BuildingsIcon,
   cars: CarProfileIcon,
   jobs: BriefcaseIcon,
-  marketplace: StorefrontIcon,
+  marketplace: MarketplaceCategoryIcon,
 };
 
 const toolbarRowSx = {

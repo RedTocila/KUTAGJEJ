@@ -9,11 +9,10 @@ import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Build
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/CrownSimple';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { PostListingAiAssist } from '@/components/user/post-listing-ai-assist';
 import { ListingFormSnapshotProvider } from '@/components/user/listing-form-snapshot-context';
@@ -155,7 +154,7 @@ function phaseIcon(phase: Phase): PhosphorIcon {
     case 'jobs-form':
       return BriefcaseIcon;
     case 'marketplace-form':
-      return StorefrontIcon;
+      return MarketplaceCategoryIcon;
     case 'businesses-form':
       return BusinessesCategoryIcon;
     case 'professionals-form':

@@ -1,11 +1,10 @@
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Car as CarIcon } from '@phosphor-icons/react/dist/ssr/Car';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import type { ListingCategoryKey } from '@/types/listing-category';
 
 export const TAB_ORDER: ListingCategoryKey[] = [
@@ -37,7 +36,7 @@ export const CATEGORY_VISUAL: Record<
   'real-estate': { Icon: BuildingsIcon, accent: 'primary' },
   'job-listings': { Icon: BriefcaseIcon, accent: 'info' },
   cars: { Icon: CarIcon, accent: 'warning' },
-  marketplace: { Icon: StorefrontIcon, accent: 'success' },
+  marketplace: { Icon: MarketplaceCategoryIcon, accent: 'success' },
   businesses: { Icon: BusinessesCategoryIcon, accent: 'info' },
   professionals: { Icon: UsersIcon, accent: 'primary' },
 };

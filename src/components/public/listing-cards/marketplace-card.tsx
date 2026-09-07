@@ -3,10 +3,10 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
-import { ShoppingBag as ShoppingBagIcon } from '@phosphor-icons/react/dist/ssr/ShoppingBag';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 
+import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { listingMarketplacePublicHref } from '@/paths';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
@@ -74,7 +74,7 @@ export function MarketplaceCard({
           listingKind="marketplace"
           listingId={listing.id}
           imageUrl={listing.imageUrl}
-          FallbackIcon={ShoppingBagIcon}
+          FallbackIcon={MarketplaceCategoryIcon}
           alt={listing.title}
           height={variant === 'browse' ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
           aspectRatio={

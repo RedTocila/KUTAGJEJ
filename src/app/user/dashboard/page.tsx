@@ -29,10 +29,10 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
+import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { paths } from '@/paths';
 import { useLanguage } from '@/hooks/use-language';
 import { useUser } from '@/hooks/use-user';
@@ -687,7 +687,7 @@ export function UserDashboardHome() {
               label={t.products}
               used={usage.products}
               max={quotas.maxProductListings}
-              icon={StorefrontIcon}
+              icon={MarketplaceCategoryIcon}
               tone="#f5a623"
               unavailableLabel={t.unavailable}
               loading={quotasLoading}

@@ -33,9 +33,8 @@ import { Plus as PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { Ruler as RulerIcon } from '@phosphor-icons/react/dist/ssr/Ruler';
 import { Speedometer as SpeedometerIcon } from '@phosphor-icons/react/dist/ssr/Speedometer';
 
-import { BusinessesCategoryIcon } from '@/components/public/home-vertical-icon';
+import { BusinessesCategoryIcon, MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
-import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Storefront';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
@@ -826,7 +825,7 @@ function MarketplaceCard({
       metrics={l}
       status={l.status}
       imageUrl={coverImage(l.imageUrls)}
-      fallbackIcon={StorefrontIcon}
+      fallbackIcon={MarketplaceCategoryIcon}
       listingId={l.id}
       kind="marketplace"
       isPremium={Boolean(l.isPremium)}
@@ -1535,7 +1534,7 @@ export default function UserMyListingsPage() {
     {
       key: 'marketplace',
       label: 'Tregu',
-      icon: <StorefrontIcon size={16} weight="duotone" />,
+      icon: <MarketplaceCategoryIcon size={16} weight="duotone" />,
       count: filteredMkt.length,
       pending: filteredMkt.filter((l) => normalizeListingModerationStatus(l.status) === 'pending').length,
     },

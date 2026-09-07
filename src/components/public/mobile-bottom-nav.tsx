@@ -80,7 +80,10 @@ export function MobileBottomNav() {
         id: 'saved',
         ariaLabel: t.chrome.navSaved,
         href: isAuthed ? paths.user.savedListings : paths.user.auth,
-        activeWhen: (p) => Boolean(p?.startsWith(paths.user.savedListings)),
+        // Must clear when search is open — Save is before Search in the list, so
+        // findIndex would keep Save and leave the pill stuck on Search after close.
+        activeWhen: (p) =>
+          Boolean(p?.startsWith(paths.user.savedListings)) && !searchActive,
         icon: BookmarkSimpleIcon,
       },
       {

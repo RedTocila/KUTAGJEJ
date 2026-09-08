@@ -63,7 +63,7 @@ function useUserNotificationsInbox() {
   React.useEffect(() => {
     if (!canUse) return;
     void refresh();
-    const id = window.setInterval(() => void refresh(), 45_000);
+    const id = window.setInterval(() => void refresh(), 300_000);
     return () => window.clearInterval(id);
   }, [canUse, refresh]);
 

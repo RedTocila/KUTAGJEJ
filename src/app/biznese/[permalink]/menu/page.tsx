@@ -10,7 +10,7 @@ import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } fro
 import { loadPublicBusinessListingById } from '@/lib/public-listings-client';
 import { listingBusinessMenuHref, paths, pathsPublicVerticalListingDetail } from '@/paths';
 
-export const revalidate = 0;
+export const revalidate = 600;
 
 type PageProps = { params: Promise<{ permalink: string }> };
 

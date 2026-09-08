@@ -11,7 +11,7 @@ import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallba
 import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
 import { PublicShell } from '@/components/public/public-shell';
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: `${config.site.name} — Njoftime falas: prona, makina, punë dhe tregu në Shqipëri`,

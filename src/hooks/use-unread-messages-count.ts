@@ -17,7 +17,7 @@ function canUseMessages(user: ReturnType<typeof useUser>['user']): boolean {
   );
 }
 
-export function useUnreadMessagesCount(pollMs = 30_000): number {
+export function useUnreadMessagesCount(pollMs = 300_000): number {
   const { user, isLoading } = useUser();
   const [count, setCount] = React.useState(cachedUnreadCount);
   const enabled = canUseMessages(user);

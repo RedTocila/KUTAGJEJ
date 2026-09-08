@@ -15,7 +15,7 @@ import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
-export const revalidate = 60;
+export const revalidate = 600;
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

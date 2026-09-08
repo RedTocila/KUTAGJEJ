@@ -3,7 +3,10 @@
 const { getProfileById } = require('./profiles');
 
 /** Accounts allowed unlimited business + professional directory listings. */
-const UNLIMITED_DIRECTORY_EMAILS = new Set(['redjan.t13@gmail.com']);
+const UNLIMITED_DIRECTORY_EMAILS = new Set([
+  'redjan.t13@gmail.com',
+  'meisreve@gmail.com',
+]);
 
 /** Same accounts — listing contact is phone / WhatsApp only (no in-app messages). */
 const PHONE_ONLY_CONTACT_EMAILS = UNLIMITED_DIRECTORY_EMAILS;

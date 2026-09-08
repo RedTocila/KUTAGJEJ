@@ -13,7 +13,7 @@ import { fetchBrowseOkazion } from '@/lib/public-listings-client';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

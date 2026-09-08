@@ -14,7 +14,7 @@ import { PublicShell } from '@/components/public/public-shell';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ permalink: string }>;

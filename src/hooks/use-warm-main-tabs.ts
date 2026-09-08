@@ -15,15 +15,19 @@ function canWarm(user: ReturnType<typeof useUser>['user']): boolean {
   );
 }
 
-/** Prefetch inbox + saved cards while the user is still on Home. */
+/** Prefetch inbox + saved cards while the user is still on Home (once per session warm). */
+let warmMainTabsDoneForUser: string | null = null;
+
 export function useWarmMainTabs(): void {
   const { user, isLoading } = useUser();
   const enabled = canWarm(user);
 
   React.useEffect(() => {
-    if (isLoading || !enabled) return;
+    if (isLoading || !enabled || !user?.id) return;
+    if (warmMainTabsDoneForUser === user.id) return;
+    warmMainTabsDoneForUser = user.id;
     void prefetchConversations();
     void prefetchSavedListings();
     void import('@/app/user/dashboard/page');
-  }, [enabled, isLoading]);
+  }, [enabled, isLoading, user?.id]);
 }

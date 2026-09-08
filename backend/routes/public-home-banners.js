@@ -4,7 +4,7 @@ const { camelizeRows } = require('../lib/profiles');
 const publicCache = require('../middleware/public-cache');
 
 const router = express.Router();
-router.use(publicCache(60));
+router.use(publicCache(300));
 
 function format(row) {
   const c = camelizeRows([row])[0];

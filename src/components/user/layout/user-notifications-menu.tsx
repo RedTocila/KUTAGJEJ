@@ -28,47 +28,12 @@ import { groupUserNotifications } from '@/lib/notification-display';
 import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import { isPublicListingDetailPath } from '@/lib/public-browse-path';
 import {
-  listUserNotifications,
   markAllUserNotificationsRead,
-  type UserNotification,
 } from '@/lib/user-notifications-client';
 import { useCopy } from '@/hooks/use-copy';
-import { useUser } from '@/hooks/use-user';
+import { useUserNotificationsInbox } from '@/hooks/use-user-notifications-inbox';
 import { paths } from '@/paths';
 import { productPopoverPaperSx } from '@/styles/product-sx';
-
-function useUserNotificationsInbox() {
-  const { user } = useUser();
-  const [unread, setUnread] = React.useState(0);
-  const [items, setItems] = React.useState<UserNotification[]>([]);
-  const [loading, setLoading] = React.useState(false);
-
-  const canUse =
-    Boolean(user) &&
-    (user?.accountType === 'individual' ||
-      user?.accountType === 'business' ||
-      user?.role === 'business-user');
-
-  const refresh = React.useCallback(async () => {
-    if (!canUse) return;
-    setLoading(true);
-    const res = await listUserNotifications(false, 16);
-    if (!res.error) {
-      setUnread(res.unread ?? 0);
-      setItems(res.notifications ?? []);
-    }
-    setLoading(false);
-  }, [canUse]);
-
-  React.useEffect(() => {
-    if (!canUse) return;
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 45_000);
-    return () => window.clearInterval(id);
-  }, [canUse, refresh]);
-
-  return { canUse, unread, items, loading, refresh };
-}
 
 function NotificationsPopoverPanel({
   groups,

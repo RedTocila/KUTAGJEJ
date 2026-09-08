@@ -9,7 +9,7 @@ import { fetchPublicMemberSearch } from '@/lib/public-member-client';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 import { MembersBrowseGrid } from '@/components/public/members-browse-grid';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

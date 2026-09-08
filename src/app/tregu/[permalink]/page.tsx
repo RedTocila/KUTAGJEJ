@@ -14,7 +14,7 @@ import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
 import { VerticalListingDetailView } from '@/components/public/vertical-listing-detail-view';
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type PageProps = {
   params: Promise<{ permalink: string }>;

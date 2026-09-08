@@ -53,7 +53,7 @@ export function AdminNotificationsMenu() {
 
   React.useEffect(() => {
     void refresh();
-    const id = window.setInterval(() => void refresh(), 60_000);
+    const id = window.setInterval(() => void refresh(), 90_000);
     return () => window.clearInterval(id);
   }, [refresh]);
 

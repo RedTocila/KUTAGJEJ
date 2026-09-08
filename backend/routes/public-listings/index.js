@@ -90,8 +90,8 @@ async function loadApprovedById(table, id, extraEq = {}) {
   return data ? camelizeRow(data) : null;
 }
 
-// Short shared cache keeps public reads fast without making new ads stale for long.
-router.use(publicCache(120));
+// Shared CDN cache for public browse/home reads (detail routes stay on publicNoStore).
+router.use(publicCache(300));
 
 /** GET /api/public/listings/seo-index — canonical active URLs for SEO metadata routes. */
 router.get('/seo-index', publicCache(600), async (_req, res) => {

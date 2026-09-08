@@ -29,6 +29,7 @@ const {
   formatMarketplace,
   formatDirectory,
 } = require('../lib/public-listings/formatters');
+const { hasMarketplaceOnlyProfileListings } = require('../lib/directory-listing-limits');
 
 const router = express.Router();
 
@@ -279,8 +280,10 @@ async function countApproved(table, posterId, extraSpec = {}) {
   return count ?? 0;
 }
 
-async function loadMemberListings(posterId) {
+async function loadMemberListings(posterId, { marketplaceOnly = false } = {}) {
   const jobSpec = activeJobCreatedAtFilter();
+  const emptyVertical = Promise.resolve([]);
+  const zeroCount = Promise.resolve(0);
 
   const [
     realEstateDocs,
@@ -296,22 +299,30 @@ async function loadMemberListings(posterId) {
     businessesTotal,
     professionalsTotal,
   ] = await Promise.all([
-    fetchApproved('real_estate_listings', posterId, LISTINGS_PER_VERTICAL),
-    fetchApproved('car_listings', posterId, LISTINGS_PER_VERTICAL),
-    fetchApproved('job_listings', posterId, LISTINGS_PER_VERTICAL, jobSpec),
+    marketplaceOnly ? emptyVertical : fetchApproved('real_estate_listings', posterId, LISTINGS_PER_VERTICAL),
+    marketplaceOnly ? emptyVertical : fetchApproved('car_listings', posterId, LISTINGS_PER_VERTICAL),
+    marketplaceOnly ? emptyVertical : fetchApproved('job_listings', posterId, LISTINGS_PER_VERTICAL, jobSpec),
     fetchApproved('marketplace_listings', posterId, LISTINGS_PER_VERTICAL),
-    fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
-      eq: { vertical: 'businesses' },
-    }),
-    fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
-      eq: { vertical: 'professionals' },
-    }),
-    countApproved('real_estate_listings', posterId),
-    countApproved('car_listings', posterId),
-    countApproved('job_listings', posterId, jobSpec),
+    marketplaceOnly
+      ? emptyVertical
+      : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
+          eq: { vertical: 'businesses' },
+        }),
+    marketplaceOnly
+      ? emptyVertical
+      : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
+          eq: { vertical: 'professionals' },
+        }),
+    marketplaceOnly ? zeroCount : countApproved('real_estate_listings', posterId),
+    marketplaceOnly ? zeroCount : countApproved('car_listings', posterId),
+    marketplaceOnly ? zeroCount : countApproved('job_listings', posterId, jobSpec),
     countApproved('marketplace_listings', posterId),
-    countApproved('directory_listings', posterId, { eq: { vertical: 'businesses' } }),
-    countApproved('directory_listings', posterId, { eq: { vertical: 'professionals' } }),
+    marketplaceOnly
+      ? zeroCount
+      : countApproved('directory_listings', posterId, { eq: { vertical: 'businesses' } }),
+    marketplaceOnly
+      ? zeroCount
+      : countApproved('directory_listings', posterId, { eq: { vertical: 'professionals' } }),
   ]);
 
   // Defense in depth: never surface expired jobs on public profiles (same rule as browse/detail).
@@ -436,7 +447,9 @@ router.get('/:id', optionalAuth, async (req, res) => {
     if (!loaded) return res.status(404).json({ error: 'Profili nuk u gjet.' });
 
     const [listings, badges, reviewStats] = await Promise.all([
-      loadMemberListings(id),
+      loadMemberListings(id, {
+        marketplaceOnly: hasMarketplaceOnlyProfileListings(profile.email),
+      }),
       resolveReferralBadges(id, loaded.posterModel),
       getReceivedReviewStats(id, loaded.posterModel),
     ]);

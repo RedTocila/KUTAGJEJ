@@ -325,7 +325,10 @@ function extractAllMeta(html, attr, key) {
 
 function extractJsonLdImages(html) {
   const out = [];
-  const blocks = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+  // Sites like vivaview omit quotes: type=application/ld+json
+  const blocks =
+    html.match(/<script\b[^>]*\btype\s*=\s*(?:["']application\/ld\+json["']|application\/ld\+json)[^>]*>[\s\S]*?<\/script>/gi) ||
+    [];
   for (const block of blocks) {
     const raw = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
     let parsed;
@@ -351,6 +354,12 @@ function extractJsonLdImages(html) {
         }
       } else if (image && typeof image === 'object' && image.url) {
         out.push(String(image.url));
+      } else if (image && typeof image === 'object') {
+        // RealEstateListing style: "image": { "1": "https://...", "2": "https://..." }
+        for (const value of Object.values(image)) {
+          if (typeof value === 'string' && /^https?:\/\//i.test(value)) out.push(value);
+          else if (value && typeof value === 'object' && value.url) out.push(String(value.url));
+        }
       }
       for (const value of Object.values(node)) {
         if (value && typeof value === 'object') stack.push(value);
@@ -419,13 +428,21 @@ function preferLargerImageUrl(url) {
   }
 }
 
+function readImgAttr(tag, name) {
+  const quoted = tag.match(new RegExp(`\\b${name}=["']([^"']+)["']`, 'i'))?.[1];
+  if (quoted) return quoted;
+  // HTML5 unquoted attrs: src=https://cdn.example/a.jpeg
+  return tag.match(new RegExp(`\\b${name}=(https?:\\/\\/[^\\s>]+|\\/[^\\s>]+)`, 'i'))?.[1] || null;
+}
+
 function extractImageCandidates(html, baseUrl) {
   const urls = [];
   const seen = new Set();
   const push = (raw) => {
     if (!raw) return;
     try {
-      const absolute = preferLargerImageUrl(new URL(decodeHtmlEntities(String(raw).trim()), baseUrl).toString());
+      const cleaned = decodeHtmlEntities(String(raw).trim()).replace(/\\\//g, '/');
+      const absolute = preferLargerImageUrl(new URL(cleaned, baseUrl).toString());
       if (seen.has(absolute)) return;
       if (!/^https?:\/\//i.test(absolute)) return;
       if (isLikelyJunkImageUrl(absolute)) return;
@@ -444,18 +461,24 @@ function extractImageCandidates(html, baseUrl) {
   for (const img of extractEmbeddedPayloadImages(html)) push(img);
 
   const imgTags = html.match(/<img\b[^>]*>/gi) || [];
-  for (const tag of imgTags.slice(0, 60)) {
-    push(tag.match(/\bsrc=["']([^"']+)["']/i)?.[1]);
-    push(tag.match(/\bdata-src=["']([^"']+)["']/i)?.[1]);
-    push(tag.match(/\bdata-lazy-src=["']([^"']+)["']/i)?.[1]);
-    push(tag.match(/\bdata-original=["']([^"']+)["']/i)?.[1]);
-    push(tag.match(/\bdata-zoom-image=["']([^"']+)["']/i)?.[1]);
-    push(firstSrcsetUrl(tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1]));
+  for (const tag of imgTags.slice(0, 120)) {
+    push(readImgAttr(tag, 'src'));
+    push(readImgAttr(tag, 'data-src'));
+    push(readImgAttr(tag, 'data-lazy-src'));
+    push(readImgAttr(tag, 'data-original'));
+    push(readImgAttr(tag, 'data-zoom-image'));
+    push(readImgAttr(tag, 'data-mfp-src'));
+    push(readImgAttr(tag, 'data-full'));
+    push(readImgAttr(tag, 'data-large_image'));
+    push(firstSrcsetUrl(readImgAttr(tag, 'srcset')));
     if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
   }
 
   if (urls.length < MAX_SNAPSHOT_IMAGES) {
-    const embedded = html.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
+    // Also match JSON-escaped URLs (https:\/\/cdn...\/photo.jpeg).
+    const normalized = String(html || '').replace(/\\\//g, '/');
+    const embedded =
+      normalized.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
     for (const match of embedded) {
       push(match);
       if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
@@ -1113,6 +1136,44 @@ function buildSnapshotFromHtml({ url, pageResult, extraImageUrls = [], social = 
   };
 }
 
+async function fetchHtmlPair(url, parentSignal, timeoutMs) {
+  const request = timeoutSignal(parentSignal, timeoutMs);
+  try {
+    const [browserResult, crawlerResult, remaxImages] = await Promise.all([
+      fetchHtmlDocument(url, BROWSER_UA, request.signal).catch((err) => {
+        if (parentSignal?.aborted) throw err;
+        return {
+          res: null,
+          html: '',
+          fetchError: err?.message || 'Failed to fetch page',
+        };
+      }),
+      fetchHtmlDocument(url, CRAWLER_UA, request.signal).catch((err) => {
+        if (parentSignal?.aborted) throw err;
+        return { res: null, html: '' };
+      }),
+      enrichRemaxAlbaniaImages(url, parentSignal),
+    ]);
+
+    const browserScore = htmlRichnessScore(browserResult.html);
+    const crawlerScore = htmlRichnessScore(crawlerResult.html);
+    const pageResult =
+      crawlerScore > browserScore
+        ? { ...crawlerResult, fetchError: crawlerResult.res?.ok ? null : browserResult.fetchError }
+        : browserResult;
+
+    const mergedImages = mergeImageUrlLists(
+      remaxImages,
+      extractImageCandidates(crawlerResult.html || '', url),
+      extractImageCandidates(browserResult.html || '', url)
+    );
+
+    return { pageResult, mergedImages, browserResult, crawlerResult };
+  } finally {
+    request.cleanup();
+  }
+}
+
 async function fetchPageSnapshot(url, parentSignal) {
   const social = isSocialMediaUrl(url);
   const instagram = isInstagramUrl(url);
@@ -1161,38 +1222,31 @@ async function fetchPageSnapshot(url, parentSignal) {
     }
   }
 
-  const request = timeoutSignal(parentSignal, 14000);
   try {
-    // Same path for every website: browser HTML + crawler HTML (og tags / galleries),
-    // then merge title, description, and images.
-    const [browserResult, crawlerResult, remaxImages] = await Promise.all([
-      fetchHtmlDocument(url, BROWSER_UA, request.signal).catch((err) => {
-        if (parentSignal?.aborted) throw err;
-        return {
-          res: null,
-          html: '',
-          fetchError: err?.message || 'Failed to fetch page',
-        };
-      }),
-      fetchHtmlDocument(url, CRAWLER_UA, request.signal).catch((err) => {
-        if (parentSignal?.aborted) throw err;
-        return { res: null, html: '' };
-      }),
-      enrichRemaxAlbaniaImages(url, parentSignal),
-    ]);
-
-    const browserScore = htmlRichnessScore(browserResult.html);
-    const crawlerScore = htmlRichnessScore(crawlerResult.html);
-    const pageResult =
-      crawlerScore > browserScore
-        ? { ...crawlerResult, fetchError: crawlerResult.res?.ok ? null : browserResult.fetchError }
-        : browserResult;
-
-    const mergedImages = mergeImageUrlLists(
-      remaxImages,
-      extractImageCandidates(crawlerResult.html || '', url),
-      extractImageCandidates(browserResult.html || '', url)
-    );
+    // First pass: browser + crawler HTML. Retry once when the page has text/meta but
+    // zero listing photos — common under rate limits / soft timeouts on gallery-heavy sites.
+    let { pageResult, mergedImages } = await fetchHtmlPair(url, parentSignal, 16000);
+    if (!mergedImages.length && !parentSignal?.aborted) {
+      const hasShell =
+        Boolean(pageResult?.html) &&
+        (Boolean(extractMeta(pageResult.html, 'property', 'og:title')) ||
+          Boolean(extractMeta(pageResult.html, 'property', 'og:description')) ||
+          stripHtml(pageResult.html).length > 200 ||
+          isThinListingHtml(pageResult.html));
+      if (hasShell || !pageResult?.res) {
+        await sleep(450, parentSignal).catch(() => {});
+        if (!parentSignal?.aborted) {
+          const retry = await fetchHtmlPair(url, parentSignal, 20000);
+          if (
+            retry.mergedImages.length > mergedImages.length ||
+            htmlRichnessScore(retry.pageResult?.html) > htmlRichnessScore(pageResult?.html)
+          ) {
+            pageResult = retry.pageResult;
+            mergedImages = mergeImageUrlLists(retry.mergedImages, mergedImages);
+          }
+        }
+      }
+    }
 
     if (!pageResult.res && !mergedImages.length) {
       return {
@@ -1233,8 +1287,6 @@ async function fetchPageSnapshot(url, parentSignal) {
       social,
       fetchError: err?.message || 'Failed to fetch page',
     };
-  } finally {
-    request.cleanup();
   }
 }
 

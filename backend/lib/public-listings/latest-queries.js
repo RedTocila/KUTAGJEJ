@@ -632,10 +632,10 @@ async function latestDirectory(vertical, limit) {
 }
 
 /**
- * Active Okazion deals across all verticals (okazion_until in the future).
- * Optional filters: `kind` (home vertical id) and free-text `q`.
+ * Raw Okazion docs (pre-format) across sellable verticals.
+ * Used by browse Okazion and the combined homepage bundle.
  */
-async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
+async function queryOkazionDocs(limit = 48, skip = 0, query = {}) {
   const take = Math.max(limit + skip, limit);
   const nowIso = new Date().toISOString();
   const okazionFilter = { gt: { okazion_until: nowIso } };
@@ -703,6 +703,15 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
 
   const total = merged.length;
   const pageDocs = merged.slice(skip, skip + limit);
+  return { pageDocs, total };
+}
+
+/**
+ * Active Okazion deals across all verticals (okazion_until in the future).
+ * Optional filters: `kind` (home vertical id) and free-text `q`.
+ */
+async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
+  const { pageDocs, total } = await queryOkazionDocs(limit, skip, query);
   const byKind = new Map();
   for (const row of pageDocs) {
     if (!byKind.has(row.kind)) byKind.set(row.kind, []);
@@ -723,6 +732,80 @@ async function queryOkazionListings(limit = 48, skip = 0, query = {}) {
   const listings = pageDocs.map(({ kind, doc }) => formattedById.get(`${kind}:${String(doc.id)}`)).filter(Boolean);
 
   return { listings, total };
+}
+
+/**
+ * Homepage SSR payload: recommended verticals + Okazion with ONE shared
+ * city / metrics / badge / review enrichment pass (avoids duplicate Supabase work).
+ */
+async function queryHomepageListings(limit) {
+  const [docGroups, okazionRaw] = await Promise.all([
+    Promise.all(
+      LATEST_VERTICAL_SPECS.map((spec) =>
+        runListingQuery(spec.table, mergePublicFilter(spec.filter), spec.sort(), limit, 0)
+      )
+    ),
+    queryOkazionDocs(limit, 0, {}),
+  ]);
+
+  const docByKey = new Map();
+  for (let i = 0; i < docGroups.length; i += 1) {
+    const kind = LATEST_VERTICAL_SPECS[i].kind;
+    for (const doc of docGroups[i]) {
+      docByKey.set(`${kind}:${String(doc.id)}`, { kind, doc });
+    }
+  }
+  for (const row of okazionRaw.pageDocs) {
+    const key = `${row.kind}:${String(row.doc.id)}`;
+    if (!docByKey.has(key)) docByKey.set(key, row);
+  }
+  const uniqueRows = [...docByKey.values()];
+  const allDocs = uniqueRows.map((r) => r.doc);
+
+  const bizDocs = docGroups[4] || [];
+  const proDocs = docGroups[5] || [];
+
+  const [cityById, bizReviews, proReviews] = await Promise.all([
+    buildCityIndex(allDocs),
+    reviewStatsByListingIds(bizDocs.map((d) => d.id)),
+    professionalReviewStatsByListingIds(proDocs.map((d) => d.id)),
+  ]);
+
+  const formattedUnique = uniqueRows.map(({ kind, doc }) => {
+    const reviewStats = kind === 'businesses' ? bizReviews : kind === 'professionals' ? proReviews : null;
+    return formatDocsLocal(kind, [doc], cityById, reviewStats)[0];
+  });
+
+  const [withMetrics, verifiedIds, trustIds] = await Promise.all([
+    attachMetricsToListings(formattedUnique),
+    loadVerifiedPosterIdSet(allDocs.map((d) => d.posterId)),
+    loadTrustBadgePosterIdSet(allDocs.map((d) => d.posterId)),
+  ]);
+
+  const listingByKey = new Map();
+  for (let i = 0; i < uniqueRows.length; i += 1) {
+    const { kind, doc } = uniqueRows[i];
+    const key = `${kind}:${String(doc.id)}`;
+    listingByKey.set(key, applySellerBadges([doc], [withMetrics[i]], verifiedIds, trustIds)[0]);
+  }
+
+  const bundle = {};
+  for (let i = 0; i < LATEST_VERTICAL_SPECS.length; i += 1) {
+    const kind = LATEST_VERTICAL_SPECS[i].kind;
+    bundle[LATEST_VERTICAL_SPECS[i].key] = (docGroups[i] || [])
+      .map((doc) => listingByKey.get(`${kind}:${String(doc.id)}`))
+      .filter(Boolean);
+  }
+
+  const okazion = okazionRaw.pageDocs
+    .map(({ kind, doc }) => listingByKey.get(`${kind}:${String(doc.id)}`))
+    .filter(Boolean);
+
+  return {
+    ...bundle,
+    okazion,
+    okazionTotal: okazionRaw.total,
+  };
 }
 
 async function attachDetailMetrics(req, listing) {
@@ -749,6 +832,7 @@ module.exports = {
   latestMarketplace,
   latestDirectory,
   queryLatestVerticals,
+  queryHomepageListings,
   topViewedByKind,
   queryOkazionListings,
   attachDetailMetrics,

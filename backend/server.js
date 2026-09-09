@@ -253,6 +253,7 @@ app.use('/api/listing-metrics', require('./routes/listing-metrics'));
 app.use('/api/job-employer-verification', require('./routes/job-employer-verification'));
 app.use('/api/admin/job-employer-verification', require('./routes/admin-job-employer-verification'));
 app.use('/api/public/home-banners', require('./routes/public-home-banners'));
+app.use('/api/public/homepage', require('./routes/public-homepage'));
 app.use('/api/public/image-proxy', require('./routes/public-image-proxy'));
 
 const startServer = async () => {

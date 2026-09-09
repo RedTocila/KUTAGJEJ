@@ -23,7 +23,7 @@ router.get('/', async (_req, res) => {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from('home_banners')
-      .select('*')
+      .select('id, title, subtitle, image_url, cta_label, cta_href, order, created_at, is_active')
       .eq('is_active', true)
       .order('order', { ascending: true })
       .order('created_at', { ascending: false });

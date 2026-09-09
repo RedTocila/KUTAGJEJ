@@ -21,7 +21,6 @@ import { UserCircle as UserCircleIcon } from '@phosphor-icons/react/dist/ssr/Use
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import type { ListingGalleryPlaceholderKey } from '@/lib/listing-gallery-placeholder';
-import { emitListingPhotoView } from '@/lib/listing-hot-lead';
 import { nextShareCount, type ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import { listingHeroImageUrl, listingThumbImageUrl } from '@/lib/storage-image';
@@ -237,7 +236,6 @@ export function RealEstateListingGallery(props: {
 
   React.useEffect(() => {
     if (!listingKind || !listingId || showPlaceholder) return;
-    emitListingPhotoView(listingKind, listingId, active);
   }, [active, listingId, listingKind, showPlaceholder]);
 
   const PLACEHOLDER_BY_KEY: Record<ListingGalleryPlaceholderKey, typeof HouseIcon> = {

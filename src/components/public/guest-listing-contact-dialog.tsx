@@ -15,7 +15,6 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { telHref, whatsappInquireHref } from '@/lib/listing-contact';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 
 export interface GuestListingContactDialogProps {
   open: boolean;
@@ -57,7 +56,6 @@ export function GuestListingContactDialog({
   const hasDirectContact = Boolean(callHref || waHref);
 
   const markContact = () => {
-    emitHotLeadContactAction({ listingKind, listingId });
   };
 
   return (

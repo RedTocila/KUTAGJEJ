@@ -24,7 +24,6 @@ import { TransientNotification } from '@/components/core/transient-success-alert
 import { ProductTag } from '@/components/public/product-browse-chrome';
 import { FilterChipSkeletonRow, NotificationRowsSkeleton } from '@/components/user/inbox-skeletons';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
 import {
   SavedListingPreviewDialog,
   type SavedListingPreviewTarget,
@@ -97,7 +96,6 @@ export default function UserNotificationsPage() {
 
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
-      <LeadsTopHeaderButton />
       <Stack spacing={1.25}>
         <UserPageHeader
           icon={React.createElement(BellIcon, { size: 22, weight: 'duotone' })}

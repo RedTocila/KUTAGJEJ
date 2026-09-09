@@ -11,15 +11,21 @@ const {
   upsertPreferences,
   PREF_KEYS,
 } = require('../lib/user-notifications');
-const { posterHasTrustBadge } = require('../lib/public-listings/load-poster-brief');
 
-/** Save / share / high-interest prefs — Grow / Elite only. */
-const GROW_ELITE_PREF_KEYS = new Set(['listing_saved', 'listing_shared', 'listing_hot_lead']);
+/** Legacy lead prefs / notification types — no longer exposed in the product. */
+const RETIRED_LEAD_PREF_KEYS = new Set(['listing_saved', 'listing_shared', 'listing_hot_lead']);
+const RETIRED_LEAD_TYPES = ['listing_saved', 'listing_shared', 'listing_hot_lead'];
 
 const router = express.Router();
 
 function portalUserId(user) {
   return String(user?.id || user?._id || '').trim();
+}
+
+function publicPreferences(preferences) {
+  const out = { ...preferences };
+  for (const key of RETIRED_LEAD_PREF_KEYS) delete out[key];
+  return out;
 }
 
 /** GET /api/user-notifications?unreadOnly=1&limit=20 */
@@ -35,6 +41,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
       .select('*')
       .eq('user_id', userId)
       .neq('type', 'ai_usage')
+      .not('type', 'in', `(${RETIRED_LEAD_TYPES.join(',')})`)
       .order('created_at', { ascending: false })
       .limit(limit);
     if (unreadOnly) listQ = listQ.is('read_at', null);
@@ -46,6 +53,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .neq('type', 'ai_usage')
+        .not('type', 'in', `(${RETIRED_LEAD_TYPES.join(',')})`)
         .is('read_at', null),
     ]);
     if (error) {
@@ -74,7 +82,7 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
 /** GET /api/user-notifications/preferences */
 router.get('/preferences', auth, requirePortalUser, async (req, res) => {
   try {
-    const preferences = await getPreferences(portalUserId(req.user));
+    const preferences = publicPreferences(await getPreferences(portalUserId(req.user)));
     res.json({ preferences });
   } catch (err) {
     console.error('GET /user-notifications/preferences:', err?.message || err);
@@ -89,28 +97,14 @@ router.patch('/preferences', auth, requirePortalUser, async (req, res) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const patch = {};
     for (const key of PREF_KEYS) {
+      if (RETIRED_LEAD_PREF_KEYS.has(key)) continue;
       if (typeof body[key] === 'boolean') patch[key] = body[key];
     }
     if (!Object.keys(patch).length) {
       return res.status(400).json({ message: 'Nuk u dërgua asnjë preferencë e vlefshme.' });
     }
 
-    const entitled = await posterHasTrustBadge(userId);
-    if (!entitled) {
-      const onlyGrowElite = Object.keys(patch).every((key) => GROW_ELITE_PREF_KEYS.has(key));
-      for (const key of GROW_ELITE_PREF_KEYS) delete patch[key];
-      if (!Object.keys(patch).length) {
-        return res.status(403).json({
-          code: 'PACKAGE_REQUIRED',
-          message:
-            onlyGrowElite
-              ? 'Këto njoftime janë të disponueshme me paketën Grow ose Elite.'
-              : 'Nuk u dërgua asnjë preferencë e vlefshme.',
-        });
-      }
-    }
-
-    const preferences = await upsertPreferences(userId, patch);
+    const preferences = publicPreferences(await upsertPreferences(userId, patch));
     res.json({ preferences });
   } catch (err) {
     console.error('PATCH /user-notifications/preferences:', err?.message || err);

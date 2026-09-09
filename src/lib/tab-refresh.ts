@@ -9,6 +9,10 @@ export function setActiveTabForRefresh(tab: MainTabId | null): void {
   activeTab = tab;
 }
 
+export function getActiveTabForRefresh(): MainTabId | null {
+  return activeTab;
+}
+
 export function subscribeTabRefresh(tab: MainTabId, handler: TabRefreshHandler): () => void {
   let set = handlers.get(tab);
   if (!set) {

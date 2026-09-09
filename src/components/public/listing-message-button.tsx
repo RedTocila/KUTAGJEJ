@@ -8,7 +8,6 @@ import { ChatCircle as ChatCircleIcon } from '@phosphor-icons/react/dist/ssr/Cha
 import { paths } from '@/paths';
 import { hasStoredAccessToken } from '@/lib/auth/storage';
 import { setPendingListingChat, startConversation, type ConversationListingKind } from '@/lib/conversations-client';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import { useUser } from '@/hooks/use-user';
 import { GuestListingContactDialog } from '@/components/public/guest-listing-contact-dialog';
 
@@ -91,7 +90,6 @@ export function ListingMessageButton({
         setError(message);
         return;
       }
-      emitHotLeadContactAction({ listingKind, listingId });
       const inquiry = encodeURIComponent(`${listingKind}:${listingId}`);
       router.push(`${paths.user.messages}?c=${encodeURIComponent(res.conversation.id)}&inquiry=${inquiry}`);
     } finally {

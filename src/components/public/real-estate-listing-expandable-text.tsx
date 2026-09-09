@@ -5,7 +5,6 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { emitHotLeadDetailsExpand } from '@/lib/listing-hot-lead';
 
 const COLLAPSED_LEN = 480;
 
@@ -88,7 +87,6 @@ export function RealEstateListingExpandableText(props: {
           type="button"
           variant="body2"
           onClick={() => {
-            if (!open) emitHotLeadDetailsExpand();
             setOpen(!open);
           }}
           underline="none"

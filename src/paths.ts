@@ -43,7 +43,7 @@ export const paths = {
     professionalsListing: '/user/dashboard/profesioniste',
     /** Listings the user has posted (portal). */
     myRealEstateListings: '/user/dashboard/shpalljet-e-mia',
-    /** Listing performance: totals + per-post views / leads. */
+    /** Listing performance: totals + per-post views / shares / saves. */
     statistics: '/user/dashboard/statistikat',
     /** Edit an existing listing: `?kind=&id=`. */
     editListing: '/user/dashboard/shpalljet-e-mia/ndrysho',
@@ -53,8 +53,6 @@ export const paths = {
     messages: '/user/dashboard/mesazhet',
     /** In-app notification inbox. */
     notifications: '/user/dashboard/njoftimet',
-    /** Grow/Elite leads: saves + shares + hot interest. */
-    leads: '/user/dashboard/leads',
     /** Notification preference toggles. */
     notificationSettings: '/user/dashboard/njoftimet/cilesimet',
     /** Referral program — invite link and stats. */

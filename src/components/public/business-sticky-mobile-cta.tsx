@@ -14,7 +14,6 @@ import {
   businessMobileCtaModeFromListing,
   type BusinessMobileCtaMode,
 } from '@/lib/business-mobile-cta';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 
 type ReservePanelProps = Omit<BusinessReservationPanelProps, 'panelRef'>;
 
@@ -61,7 +60,6 @@ export function BusinessStickyMobileCta({
       {...reservationPanel}
       primaryCta
       onOpenChange={(next) => {
-        if (next) emitHotLeadContactAction({ listingKind: 'businesses', listingId });
         reservationPanel.onOpenChange(next);
       }}
     />

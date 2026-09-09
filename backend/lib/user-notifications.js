@@ -302,89 +302,6 @@ async function notifyNewMessage({
   });
 }
 
-async function notifyListingSaved({ metricsKind, listingId, saverId }) {
-  const brief = await loadListingOwnerBrief(metricsKind, listingId);
-  if (!brief) return null;
-  if (String(brief.posterId) === String(saverId)) return null;
-
-  // Save-lead alerts are a Grow / Elite perk only.
-  const { posterHasTrustBadge } = require('./public-listings/load-poster-brief');
-  const entitled = await posterHasTrustBadge(brief.posterId);
-  if (!entitled) return null;
-
-  const saverName = (await displayNameForUserId(saverId)) || 'Dikush';
-  const listingHref = listingPublicHrefFromMetrics(metricsKind, listingId);
-  return createUserNotification({
-    userId: brief.posterId,
-    type: 'listing_saved',
-    title: `${saverName} ruajti njoftimin tuaj`,
-    message: `«${brief.title}» u shtua te të ruajturat.`,
-    refKind: metricsKind,
-    refId: listingId,
-    actorId: saverId,
-    actorName: saverName,
-    href: listingHref,
-  });
-}
-
-async function notifyListingShared({ metricsKind, listingId, sharerId }) {
-  const brief = await loadListingOwnerBrief(metricsKind, listingId);
-  if (!brief) return null;
-  if (String(brief.posterId) === String(sharerId)) return null;
-
-  // Share-lead alerts are a Grow / Elite perk only.
-  const { posterHasTrustBadge } = require('./public-listings/load-poster-brief');
-  const entitled = await posterHasTrustBadge(brief.posterId);
-  if (!entitled) return null;
-
-  const sharerName = (await displayNameForUserId(sharerId)) || 'Dikush';
-  const listingHref = listingPublicHrefFromMetrics(metricsKind, listingId);
-  return createUserNotification({
-    userId: brief.posterId,
-    type: 'listing_shared',
-    title: `${sharerName} ndau njoftimin tuaj`,
-    message: `«${brief.title}» u nda.`,
-    refKind: metricsKind,
-    refId: listingId,
-    actorId: sharerId,
-    actorName: sharerName,
-    href: listingHref,
-  });
-}
-
-/**
- * Hot-interest lead: engagement combo (dwell / photos / scroll / details / return / save / share).
- * Actor identity only when the visitor is signed in (contactable).
- */
-async function notifyListingHotLead({ metricsKind, listingId, viewerId = null }) {
-  const brief = await loadListingOwnerBrief(metricsKind, listingId);
-  if (!brief) return null;
-  if (viewerId && String(brief.posterId) === String(viewerId)) return null;
-
-  // Hot-lead alerts are a Grow / Elite perk only.
-  const { posterHasTrustBadge } = require('./public-listings/load-poster-brief');
-  const entitled = await posterHasTrustBadge(brief.posterId);
-  if (!entitled) return null;
-
-  const actorId = viewerId && isUuid(String(viewerId)) ? String(viewerId) : null;
-  const actorName = actorId ? (await displayNameForUserId(actorId)) || 'Dikush' : null;
-  const listingHref = listingPublicHrefFromMetrics(metricsKind, listingId);
-
-  return createUserNotification({
-    userId: brief.posterId,
-    type: 'listing_hot_lead',
-    title: actorName ? `${actorName} tregoi interes të lartë` : 'Interes i lartë për njoftimin',
-    message: actorName
-      ? `${actorName} shikoi me kujdes «${brief.title}».`
-      : `Dikush shikoi me kujdes «${brief.title}».`,
-    refKind: metricsKind,
-    refId: listingId,
-    actorId,
-    actorName,
-    href: listingHref,
-  });
-}
-
 async function notifyListingStatus({ posterId, listingKind, listingId, listingTitle, approved }) {
   const title = listingTitle || 'Njoftimi juaj';
   return createUserNotification({
@@ -484,9 +401,6 @@ module.exports = {
   displayNameForUserId,
   createUserNotification,
   notifyNewMessage,
-  notifyListingSaved,
-  notifyListingShared,
-  notifyListingHotLead,
   notifyListingStatus,
   notifyMemberReview,
   notifyListingReview,

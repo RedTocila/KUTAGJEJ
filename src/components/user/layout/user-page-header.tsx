@@ -20,7 +20,7 @@ export function UserPageHeader({
   icon: React.ReactNode;
   title: string;
   description?: string;
-  /** Optional control aligned to the right of the title row (e.g. Leads). */
+  /** Optional control aligned to the right of the title row. */
   action?: React.ReactNode;
   sx?: SxProps<Theme>;
   /** Optional override for the icon tile (color / bgcolor). */

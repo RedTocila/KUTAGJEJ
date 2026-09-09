@@ -11,6 +11,8 @@ import { HomeCarouselsFallback } from '@/components/public/home-carousels-fallba
 import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
 import { PublicShell } from '@/components/public/public-shell';
 
+/** Public homepage — ISR. Observability labels this route `/index` (RSC: `/index.rsc`). */
+export const dynamic = 'force-static';
 export const revalidate = 300;
 
 export const metadata: Metadata = {

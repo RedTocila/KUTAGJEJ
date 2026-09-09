@@ -11,7 +11,6 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
-import { emitListingPhotoView } from '@/lib/listing-hot-lead';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import type { ProfessionalPortfolioItem } from '@/lib/professional-listing-detail-content';
 import { listingCardImageUrl, listingHeroImageUrl } from '@/lib/storage-image';
@@ -613,7 +612,6 @@ export function ProfessionalPortfolioSection({
       setActiveIndex(index);
       if (listingId) {
         // Cover gallery uses index 0; portfolio photos continue from 1.
-        emitListingPhotoView(listingKind, listingId, index + 1);
       }
     },
     [listingId, listingKind]

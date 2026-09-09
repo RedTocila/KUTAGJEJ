@@ -6,7 +6,7 @@
  * load only before that bridge mounts.
  */
 
-import { runActiveTabRefresh } from '@/lib/tab-refresh';
+import { getActiveTabForRefresh, runActiveTabRefresh } from '@/lib/tab-refresh';
 
 type NavigateFn = (href: string) => void;
 type RefreshFn = () => void;
@@ -41,7 +41,10 @@ export function hardNavigate(href: string, event?: { preventDefault(): void }): 
   window.location.assign(href);
 }
 
-/** Scroll to top and refresh RSC data without a full document reload. */
+/**
+ * Scroll to top and refresh the active tab.
+ * Home uses client handlers only — `router.refresh()` would bypass CDN/ISR for `/index`.
+ */
 export function hardRefreshToTop(event?: { preventDefault(): void }): void {
   event?.preventDefault();
   if (typeof window === 'undefined') return;
@@ -50,6 +53,11 @@ export function hardRefreshToTop(event?: { preventDefault(): void }): void {
   }
   window.scrollTo(0, 0);
   void runActiveTabRefresh();
+
+  // Public homepage is ISR-cached (`/` / Observability `/index`). Re-running RSC on
+  // every Home retap caused nearly all `/index` invocations to miss cache.
+  if (getActiveTabForRefresh() === 'home') return;
+
   if (softRefreshFn) {
     softRefreshFn();
     return;

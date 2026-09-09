@@ -86,12 +86,9 @@ function Stat({
 export function ListingOwnerStats({
   metrics,
   sx,
-  onSavesClick,
 }: {
   metrics: Partial<ListingMetrics>;
   sx?: object;
-  /** Opens Grow/Elite “who saved” leads when the save count is pressed. */
-  onSavesClick?: () => void;
 }) {
   const viewCount = metrics.viewCount ?? 0;
   const shareCount = metrics.shareCount ?? 0;
@@ -111,12 +108,7 @@ export function ListingOwnerStats({
     >
       <Stat icon={<EyeIcon size={13} />} label="shikime" value={viewCount} />
       <Stat icon={<ShareIcon size={13} />} label="ndarje" value={shareCount} />
-      <Stat
-        icon={<BookmarkIcon size={13} />}
-        label={onSavesClick ? 'ruajtje · shiko interesuarit' : 'ruajtje'}
-        value={saveCount}
-        onClick={onSavesClick}
-      />
+      <Stat icon={<BookmarkIcon size={13} />} label="ruajtje" value={saveCount} />
     </Stack>
   );
 }
@@ -302,7 +294,6 @@ export function ListingOwnerMetrics({
   lastRefreshedAt,
   refreshEveryHours,
   hideStats = false,
-  onSavesClick,
 }: {
   metrics: Partial<ListingMetrics>;
   listingId?: string;
@@ -330,8 +321,6 @@ export function ListingOwnerMetrics({
   refreshEveryHours?: number | null;
   /** Hide stats row when rendered externally. */
   hideStats?: boolean;
-  /** Opens Grow/Elite saver leads for this listing. */
-  onSavesClick?: () => void;
 }) {
   const t = useCopy();
   const { checkSession } = useUser();
@@ -477,7 +466,7 @@ export function ListingOwnerMetrics({
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
-      {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} onSavesClick={onSavesClick} /> : null}
+      {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} /> : null}
 
       {refreshLocked ? (
         <Typography

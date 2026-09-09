@@ -26,8 +26,6 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import { StatsPageSkeleton } from '@/components/core/content-skeletons';
 import { portalToggleGroupSx } from '@/components/user/portal-cards';
 import { UserPageHeader } from '@/components/user/layout/user-page-header';
-import { LeadsTopHeaderButton } from '@/components/user/leads-top-header-button';
-import { ListingSavesLeadsDialog } from '@/components/user/listing-saves-leads-dialog';
 import {
   PANEL_BG_DARK,
   PANEL_BG_LIGHT,
@@ -169,11 +167,6 @@ export default function UserStatisticsPage() {
   const deferredSearch = React.useDeferredValue(search);
   const searchQuery = React.useMemo(() => normalizeSearch(deferredSearch), [deferredSearch]);
   const hasSearch = searchQuery.length > 0;
-  const [leadsTarget, setLeadsTarget] = React.useState<{
-    kind: ListingMetricKind;
-    listingId: string;
-    title: string;
-  } | null>(null);
 
   const canPublish =
     Boolean(user) &&
@@ -341,7 +334,6 @@ export default function UserStatisticsPage() {
 
   return (
     <Stack spacing={3}>
-      <LeadsTopHeaderButton />
       <UserPageHeader
         icon={<ChartLineUpIcon size={20} weight="duotone" />}
         title={t.nav.statistics}
@@ -564,37 +556,12 @@ export default function UserStatisticsPage() {
                           {formatNum(row.shareCount)}
                         </Typography>
                       </Stack>
-                      <Box
-                        component="button"
-                        type="button"
-                        title="Ruajtje · shiko interesuarit"
-                        aria-label="Ruajtje · shiko interesuarit"
-                        onClick={() =>
-                          setLeadsTarget({
-                            kind: row.kind,
-                            listingId: row.listingId,
-                            title: row.title,
-                          })
-                        }
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 0.4,
-                          m: 0,
-                          p: 0,
-                          border: 0,
-                          bgcolor: 'transparent',
-                          cursor: 'pointer',
-                          color: 'inherit',
-                          WebkitTapHighlightColor: 'transparent',
-                          '&:hover': { color: 'primary.main' },
-                        }}
-                      >
+                      <Stack direction="row" spacing={0.4} sx={{ alignItems: 'center' }} title="Ruajtje">
                         <BookmarkIcon size={15} />
                         <Typography variant="caption" sx={{ fontWeight: 800 }}>
                           {formatNum(row.saveCount)}
                         </Typography>
-                      </Box>
+                      </Stack>
                     </Stack>
                   </Stack>
                 ))}
@@ -604,15 +571,6 @@ export default function UserStatisticsPage() {
         </Box>
       )}
 
-      {leadsTarget ? (
-        <ListingSavesLeadsDialog
-          open
-          onClose={() => setLeadsTarget(null)}
-          listingKind={leadsTarget.kind}
-          listingId={leadsTarget.listingId}
-          listingTitle={leadsTarget.title}
-        />
-      ) : null}
     </Stack>
   );
 }

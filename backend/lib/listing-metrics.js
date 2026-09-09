@@ -17,55 +17,7 @@ const TABLE_BY_KIND = {
 
 const DEDUP_MS = {
   view: 30 * 60 * 1000,
-  hot_lead: 48 * 60 * 60 * 1000,
 };
-
-const HOT_LEAD_SIGNAL_KEYS = [
-  'dwell',
-  'photos',
-  'scroll',
-  'details',
-  'saved',
-  'shared',
-  'returned',
-  'multiListing',
-  'repeatView',
-];
-
-const HOT_LEAD_HIGH_INTENT_KEYS = new Set(['saved', 'shared', 'returned', 'multiListing', 'repeatView']);
-
-function countHotLeadSignals(signals) {
-  if (!signals || typeof signals !== 'object') return 0;
-  let n = 0;
-  for (const key of HOT_LEAD_SIGNAL_KEYS) {
-    // returned + repeatView are the same 2+ visit behavior — count once.
-    if (key === 'repeatView') continue;
-    if (key === 'returned') {
-      if (signals.returned === true || signals.repeatView === true) n += 1;
-      continue;
-    }
-    if (signals[key] === true) n += 1;
-  }
-  return n;
-}
-
-function countHotLeadHighIntentSignals(signals) {
-  if (!signals || typeof signals !== 'object') return 0;
-  let n = 0;
-  for (const key of HOT_LEAD_HIGH_INTENT_KEYS) {
-    if (key === 'repeatView') continue;
-    if (key === 'returned') {
-      if (signals.returned === true || signals.repeatView === true) n += 1;
-      continue;
-    }
-    if (signals[key] === true) n += 1;
-  }
-  return n;
-}
-
-function qualifiesAsHotLead(signals) {
-  return countHotLeadSignals(signals) >= 3;
-}
 
 function metricsKey(kind, listingId) {
   return `${kind}:${String(listingId)}`;
@@ -538,20 +490,12 @@ async function attachOwnerMetrics(listings, kind) {
   return enriched.map(({ kind: _k, ...rest }) => rest);
 }
 
-async function recordListingEvent(req, { kind, listingId, event, signals = null, includeMetrics = true }) {
+async function recordListingEvent(req, { kind, listingId, event, includeMetrics = true }) {
   if (!isValidKind(kind) || !isUuid(listingId)) {
     return { ok: false, status: 400, message: 'Invalid listing.' };
   }
-  if (!['view', 'share', 'hot_lead'].includes(event)) {
+  if (!['view', 'share'].includes(event)) {
     return { ok: false, status: 400, message: 'Invalid event.' };
-  }
-
-  if (event === 'hot_lead' && !qualifiesAsHotLead(signals)) {
-    return {
-      ok: false,
-      status: 400,
-      message: 'Hot lead requires at least 3 engagement signals including 1 high-intent behavior.',
-    };
   }
 
   const exists = await listingExists(kind, listingId);
@@ -560,11 +504,11 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null,
   const visitorKey = visitorKeyFromRequest(req);
   let incremented = true;
 
-  if (event === 'view' || event === 'hot_lead') {
+  if (event === 'view') {
     if (!visitorKey) {
       return { ok: false, status: 400, message: 'Visitor id required.' };
     }
-    const expiresAt = new Date(Date.now() + DEDUP_MS[event]).toISOString();
+    const expiresAt = new Date(Date.now() + DEDUP_MS.view).toISOString();
     const { error } = await getSupabaseAdmin().from('listing_metric_dedups').insert({
       listing_kind: kind,
       listing_id: listingId,
@@ -579,7 +523,7 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null,
   }
 
   let engagement = null;
-  if (event === 'share' || (incremented && event !== 'hot_lead')) {
+  if (event === 'share' || incremented) {
     engagement = await incrementEngagement(kind, listingId, event);
     if (event === 'share' || (event === 'view' && incremented)) {
       await logMetricEvent(kind, listingId, event);
@@ -590,36 +534,6 @@ async function recordListingEvent(req, { kind, listingId, event, signals = null,
   // metrics payload and checking saved_listings once per item in the batch.
   if (!includeMetrics && event === 'view') {
     return { ok: true };
-  }
-
-  if (event === 'share') {
-    const sharer = saverFromUser(req.user);
-    if (sharer) {
-      try {
-        const { notifyListingShared } = require('./user-notifications');
-        await notifyListingShared({
-          metricsKind: kind,
-          listingId,
-          sharerId: sharer.saverId,
-        });
-      } catch (err) {
-        console.warn('notifyListingShared:', err?.message || err);
-      }
-    }
-  }
-
-  if (event === 'hot_lead' && incremented) {
-    const viewer = saverFromUser(req.user);
-    try {
-      const { notifyListingHotLead } = require('./user-notifications');
-      await notifyListingHotLead({
-        metricsKind: kind,
-        listingId,
-        viewerId: viewer?.saverId || null,
-      });
-    } catch (err) {
-      console.warn('notifyListingHotLead:', err?.message || err);
-    }
   }
 
   if (!engagement) {
@@ -686,16 +600,6 @@ async function toggleSavedListing(req, { kind, listingId }) {
     if (error) throw error;
     saved = true;
     storedSaveCount = await adjustStoredSaveCount(sb, kind, listingId, 1);
-    try {
-      const { notifyListingSaved } = require('./user-notifications');
-      await notifyListingSaved({
-        metricsKind: kind,
-        listingId,
-        saverId: saver.saverId,
-      });
-    } catch (notifyErr) {
-      console.warn('notifyListingSaved:', notifyErr?.message || notifyErr);
-    }
   }
 
   const saveCount = reportedSaveCount(storedSaveCount ?? (await countSaves(kind, listingId)), saved);

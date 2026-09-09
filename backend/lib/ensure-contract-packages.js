@@ -72,7 +72,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 Okazion (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
+      '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 Okazion (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge',
   },
   {
     planCode: 'elite',
@@ -91,7 +91,7 @@ const PACKAGE_TIERS = [
     glowBadgeEnabled: true,
     dailyBoostAccess: false,
     content:
-      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 Okazion (7 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge · Leads: contact from saves, shares & high interest',
+      '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 Okazion (7 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge',
   },
 ];
 
@@ -206,7 +206,12 @@ async function syncStarterGrowQuotas(sb) {
       max_apartment_listings: 300,
       max_product_listings: 70,
       content:
-        '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 Okazion (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge · Leads: contact from saves, shares & high interest',
+        '0/1 List in All Categories · 0/40 Cars · 0/300 Apartments · 0/70 Products · 0/200 Jobs · 0/20 Premium (30 days) · 0/5 Okazion (7 days) · 1000 Boost Coins · Refresh same listing after 12 hours · Premium Badge',
+    },
+    {
+      planCode: 'elite',
+      content:
+        '0/1 List in All Categories · 0/150 Cars · 0/1000 Apartments · 0/200 Products · 0/500 Jobs · 0/30 Premium (30 days) · 0/10 Okazion (7 days) · 2000 Boost Coins · Refresh same listing after 6 hours · Premium Badge',
     },
   ];
 

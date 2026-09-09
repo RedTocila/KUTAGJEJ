@@ -111,7 +111,11 @@ const config = {
   },
 
   async redirects() {
-    return LEGACY_REDIRECT_HOSTS.flatMap(hostRedirects);
+    return [
+      // Literal `/index` → canonical `/` (Observability `/index` is the RSC route id, not this URL).
+      { source: '/index', destination: '/', permanent: true },
+      ...LEGACY_REDIRECT_HOSTS.flatMap(hostRedirects),
+    ];
   },
 
   async rewrites() {

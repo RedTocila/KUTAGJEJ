@@ -7,7 +7,6 @@ import { useSavedListingsOptional } from '@/contexts/saved-listings-context';
 import { useListingSaveCount, useListingSavedState } from '@/hooks/use-listing-saved-state';
 import { useUser } from '@/hooks/use-user';
 import { nextSaveCount, toggleListingSave, type ListingMetricKind } from '@/lib/listing-metrics';
-import { emitHotLeadSave } from '@/lib/listing-hot-lead';
 import { paths } from '@/paths';
 
 export function useListingBookmark(
@@ -54,7 +53,6 @@ export function useListingBookmark(
     const metrics = await toggleListingSave(listingKind, listingId);
     if (metrics) {
       setLocalCount((count) => nextSaveCount(count, metrics));
-      if (metrics.saved && !wasSaved) emitHotLeadSave(listingKind, listingId);
     } else setLocalCount((count) => Math.max(0, count + (wasSaved ? 1 : -1)));
   }, [hydratedSaved, listingId, listingKind, router, saveCount, savedCtx, user]);
 

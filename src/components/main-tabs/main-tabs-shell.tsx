@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Box, type SxProps, type Theme } from '@mui/material';
 
 import { MainTabsGuestPane } from '@/components/main-tabs/main-tabs-guest-pane';
@@ -14,7 +14,6 @@ import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-
 import { useOptionalSearchOverlay } from '@/contexts/search-overlay-context';
 import { useCopy } from '@/hooks/use-copy';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
-import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useWarmMainTabs } from '@/hooks/use-warm-main-tabs';
 import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
@@ -119,14 +118,6 @@ function useMobileTabsMq(): boolean {
 function shouldMountPane(index: number, current: number, visited: ReadonlySet<number>): boolean {
   if (index === 0) return true;
   return index === current || Math.abs(index - current) <= 1 || visited.has(index);
-}
-
-function HomeTabSoftRefresh() {
-  const router = useRouter();
-  useRegisterTabRefresh('home', () => {
-    router.refresh();
-  });
-  return null;
 }
 
 function MainTabPane({
@@ -590,7 +581,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 0}
               onPaneRef={setPaneRef}
             >
-              <HomeTabSoftRefresh />
               {routeTab?.id === 'home' ? children : <MainTabsHomePreview />}
             </MainTabPane>
             <MainTabPane

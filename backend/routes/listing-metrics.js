@@ -24,14 +24,13 @@ function requirePortalUser(req, res, next) {
   next();
 }
 
-/** POST /api/listing-metrics/event — view | share | hot_lead (anonymous or signed-in). */
+/** POST /api/listing-metrics/event — view | share (anonymous or signed-in). */
 router.post('/event', metricsRateLimit, optionalAuth, async (req, res) => {
   try {
     const kind = String(req.body?.listingKind ?? '').trim();
     const listingId = String(req.body?.listingId ?? '').trim();
     const event = String(req.body?.event ?? '').trim();
-    const signals = req.body?.signals && typeof req.body.signals === 'object' ? req.body.signals : null;
-    const result = await recordListingEvent(req, { kind, listingId, event, signals });
+    const result = await recordListingEvent(req, { kind, listingId, event });
     if (!result.ok) return res.status(result.status).json({ message: result.message });
     res.json(result.metrics);
   } catch (err) {
@@ -172,33 +171,6 @@ router.get('/batch', metricsRateLimit, optionalAuth, async (req, res) => {
     res.json({ metrics });
   } catch (err) {
     console.error('GET /listing-metrics/batch:', err?.message || err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-/** GET /api/listing-metrics/savers?listingKind=&listingId=&page=1&limit=30 — owner leads (Grow/Elite). */
-router.get('/savers', authMiddleware, requirePortalUser, async (req, res) => {
-  try {
-    const { listListingSaversForOwner } = require('../lib/listing-savers');
-    const kind = String(req.query.listingKind ?? '').trim();
-    const listingId = String(req.query.listingId ?? '').trim();
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 30));
-    const result = await listListingSaversForOwner(req.user.id, { kind, listingId, page, limit });
-    if (!result.ok) {
-      const body = { message: result.message };
-      if (result.code) body.code = result.code;
-      return res.status(result.status).json(body);
-    }
-    res.json({
-      savers: result.savers,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: result.totalPages,
-    });
-  } catch (err) {
-    console.error('GET /listing-metrics/savers:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

@@ -502,9 +502,6 @@ const sq = {
     okazionListingDays: (n: number, days: number) => `${n} Okazion · ${days} ditë`,
     refreshAfterHours: (h: number) => `Ngrije postimin në krye pas ${h} orësh`,
     premiumBadge: 'Premium Badge',
-    saveLeads: 'Leads: kontakto nga ruajtje, ndarje dhe interes i lartë',
-    saveLeadsLabel: 'Leads',
-    saveLeadsRest: ': kontakto nga ruajtje, ndarje dhe interes i lartë',
     yourPlan: 'Plani juaj',
     savePct: (pct: number) => `Kurseni ${pct}%`,
     annual: 'Vjetore',
@@ -594,7 +591,7 @@ const sq = {
     cancelSubscription: 'Anulo abonimin',
     cancelConfirmTitle: 'Anulo abonimin?',
     cancelConfirmBody:
-      'Aksesi te plani ndalon menjëherë (kuota, Leads, Premium Badge, etj.). Nuk do të ngarkohet përsëri derisa të riblini ose të ndërroni paketë. Pagesa e kryer nuk rimbursohet automatikisht.',
+      'Aksesi te plani ndalon menjëherë (kuota, Premium Badge, etj.). Nuk do të ngarkohet përsëri derisa të riblini ose të ndërroni paketë. Pagesa e kryer nuk rimbursohet automatikisht.',
     cancelConfirmCta: 'Po, anulo',
     keepSubscription: 'Mbaje abonimin',
     cancelSuccess: 'Abonimi u anulua.',
@@ -804,61 +801,15 @@ const sq = {
     tags: {
       all: 'Të gjitha',
       messages: 'Mesazhe',
-      listing_saved: 'Ruajtje',
-      listing_shared: 'Ndarje',
-      listing_hot_lead: 'Interes',
       listing_status: 'Statusi',
       reviews: 'Vlerësime',
       reservations: 'Rezervime',
       verification: 'Statusi',
-      leads: 'Leads',
-    },
-    leadsTitle: 'Leads',
-    leadsDescription:
-      'Ruajtje, ndarje dhe interes i lartë për njoftimet tuaja — vetëm me Grow / Elite.',
-    leadsEmpty: 'Nuk keni leads ende.',
-    leadsUpgrade: 'Leads janë të disponueshme me paketat Grow ose Elite.',
-    leadsUpgradeCta: 'Shiko paketat',
-    leadsHowItWorks: {
-      aria: 'Si funksionojnë Leads',
-      title: 'Si funksionojnë Leads',
-      intro:
-        'Me Grow ose Elite merrni njoftime kur dikush tregon interes për njoftimet tuaja — dhe mund t\'i kontaktoni direkt.',
-      types: {
-        listing_saved: {
-          title: 'Ruajtje',
-          description:
-            'Kur dikush ruan njoftimin tuaj, shfaqet si lead. Hapeni për të parë kush e ruajti dhe dërgoni mesazh.',
-        },
-        listing_shared: {
-          title: 'Ndarje',
-          description:
-            'Kur dikush ndan njoftimin tuaj, merrni lead me kontaktin e tyre që të ndiqni interesin.',
-        },
-        listing_hot_lead: {
-          title: 'Interes i lartë',
-          description:
-            'Kur dikush tregon interes të fortë për njoftimin tuaj pa ju kontaktuar — p.sh. duke e eksploruar, duke parë detaje, duke e ruajtur ose ndarë, ose duke u kthyer më vonë — merrni lead interes.',
-        },
-      },
     },
     prefs: {
       messages: {
         title: 'Mesazhe të reja',
         description: 'Njoftohu kur dikush ju dërgon mesazh.',
-      },
-      listing_saved: {
-        title: 'Ruajtje të njoftimeve',
-        description: 'Njoftohu kush e ruan njoftimin tuaj (vetëm me Grow / Elite).',
-      },
-      listing_shared: {
-        title: 'Ndarje të njoftimeve',
-        description: 'Njoftohu kush e ndan njoftimin tuaj (vetëm me Grow / Elite).',
-      },
-      listing_hot_lead: {
-        title: 'Interes i lartë',
-        description:
-          'Njoftohu kur dikush tregon interes të fortë pa ju kontaktuar (eksplorim, detaje, ruajtje/ndarje, kthim) — Grow / Elite.',
       },
       listing_status: {
         title: 'Statusi i njoftimeve',
@@ -1332,9 +1283,6 @@ const en: AppMessages = {
     okazionListingDays: (n: number, days: number) => `${n} Okazion · ${days} days`,
     refreshAfterHours: (h: number) => `Bump listing to top after ${h} hours`,
     premiumBadge: 'Premium Badge',
-    saveLeads: 'Leads: contact from saves, shares & high interest',
-    saveLeadsLabel: 'Leads',
-    saveLeadsRest: ': contact from saves, shares & high interest',
     yourPlan: 'Your plan',
     savePct: (pct: number) => `Save ${pct}%`,
     annual: 'Annual',
@@ -1421,7 +1369,7 @@ const en: AppMessages = {
     cancelSubscription: 'Cancel subscription',
     cancelConfirmTitle: 'Cancel subscription?',
     cancelConfirmBody:
-      'Plan access stops immediately (quotas, Leads, Premium Badge, etc.). You will not be charged again until you resubscribe or switch packages. Completed payments are not refunded automatically.',
+      'Plan access stops immediately (quotas, Premium Badge, etc.). You will not be charged again until you resubscribe or switch packages. Completed payments are not refunded automatically.',
     cancelConfirmCta: 'Yes, cancel',
     keepSubscription: 'Keep subscription',
     cancelSuccess: 'Subscription canceled.',
@@ -1631,60 +1579,15 @@ const en: AppMessages = {
     tags: {
       all: 'All',
       messages: 'Messages',
-      listing_saved: 'Saves',
-      listing_shared: 'Shares',
-      listing_hot_lead: 'Interest',
       listing_status: 'Status',
       reviews: 'Reviews',
       reservations: 'Reservations',
       verification: 'Status',
-      leads: 'Leads',
-    },
-    leadsTitle: 'Leads',
-    leadsDescription: 'Saves, shares, and high interest on your listings — Grow / Elite only.',
-    leadsEmpty: 'No leads yet.',
-    leadsUpgrade: 'Leads are available with Grow or Elite packages.',
-    leadsUpgradeCta: 'View packages',
-    leadsHowItWorks: {
-      aria: 'How Leads work',
-      title: 'How Leads work',
-      intro:
-        'With Grow or Elite you get notified when someone shows interest in your listings — and you can contact them directly.',
-      types: {
-        listing_saved: {
-          title: 'Saves',
-          description:
-            'When someone saves your listing, it appears as a lead. Open it to see who saved it and send a message.',
-        },
-        listing_shared: {
-          title: 'Shares',
-          description:
-            'When someone shares your listing, you get a lead with their contact so you can follow up.',
-        },
-        listing_hot_lead: {
-          title: 'High interest',
-          description:
-            'When someone shows strong interest in your listing without contacting you — for example, by spending time exploring it, viewing multiple details, saving or sharing it, or coming back later — you get an interest lead.',
-        },
-      },
     },
     prefs: {
       messages: {
         title: 'New messages',
         description: 'Get notified when someone messages you.',
-      },
-      listing_saved: {
-        title: 'Listing saves',
-        description: 'Get notified who saved your listing (Grow / Elite only).',
-      },
-      listing_shared: {
-        title: 'Listing shares',
-        description: 'Get notified who shared your listing (Grow / Elite only).',
-      },
-      listing_hot_lead: {
-        title: 'High interest',
-        description:
-          'Get notified when someone shows strong interest without contacting you (exploring, details, save/share, return) — Grow / Elite.',
       },
       listing_status: {
         title: 'Listing status',

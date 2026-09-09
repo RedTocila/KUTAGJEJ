@@ -37,7 +37,6 @@ import {
   resolveStoryImageSrc,
   type ListingSharePayload,
 } from '@/lib/listing-share';
-import { emitHotLeadShare } from '@/lib/listing-hot-lead';
 import { recordListingMetricEvent, type ListingMetrics } from '@/lib/listing-metrics';
 import { authClient } from '@/lib/auth/client';
 import {
@@ -663,7 +662,6 @@ export function ListingSharePage({
     if (!payload.listingKind || !payload.listingId) return null;
     const metrics = await recordListingMetricEvent(payload.listingKind, payload.listingId, 'share');
     if (metrics) onShared?.(metrics);
-    emitHotLeadShare(payload.listingKind, payload.listingId);
     return metrics;
   }, [onShared, payload]);
 

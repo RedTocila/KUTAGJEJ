@@ -16,7 +16,6 @@ import { businessMobileCtaLabel, businessMobileCtaModeFromListing } from '@/lib/
 import { setPendingBusinessReservation, submitBusinessReservationToMessages } from '@/lib/business-reservation-message';
 import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
-import { emitHotLeadContactAction } from '@/lib/listing-hot-lead';
 import type { PublicDirectoryListing, PublicDirectoryListingDetail } from '@/lib/public-listings-client';
 import { useListingBookmark } from '@/hooks/use-listing-bookmark';
 import { useListingViewCount } from '@/hooks/use-listing-view-count';
@@ -153,8 +152,6 @@ export function BusinessListingDetailView({
         return;
       }
 
-      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
-
       const draft = {
         listingId: listing.id,
         guestName: name,
@@ -196,7 +193,6 @@ export function BusinessListingDetailView({
       return;
     }
     if (telHref) {
-      emitHotLeadContactAction({ listingKind: 'businesses', listingId: listing.id });
       window.location.href = telHref;
     }
   };

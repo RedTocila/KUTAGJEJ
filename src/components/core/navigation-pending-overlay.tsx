@@ -56,7 +56,6 @@ function shouldSkipOverlay(path: string, currentPath: string): boolean {
   if (path === paths.user.notifications || path.startsWith(`${paths.user.notifications}/`)) {
     return true;
   }
-  if (path === paths.user.leads || path.startsWith(`${paths.user.leads}/`)) return true;
   if (isPublicListingDetailPath(path)) return true;
   // Form chrome paints from the URL on the next frame — a full-page skeleton feels stuck.
   if (isPostListingPath(path)) return true;

@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 
-import { ListingHotLeadTracker } from '@/components/public/listing-hot-lead-tracker';
 import {
   recordListingMetricEvent,
   type ListingMetricKind,
@@ -16,8 +15,6 @@ export function ListingMetricsTracker({
   listingId,
   city,
   category,
-  ownerId,
-  photoCount,
   onViewed,
 }: {
   listingKind: ListingMetricKind;
@@ -25,9 +22,9 @@ export function ListingMetricsTracker({
   /** Optional signals used for homepage “recommended” personalization. */
   city?: string | null;
   category?: string | null;
-  /** Seller id — enables multi-listing High Interest signals. */
+  /** @deprecated Kept for call-site compatibility; unused after leads removal. */
   ownerId?: string | null;
-  /** Distinct photos available (cover + gallery/portfolio) for the photos signal. */
+  /** @deprecated Kept for call-site compatibility; unused after leads removal. */
   photoCount?: number | null;
   /** Server metrics after the view POST (omitted when the request fails). */
   onViewed?: (metrics: ListingMetrics | null) => void;
@@ -42,12 +39,5 @@ export function ListingMetricsTracker({
     });
   }, [listingKind, listingId, city, category]);
 
-  return (
-    <ListingHotLeadTracker
-      listingKind={listingKind}
-      listingId={listingId}
-      ownerId={ownerId}
-      photoCount={photoCount}
-    />
-  );
+  return null;
 }

@@ -1,20 +1,20 @@
-import type { CapacitorConfig } from '@capacitor/core';
-
 /**
  * Hybrid shell: native WebView loads the live Next.js site.
  * Bundled `www/` is only the offline / boot fallback.
  *
  * Dev against local Next: set CAP_SERVER_URL=http://YOUR_LAN_IP:3000
  */
-const serverUrl = process.env.CAP_SERVER_URL || 'https://kutagjej.al';
+const serverUrl =
+  (typeof process !== 'undefined' && process.env && process.env.CAP_SERVER_URL) || 'https://kutagjej.al';
 
-const config: CapacitorConfig = {
+/** @type {import('@capacitor/cli').CapacitorConfig} */
+const config = {
   appId: 'al.kutagjej.app',
   appName: 'KuTaGjej',
   webDir: 'www',
   server: {
     url: serverUrl,
-    cleartext: serverUrl.startsWith('http://'),
+    cleartext: String(serverUrl).startsWith('http://'),
     allowNavigation: ['kutagjej.al', 'www.kutagjej.al', '*.kutagjej.al', 'localhost', '127.0.0.1'],
   },
   plugins: {

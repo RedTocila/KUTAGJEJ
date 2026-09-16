@@ -6,7 +6,10 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": []
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["capacitor.config.ts", "src/**/*.ts"]
+  "include": ["capacitor.config.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "android", "ios", "www"]
 }

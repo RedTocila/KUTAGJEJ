@@ -279,3 +279,8 @@ html.dark .kutagjej-splash__progress-fill {
     font-size: 16px !important;
   }
 }
+
+/* Capacitor app shell: hide browser-only SEO blocks without changing app chrome */
+html[data-native-app] [data-browser-seo] {
+  display: none !important;
+}

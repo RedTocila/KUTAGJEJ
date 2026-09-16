@@ -22,6 +22,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
+import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -173,9 +174,11 @@ export function PublicCategoryHero({
                       : t.browse.noListingsYet}
               </Typography>
               {intro ? (
-                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760, mt: 0.5 }}>
-                  {intro}
-                </Typography>
+                <BrowserSeoSection component="div">
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760, mt: 0.5 }}>
+                    {intro}
+                  </Typography>
+                </BrowserSeoSection>
               ) : null}
             </Stack>
             {isProfiles ? null : (

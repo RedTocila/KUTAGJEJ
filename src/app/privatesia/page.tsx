@@ -12,7 +12,7 @@ export const metadata = {
 
 export default function PrivacyPage(): React.ReactNode {
   return (
-    <LegalDocumentPage title="Politika e privatësisë" updated="5 gusht 2026">
+    <LegalDocumentPage title="Politika e privatësisë" updated="16 shtator 2026">
       <Typography component="h2">1. Të dhënat që mbledhim</Typography>
       <Typography component="p">
         Mbledhim të dhëna që na jepni gjatë regjistrimit dhe përdorimit të {config.site.name}, si emri,
@@ -63,10 +63,18 @@ export default function PrivacyPage(): React.ReactNode {
       <Typography component="h2">5. Të drejtat tuaja</Typography>
       <Typography component="p">
         Mund të kërkoni qasje, korrigjim ose fshirje të të dhënave tuaja duke na kontaktuar përmes
-        platformës, sipas kufizimeve ligjore.
+        platformës, sipas kufizimeve ligjore. Përdoruesit e regjistruar mund të nisin fshirjen e
+        përhershme të llogarisë nga Profili → “Fshi llogarinë” (në ueb dhe në aplikacionin celular).
       </Typography>
 
-      <Typography component="h2">6. Ndryshime</Typography>
+      <Typography component="h2">6. Aplikacioni celular</Typography>
+      <Typography component="p">
+        Kur përdorni aplikacionin Zyrtar KuTaGjej (iOS / Android), mund të përdoren funksione
+        vendase si kamera, njoftime push dhe lidhje të thella (deep links). Këto shërbime
+        mbështeten në të njëjtat politika privatësie si platforma ueb.
+      </Typography>
+
+      <Typography component="h2">7. Ndryshime</Typography>
       <Typography component="p">
         Kjo politikë mund të përditësohet. Data e përditësimit shfaqet në krye të faqes.
       </Typography>

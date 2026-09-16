@@ -66,7 +66,7 @@ export default async function ProfessionalListingPage({ params, searchParams }: 
   if (!id) {
     const landing = await loadSeoLandingRoute('professionals', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicProfessionalListingById(id);

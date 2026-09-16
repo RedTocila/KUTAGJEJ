@@ -67,7 +67,7 @@ export default async function CarListingPage({ params, searchParams }: PageProps
   if (!id) {
     const landing = await loadSeoLandingRoute('cars', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicCarListingById(id);

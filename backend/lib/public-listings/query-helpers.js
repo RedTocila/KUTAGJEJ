@@ -4,6 +4,7 @@ const { DEFAULT_LIMIT, MAX_LIMIT, JOB_LISTING_VISIBLE_DAYS, MS_PER_DAY } = requi
 const { expandSearchTerms, namesMatch, normalizeSearchText } = require('../search-normalize');
 const { hasPremiumUntilColumn } = require('../ensure-premium-listing-schema');
 const { hasBumpedAtColumn } = require('../ensure-bumped-at-schema');
+const { getPublicCitiesList } = require('../real-estate-cities-public');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -344,14 +345,14 @@ async function locationOrForNeedle(q) {
   const needle = normalizeSearchText(q);
   if (!needle || needle.length < 2) return null;
 
-  const { data, error } = await getSupabaseAdmin().from('real_estate_cities').select('id, name, zones');
-  if (error) throw error;
-  if (!data?.length) return null;
+  // Reuse process-cached cities/zones (same store as GET /real-estate/locations).
+  const cities = await getPublicCitiesList();
+  if (!cities.length) return null;
 
   const cityIds = new Set();
   const zoneIds = new Set();
 
-  for (const city of data) {
+  for (const city of cities) {
     if (namesMatch(needle, city.name)) {
       cityIds.add(city.id);
     }

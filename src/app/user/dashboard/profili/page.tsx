@@ -31,7 +31,8 @@ import { TiktokLogo as TiktokLogoIcon } from '@phosphor-icons/react/dist/ssr/Tik
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 
-import { pathsPublicMemberProfile } from '@/paths';
+import { paths, pathsPublicMemberProfile } from '@/paths';
+import { deleteOwnAccount } from '@/lib/account-client';
 import { clientFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
@@ -117,6 +118,9 @@ export default function UserProfilePage() {
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState('');
+  const [deleteBusy, setDeleteBusy] = React.useState(false);
+  const [deleteMsg, setDeleteMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordMsg, setPasswordMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [savingPassword, setSavingPassword] = React.useState(false);
 
@@ -459,6 +463,37 @@ export default function UserProfilePage() {
       setConfirmPassword('');
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const onDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDeleteMsg(null);
+    const email = String(user?.email || '').trim();
+    if (!email) {
+      setDeleteMsg({ type: 'error', text: 'Nuk u gjet emaili i llogarisë.' });
+      return;
+    }
+    if (deleteConfirmEmail.trim().toLowerCase() !== email.toLowerCase()) {
+      setDeleteMsg({ type: 'error', text: 'Shkruani saktë emailin e llogarisë për të konfirmuar.' });
+      return;
+    }
+    const confirmed = window.confirm(
+      'Kjo fshin përgjithmonë llogarinë dhe të dhënat tuaja. Nuk mund të zhbëhet. Vazhdoni?'
+    );
+    if (!confirmed) return;
+
+    setDeleteBusy(true);
+    try {
+      const result = await deleteOwnAccount(deleteConfirmEmail.trim());
+      if (result.error) {
+        setDeleteMsg({ type: 'error', text: result.error });
+        return;
+      }
+      setDeleteMsg({ type: 'success', text: result.message || 'Llogaria u fshi.' });
+      await authClient.signOut(paths.home);
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -1036,6 +1071,51 @@ export default function UserProfilePage() {
           </Stack>
         </Box>
       </PortalSectionCard>
+
+      {canEdit ? (
+        <PortalSectionCard
+          title="Fshi llogarinë"
+          description="Fshirja është e përhershme (kërkesë e App Store / Play Store). Shkruani emailin tuaj për të konfirmuar."
+          icon={<TrashIcon size={22} weight="duotone" />}
+        >
+          <Box component="form" onSubmit={(e) => void onDeleteAccount(e)}>
+            <Stack spacing={2} sx={{ maxWidth: 440 }}>
+              {deleteMsg?.type === 'success' ? (
+                <TransientSuccessAlert message={deleteMsg.text} onDismiss={() => setDeleteMsg(null)} />
+              ) : deleteMsg ? (
+                <TransientNotification
+                  severity="error"
+                  message={deleteMsg.text}
+                  onDismiss={() => setDeleteMsg(null)}
+                />
+              ) : null}
+              <Alert severity="warning" variant="outlined">
+                Do të fshihen profili, sesioni dhe të dhënat e lidhura me llogarinë. Njoftimet tuaja mund të hiqen sipas
+                rregullave të platformës.
+              </Alert>
+              <TextField
+                label="Konfirmo me email"
+                type="email"
+                value={deleteConfirmEmail}
+                onChange={(ev) => setDeleteConfirmEmail(ev.target.value)}
+                placeholder={user.email || undefined}
+                fullWidth
+                required
+                autoComplete="email"
+              />
+              <Button
+                type="submit"
+                variant="outlined"
+                color="error"
+                disabled={deleteBusy}
+                sx={{ alignSelf: 'flex-start', fontWeight: 800, borderRadius: 2.5 }}
+              >
+                {deleteBusy ? 'Duke fshirë…' : 'Fshi llogarinë përgjithmonë'}
+              </Button>
+            </Stack>
+          </Box>
+        </PortalSectionCard>
+      ) : null}
       </Stack>
     </>
   );

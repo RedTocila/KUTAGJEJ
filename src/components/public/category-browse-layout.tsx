@@ -16,6 +16,7 @@ import {
 import { CategoryTopViewedSlider } from '@/components/public/category-top-viewed-slider';
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
 import { PublicShell } from '@/components/public/public-shell';
+import { VerticalBrowseSeo } from '@/components/public/vertical-browse-seo';
 
 interface CategoryBrowseLayoutProps {
   verticalId: BrowseCategoryId;
@@ -145,6 +146,7 @@ export function CategoryBrowseLayout({
           </Container>
         )}
       </BrowseLoadProvider>
+      <VerticalBrowseSeo verticalId={verticalId} />
     </PublicShell>
   );
 }

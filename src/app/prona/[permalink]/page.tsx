@@ -53,7 +53,7 @@ export default async function RealEstateListingPage({ params, searchParams }: Pa
   if (!id) {
     const landing = await loadSeoLandingRoute('real-estate', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicRealEstateListingById(id);

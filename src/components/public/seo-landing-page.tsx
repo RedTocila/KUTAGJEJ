@@ -10,9 +10,11 @@ import {
   seoLandingMetadata,
   type PublicSeoIndex,
   type SeoLandingConfig,
+  type SeoLandingListings,
 } from '@/lib/public-seo';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
 export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
@@ -49,7 +51,7 @@ function contextualLinks(config: SeoLandingConfig, index: PublicSeoIndex | null)
     .slice(0, 6);
 }
 
-function listingData(result: Awaited<ReturnType<typeof fetchSeoLandingListings>>) {
+function listingData(result: SeoLandingListings) {
   return {
     listings: result.listings,
     total: result.total,
@@ -59,13 +61,23 @@ function listingData(result: Awaited<ReturnType<typeof fetchSeoLandingListings>>
   };
 }
 
+/**
+ * @param prefetchedPage1 Optional listings already loaded by `loadSeoLandingRoute` (always page 1).
+ *   Reused when rendering page 1 so SEO landings do not hit browse/list+count twice.
+ *   Page 2+ still fetches fresh; metadata/total from page 1 remains unchanged.
+ */
 export async function renderSeoLandingPage(
   config: SeoLandingConfig,
   cities: RealEstateCityDto[],
-  searchParams: Record<string, string | string[] | undefined> = {}
+  searchParams: Record<string, string | string[] | undefined> = {},
+  prefetchedPage1?: SeoLandingListings | null
 ): Promise<React.ReactNode> {
   const page = parseBrowsePage(searchParams);
-  const [result, index] = await Promise.all([fetchSeoLandingListings(config, page), fetchPublicSeoIndex()]);
+  const listingsPromise =
+    page === 1 && prefetchedPage1 != null
+      ? Promise.resolve(prefetchedPage1)
+      : fetchSeoLandingListings(config, page);
+  const [result, index] = await Promise.all([listingsPromise, fetchPublicSeoIndex()]);
   const data = listingData(result);
   if (data.ok && data.total === 0) {
     notFound();
@@ -90,32 +102,34 @@ export async function renderSeoLandingPage(
         heading={config.heading}
         intro={config.description}
       >
-        <Container maxWidth="xl" sx={{ pb: 1 }}>
-          <Stack spacing={1}>
-            <Breadcrumbs aria-label="Vendndodhja e faqes">
-              <MuiLink href="/" underline="hover" color="inherit">
-                Kryefaqja
-              </MuiLink>
-              <MuiLink
-                href={`/${config.path.split('/').filter(Boolean).slice(0, 1).join('/')}`}
-                underline="hover"
-                color="inherit"
-              >
-                {config.vertical}
-              </MuiLink>
-              <Typography color="text.primary">{config.heading}</Typography>
-            </Breadcrumbs>
-            {links.length ? (
-              <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                {links.map((link) => (
-                  <MuiLink key={link.path} href={link.path} underline="hover">
-                    {link.path.split('/').at(-1)?.replaceAll('-', ' ')}
-                  </MuiLink>
-                ))}
-              </Stack>
-            ) : null}
-          </Stack>
-        </Container>
+        <BrowserSeoSection component="div">
+          <Container maxWidth="xl" sx={{ pb: 1 }}>
+            <Stack spacing={1}>
+              <Breadcrumbs aria-label="Vendndodhja e faqes">
+                <MuiLink href="/" underline="hover" color="inherit">
+                  Kryefaqja
+                </MuiLink>
+                <MuiLink
+                  href={`/${config.path.split('/').filter(Boolean).slice(0, 1).join('/')}`}
+                  underline="hover"
+                  color="inherit"
+                >
+                  {config.vertical}
+                </MuiLink>
+                <Typography color="text.primary">{config.heading}</Typography>
+              </Breadcrumbs>
+              {links.length ? (
+                <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                  {links.map((link) => (
+                    <MuiLink key={link.path} href={link.path} underline="hover">
+                      {link.path.split('/').at(-1)?.replaceAll('-', ' ')}
+                    </MuiLink>
+                  ))}
+                </Stack>
+              ) : null}
+            </Stack>
+          </Container>
+        </BrowserSeoSection>
         <BrowseInfiniteGrid
           verticalId={config.vertical}
           filters={config.filters}

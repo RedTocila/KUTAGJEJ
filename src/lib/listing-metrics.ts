@@ -442,6 +442,11 @@ export async function shareListing(opts: {
   const url = opts.url ?? (typeof window !== 'undefined' ? window.location.href : '');
 
   try {
+    const { shareNative } = await import('@/lib/native-app');
+    if (await shareNative({ title: opts.title, text: opts.title, url })) {
+      return recordListingMetricEvent(opts.listingKind, opts.listingId, 'share');
+    }
+
     if (typeof navigator !== 'undefined' && navigator.share) {
       await navigator.share({ title: opts.title, text: opts.title, url });
     } else if (typeof navigator !== 'undefined') {

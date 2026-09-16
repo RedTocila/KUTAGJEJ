@@ -66,7 +66,7 @@ export default async function MarketplaceListingPage({ params, searchParams }: P
   if (!id) {
     const landing = await loadSeoLandingRoute('marketplace', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicMarketplaceListingById(id);

@@ -66,7 +66,7 @@ export default async function BusinessListingPage({ params, searchParams }: Page
   if (!id) {
     const landing = await loadSeoLandingRoute('businesses', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicBusinessListingById(id);

@@ -26,5 +26,5 @@ export async function generateSeoRouteMetadata(
 export async function renderSeoRoute(vertical: SeoVertical, segments: string[]) {
   const route = await loadSeoLandingRoute(vertical, segments);
   if (!route.config) notFound();
-  return renderSeoLandingPage(route.config, route.cities);
+  return renderSeoLandingPage(route.config, route.cities, {}, route.result);
 }

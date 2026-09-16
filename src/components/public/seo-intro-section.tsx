@@ -2,65 +2,69 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Box, Container, Link as MuiLink, Stack, Typography } from '@mui/material';
+import { Link as MuiLink, Stack, Typography } from '@mui/material';
 
 import { paths } from '@/paths';
+import { HOME_SEO_COPY } from '@/lib/public-seo-copy';
+import { BrowserSeoSection } from '@/components/public/browser-seo-section';
+import { PublicSeoContentBlock } from '@/components/public/public-seo-content';
 
+/** Homepage SEO copy + FAQ — browser / Google only (hidden in native app). */
 export function SeoIntroSection() {
   return (
-    <Box component="section" aria-labelledby="about-kutagjej" sx={{ py: { xs: 4, md: 6 } }}>
-      <Container maxWidth="md">
-        <Stack spacing={2}>
-          <Typography
-            id="about-kutagjej"
-            component="h2"
-            sx={{
-              fontWeight: 700,
-              fontSize: { xs: '1.25rem', md: '1.5rem' },
-              letterSpacing: '-0.01em',
-            }}
+    <>
+      <PublicSeoContentBlock
+        headline={HOME_SEO_COPY.headline}
+        subtext={HOME_SEO_COPY.subtext}
+        paragraphs={HOME_SEO_COPY.paragraphs}
+        faqs={HOME_SEO_COPY.faqs}
+        headingId="about-kutagjej"
+        faqHeadingId="faq-kutagjej"
+      />
+      <HomeSeoLinkCloud />
+    </>
+  );
+}
+
+/** Extra internal links for crawlers (browser only). */
+function HomeSeoLinkCloud() {
+  return (
+    <BrowserSeoSection sx={{ pb: { xs: 3, md: 4 } }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        useFlexGap
+        sx={{ flexWrap: 'wrap', justifyContent: 'center', px: 2, maxWidth: 900, mx: 'auto' }}
+      >
+        {[
+          { href: paths.public.realEstate, label: 'Prona' },
+          { href: paths.public.cars, label: 'Makina' },
+          { href: paths.public.jobs, label: 'Punë' },
+          { href: paths.public.marketplace, label: 'Tregu' },
+          { href: paths.public.businesses, label: 'Biznese' },
+          { href: paths.public.professionals, label: 'Profesionistë' },
+          { href: paths.auth.signIn, label: 'Hyr / Regjistrohu' },
+        ].map((item) => (
+          <MuiLink
+            key={item.href}
+            component={RouterLink}
+            href={item.href}
+            underline="hover"
+            color="text.secondary"
+            sx={{ fontSize: '0.9rem', fontWeight: 600 }}
           >
-            Çfarë është KuTaGjej?
-          </Typography>
-          <Typography component="p" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            <strong>KuTaGjej</strong> është platforma shqiptare e njoftimeve falas. Çdo ditë mijëra përdorues kërkojnë
-            dhe postojnë{' '}
-            <MuiLink component={RouterLink} href={paths.public.realEstate} underline="hover">
-              apartamente me qira dhe shitje
-            </MuiLink>
-            ,{' '}
-            <MuiLink component={RouterLink} href={paths.public.cars} underline="hover">
-              vetura të reja dhe të përdorura
-            </MuiLink>
-            ,{' '}
-            <MuiLink component={RouterLink} href={paths.public.jobs} underline="hover">
-              vende pune në çdo industri
-            </MuiLink>{' '}
-            dhe{' '}
-            <MuiLink component={RouterLink} href={paths.public.marketplace} underline="hover">
-              artikuj të rinj e të dorës së dytë
-            </MuiLink>{' '}
-            në Tiranë, Durrës, Vlorë, Shkodër dhe gjithë Shqipërinë.
-          </Typography>
-          <Typography component="p" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            Postimi është falas dhe zgjat më pak se një minutë. Shto fotografi, çmim, vendndodhje dhe informacionet
-            kryesore — njoftimi yt shfaqet menjëherë në kategorinë përkatëse dhe është i kërkueshëm nga vizitorët.
-            Mund të{' '}
-            <MuiLink component={RouterLink} href={paths.auth.signIn} underline="hover">
-              hysh në llogarinë tënde
-            </MuiLink>{' '}
-            për të menaxhuar njoftimet ekzistuese ose për të krijuar të reja.
-          </Typography>
-          <Typography component="p" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-            Pavarësisht nëse ke nevojë për një{' '}
-            <strong>apartament 1+1 me qira në Tiranë</strong>, një{' '}
-            <strong>makinë të dorës së dytë</strong> për familjen, një{' '}
-            <strong>punë në sektorin IT</strong> apo thjesht dëshiron të{' '}
-            <strong>shesësh diçka në treg</strong>, KuTaGjej e bën të lehtë: kërko, krahasoji dhe lidhu drejtpërdrejt
-            me shitësin ose punëdhënësin.
-          </Typography>
-        </Stack>
-      </Container>
-    </Box>
+            {item.label}
+          </MuiLink>
+        ))}
+      </Stack>
+      <Typography
+        component="p"
+        variant="caption"
+        color="text.secondary"
+        sx={{ textAlign: 'center', display: 'block', mt: 1.5, px: 2 }}
+      >
+        Posto njoftim falas ose kërko në kategoritë e mësipërme — KuTaGjej.
+      </Typography>
+    </BrowserSeoSection>
   );
 }

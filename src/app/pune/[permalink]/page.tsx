@@ -66,7 +66,7 @@ export default async function JobListingPage({ params, searchParams }: PageProps
   if (!id) {
     const landing = await loadSeoLandingRoute('jobs', [permalink]);
     if (!landing.config) notFound();
-    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {});
+    return renderSeoLandingPage(landing.config, landing.cities, (await searchParams) ?? {}, landing.result);
   }
 
   const loaded = await loadPublicJobListingById(id);

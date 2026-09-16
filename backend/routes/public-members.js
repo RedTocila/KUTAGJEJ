@@ -30,6 +30,7 @@ const {
   formatDirectory,
 } = require('../lib/public-listings/formatters');
 const { hasMarketplaceOnlyProfileListings } = require('../lib/directory-listing-limits');
+const { getPublicCitiesList } = require('../lib/real-estate-cities-public');
 
 const router = express.Router();
 
@@ -74,9 +75,8 @@ function citiesMatchingTerm(cities, term) {
 }
 
 async function loadSearchCities() {
-  const { data, error } = await getSupabaseAdmin().from('real_estate_cities').select('id, name');
-  if (error) throw error;
-  return data || [];
+  // Same process cache as /real-estate/locations and locationOrForNeedle.
+  return getPublicCitiesList();
 }
 
 /** Aggregate member + directory-listing reviews for a page of profile hits. */

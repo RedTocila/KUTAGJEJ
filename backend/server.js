@@ -206,6 +206,7 @@ app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/admin/listings', require('./routes/admin-listings'));
 app.use('/api/admin/notifications', require('./routes/admin-notifications'));
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/account', require('./routes/account'));
 app.use('/api/admin/roles', require('./routes/admin-roles'));
 app.use('/api/admin/users', require('./routes/admin-users'));
 app.use('/api/admin/ai', require('./routes/admin-ai'));

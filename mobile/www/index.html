@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="sq">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="theme-color" content="#5f9816" />
+    <title>KuTaGjej</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --brand: #5f9816;
+        --ink: #14201a;
+        --muted: #5a6b60;
+        --bg: #f4f7f1;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(160deg, #e8f2dc 0%, var(--bg) 45%, #ffffff 100%);
+        color: var(--ink);
+      }
+      main {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom));
+        text-align: center;
+        gap: 0.75rem;
+      }
+      .mark {
+        width: 88px;
+        height: 88px;
+        border-radius: 22px;
+        background: var(--brand);
+        display: grid;
+        place-items: center;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 12px 32px rgba(95, 152, 22, 0.28);
+      }
+      .mark span {
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.35rem;
+        letter-spacing: -0.03em;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        letter-spacing: -0.03em;
+      }
+      p {
+        margin: 0;
+        max-width: 22rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      button {
+        margin-top: 1rem;
+        appearance: none;
+        border: 0;
+        border-radius: 12px;
+        background: var(--brand);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        padding: 0.85rem 1.4rem;
+        cursor: pointer;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      .hint {
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true"><span>KG</span></div>
+      <h1>KuTaGjej</h1>
+      <p id="status">Po lidhemi me platformën…</p>
+      <p class="hint" id="hint">Nëse nuk ke internet, do të shfaqet një mesazh këtu.</p>
+      <button type="button" id="retry" hidden>Provo përsëri</button>
+    </main>
+    <script>
+      (function () {
+        var LIVE = 'https://kutagjej.al/';
+        var statusEl = document.getElementById('status');
+        var hintEl = document.getElementById('hint');
+        var retryBtn = document.getElementById('retry');
+
+        function goLive() {
+          window.location.replace(LIVE);
+        }
+
+        function showOffline() {
+          statusEl.textContent = 'Nuk ka lidhje interneti';
+          hintEl.textContent = 'Kontrollo rrjetin dhe provo përsëri për të hapur KuTaGjej.';
+          retryBtn.hidden = false;
+        }
+
+        retryBtn.addEventListener('click', function () {
+          retryBtn.hidden = true;
+          statusEl.textContent = 'Po lidhemi me platformën…';
+          tryConnect();
+        });
+
+        function tryConnect() {
+          if (!navigator.onLine) {
+            showOffline();
+            return;
+          }
+          // Capacitor normally loads server.url directly; this page is the bundled fallback.
+          var img = new Image();
+          var done = false;
+          var timer = setTimeout(function () {
+            if (done) return;
+            done = true;
+            showOffline();
+          }, 4000);
+          img.onload = img.onerror = function () {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            if (navigator.onLine) goLive();
+            else showOffline();
+          };
+          img.src = LIVE + 'favicon.ico?_=' + Date.now();
+        }
+
+        window.addEventListener('online', tryConnect);
+        tryConnect();
+      })();
+    </script>
+  </body>
+</html>

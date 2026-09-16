@@ -7,6 +7,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import { ImageLightbox, useObjectUrls } from '@/components/common/image-lightbox';
 import { useOwnerEditReorderMode } from '@/components/user/owner-edit-section-dialog';
+import { pickNativeImages } from '@/lib/native-app';
 
 const GRID_THUMB_SX = {
   position: 'relative',
@@ -272,7 +273,16 @@ export function ListingImagePicker({
 
   const openPicker = () => {
     if (disabled || slotsLeft <= 0) return;
-    fileInputRef.current?.click();
+    void (async () => {
+      const native = await pickNativeImages({ limit: slotsLeft });
+      if (native === null) {
+        fileInputRef.current?.click();
+        return;
+      }
+      if (!native.length) return;
+      const next = [...value, ...native].slice(0, slotsLeft + value.length);
+      onChange(next);
+    })();
   };
 
   const handleFileChange = (ev: React.ChangeEvent<HTMLInputElement>) => {

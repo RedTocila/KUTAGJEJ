@@ -66,6 +66,88 @@ const { buildPublicSeoIndex } = require('../../lib/public-seo-index');
 
 const router = express.Router();
 const SEO_INDEX_CACHE_TTL_MS = 10 * 60 * 1000;
+/** Same window as publicCache / public-listings-cache default (~300s). */
+const BROWSE_PAGE1_CACHE_TTL_MS = 300 * 1000;
+
+/** Query keys that make a browse request filtered/search (do not use unfiltered page-1 cache). */
+const BROWSE_FILTER_QUERY_KEYS = [
+  'cat',
+  'category',
+  'tx',
+  'transaction',
+  'city',
+  'zone',
+  'minPrice',
+  'maxPrice',
+  'minSurface',
+  'bedrooms',
+  'q',
+  'type',
+  'fuel',
+  'make',
+  'model',
+  'transmission',
+  'minYear',
+  'maxYear',
+  'maxKm',
+  'industry',
+  'jobType',
+  'workLocation',
+  'education',
+  'experience',
+  'condition',
+  'verified',
+  'announcement',
+  'reservations',
+  'fastResponse',
+  'minRating',
+];
+
+function queryParamPresent(value) {
+  if (Array.isArray(value)) return value.some((v) => String(v ?? '').trim() !== '');
+  return value != null && String(value).trim() !== '';
+}
+
+/** True when the request is default newest sort with no browse filters/search. */
+function isUnfilteredBrowseQuery(query) {
+  for (const key of BROWSE_FILTER_QUERY_KEYS) {
+    if (queryParamPresent(query[key])) return false;
+  }
+  const sort = String(query.sort ?? '')
+    .trim()
+    .toLowerCase();
+  if (sort && sort !== 'newest') return false;
+  return true;
+}
+
+/**
+ * Serve anonymous browse page payload from process cache when unfiltered page 1.
+ * Saver enrichment runs after cache (same pattern as /latest and /recommended).
+ */
+async function loadBrowsePagePayload({
+  vertical,
+  query,
+  parseFilters,
+  countFn,
+  listFn,
+  finalizeOpts,
+}) {
+  const { limit, page, skip } = parsePagination(query);
+  const parsed = parseFilters(query);
+  const filter = await finalizeBrowseFilter(parsed.filter, query, finalizeOpts);
+  const sort = parsed.sort;
+  const canCache = skip === 0 && isUnfilteredBrowseQuery(query);
+  const cacheKey = canCache ? `browse:${vertical}:unfiltered:p1:${limit}` : null;
+
+  let payload = cacheKey ? getCached(cacheKey) : null;
+  if (!payload) {
+    const [total, listings] = await Promise.all([countFn(filter), listFn(limit, filter, sort, skip)]);
+    payload = { listings, total };
+    if (cacheKey) setCached(cacheKey, payload, BROWSE_PAGE1_CACHE_TTL_MS);
+  }
+
+  return { limit, page, payload };
+}
 
 /** Home vertical id → ListingEngagement.listingKind */
 const VERTICAL_TO_KIND = {
@@ -120,7 +202,12 @@ router.get('/top-viewed', optionalAuth, async (req, res) => {
     }
     const rawLimit = Number.parseInt(String(req.query.limit ?? '10'), 10);
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 10) : 10;
-    let listings = await topViewedByKind(kind, limit);
+    const cacheKey = `top-viewed:${vertical}:${limit}`;
+    let listings = getCached(cacheKey);
+    if (!listings) {
+      listings = await topViewedByKind(kind, limit);
+      setCached(cacheKey, listings, BROWSE_PAGE1_CACHE_TTL_MS);
+    }
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
     res.json({ listings, vertical, kind });
@@ -487,14 +574,17 @@ router.get('/professionals/:id', publicNoStore(), optionalAuth, async (req, res)
 
 router.get('/real-estate', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseRealEstateFilters(req.query);
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([countRealEstate(filter), queryRealEstate(limit, filter, sort, skip)]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'real-estate',
+      query: req.query,
+      parseFilters: parseRealEstateFilters,
+      countFn: countRealEstate,
+      listFn: queryRealEstate,
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/real-estate:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -503,14 +593,17 @@ router.get('/real-estate', optionalAuth, async (req, res) => {
 
 router.get('/cars', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseCarFilters(req.query);
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([countCars(filter), queryCars(limit, filter, sort, skip)]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'cars',
+      query: req.query,
+      parseFilters: parseCarFilters,
+      countFn: countCars,
+      listFn: queryCars,
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/cars:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -519,14 +612,17 @@ router.get('/cars', optionalAuth, async (req, res) => {
 
 router.get('/jobs', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseJobFilters(req.query);
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([countJobs(filter), queryJobs(limit, filter, sort, skip)]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'jobs',
+      query: req.query,
+      parseFilters: parseJobFilters,
+      countFn: countJobs,
+      listFn: queryJobs,
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/jobs:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -535,14 +631,17 @@ router.get('/jobs', optionalAuth, async (req, res) => {
 
 router.get('/marketplace', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseMarketplaceFilters(req.query);
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query);
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([countMarketplace(filter), queryMarketplace(limit, filter, sort, skip)]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'marketplace',
+      query: req.query,
+      parseFilters: parseMarketplaceFilters,
+      countFn: countMarketplace,
+      listFn: queryMarketplace,
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/marketplace:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -551,17 +650,18 @@ router.get('/marketplace', optionalAuth, async (req, res) => {
 
 router.get('/businesses', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseDirectoryFilters(req.query, 'businesses');
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query, { vertical: 'businesses' });
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countDirectory(filter),
-      queryDirectory('businesses', limit, filter, sort, skip),
-    ]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'businesses',
+      query: req.query,
+      parseFilters: (q) => parseDirectoryFilters(q, 'businesses'),
+      countFn: countDirectory,
+      listFn: (lim, filter, sort, skip) => queryDirectory('businesses', lim, filter, sort, skip),
+      finalizeOpts: { vertical: 'businesses' },
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/businesses:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
@@ -570,17 +670,18 @@ router.get('/businesses', optionalAuth, async (req, res) => {
 
 router.get('/professionals', optionalAuth, async (req, res) => {
   try {
-    const { limit, page, skip } = parsePagination(req.query);
-    const parsed = parseDirectoryFilters(req.query, 'professionals');
-    const filter = await finalizeBrowseFilter(parsed.filter, req.query, { vertical: 'professionals' });
-    const sort = parsed.sort;
-    let [total, listings] = await Promise.all([
-      countDirectory(filter),
-      queryDirectory('professionals', limit, filter, sort, skip),
-    ]);
+    const { limit, page, payload } = await loadBrowsePagePayload({
+      vertical: 'professionals',
+      query: req.query,
+      parseFilters: (q) => parseDirectoryFilters(q, 'professionals'),
+      countFn: countDirectory,
+      listFn: (lim, filter, sort, skip) => queryDirectory('professionals', lim, filter, sort, skip),
+      finalizeOpts: { vertical: 'professionals' },
+    });
+    let listings = payload.listings;
     const saver = saverFromUser(req.user);
     if (saver) listings = await enrichListingsSaverState(listings, saver);
-    res.json(buildPaginatedResponse(listings, total, limit, page));
+    res.json(buildPaginatedResponse(listings, payload.total, limit, page));
   } catch (err) {
     console.error('GET /public/listings/professionals:', err?.message || err);
     res.status(500).json({ message: 'Server error' });

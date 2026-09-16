@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/contexts/language-context';
 import { UserProvider } from '@/contexts/user-context';
 import { SavedListingsProvider } from '@/contexts/saved-listings-context';
 import { SoftNavigateBridge } from '@/components/core/soft-navigate-bridge';
+import { NativeAppBoot } from '@/components/core/native-app-boot';
 import { SearchOverlayProvider } from '@/contexts/search-overlay-context';
 import { MainTabsShell } from '@/components/main-tabs/main-tabs-shell';
 import { ThemeProvider } from '@/components/core/theme-provider/theme-provider';
@@ -34,6 +35,7 @@ export function AppProviders({
             <ThemeProvider initialColorScheme={initialColorScheme}>
               <SearchOverlayProvider>
                 <SoftNavigateBridge>
+                  <NativeAppBoot />
                   <MainTabsShell>{children}</MainTabsShell>
                 </SoftNavigateBridge>
               </SearchOverlayProvider>

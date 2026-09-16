@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { brandLogoSrc, config } from '@/config';
 import { paths } from '@/paths';
 import { homepageStaticJsonLd } from '@/lib/homepage-json-ld';
+import { faqJsonLd, HOME_SEO_COPY } from '@/lib/public-seo-copy';
 import { HeroSection } from '@/components/public/hero-section';
 import { HomepageBanners } from '@/components/public/homepage-banners';
 import { HomepageFeed } from '@/components/public/homepage-feed';
@@ -63,12 +64,14 @@ export const metadata: Metadata = {
 export default function HomePage() {
   const siteOrigin = config.site.url.replace(/\/$/, '');
   const { website, organization, breadcrumbs } = homepageStaticJsonLd(siteOrigin);
+  const faq = faqJsonLd(HOME_SEO_COPY.faqs, `${siteOrigin}/`);
 
   return (
     <PublicShell>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faq) }} />
 
       <HeroSection>
         <React.Suspense fallback={<HomeBannerSkeleton />}>

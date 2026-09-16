@@ -2,12 +2,8 @@ import * as React from 'react';
 import { Box, Skeleton, Stack, Typography } from '@mui/material';
 
 import {
-  fetchLatestBusinesses,
-  fetchLatestCars,
-  fetchLatestJobs,
-  fetchLatestMarketplace,
-  fetchLatestProfessionals,
-  fetchLatestRealEstate,
+  fetchLatestVertical,
+  type HomepageLatestVerticalId,
   type PublicCarListing,
   type PublicDirectoryListing,
   type PublicJobListing,
@@ -21,7 +17,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 
-export type SimilarListingsKind = 'real-estate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals';
+export type SimilarListingsKind = HomepageLatestVerticalId;
 
 const SIMILAR_FETCH = 12;
 const SIMILAR_SHOW = 10;
@@ -101,21 +97,17 @@ export async function SimilarListingsSection({
   );
 }
 
+/**
+ * Newest cards for the same vertical via `/public/listings/latest/:vertical`
+ * (Express in-memory + CDN publicCache 300s) — not the uncached browse list+count path.
+ */
 async function fetchSimilarPool(kind: SimilarListingsKind) {
-  switch (kind) {
-    case 'real-estate':
-      return fetchLatestRealEstate(SIMILAR_FETCH);
-    case 'cars':
-      return fetchLatestCars(SIMILAR_FETCH);
-    case 'jobs':
-      return fetchLatestJobs(SIMILAR_FETCH);
-    case 'marketplace':
-      return fetchLatestMarketplace(SIMILAR_FETCH);
-    case 'businesses':
-      return fetchLatestBusinesses(SIMILAR_FETCH);
-    case 'professionals':
-      return fetchLatestProfessionals(SIMILAR_FETCH);
-    default:
-      return [];
-  }
+  type Card =
+    | PublicRealEstateListing
+    | PublicCarListing
+    | PublicJobListing
+    | PublicMarketplaceListing
+    | PublicDirectoryListing;
+  const { listings, ok } = await fetchLatestVertical<Card>(kind, SIMILAR_FETCH);
+  return ok ? listings : [];
 }

@@ -99,7 +99,12 @@ export default async function CarListingPage({ params, searchParams }: PageProps
         <CarListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}
-          similarSlot={similarListingsSlot('cars', listing.id, 'Automjete të fundit')}
+          similarSlot={similarListingsSlot('cars', listing.id, 'Automjete të fundit', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.make,
+          })}
         />
       </PublicShell>
     </>

@@ -8,7 +8,7 @@ import { PublicShell } from '@/components/public/public-shell';
 /** Instant placeholder when soft-navigating to `/`. */
 export default function Loading(): React.JSX.Element {
   return (
-    <PublicShell>
+    <PublicShell keepDesktopHeader>
       <HeroSection>
         <HomeBannerSkeleton />
       </HeroSection>

@@ -8,6 +8,7 @@ import { MuiCard } from './card';
 import { MuiCardContent } from './card-content';
 import { MuiCardHeader } from './card-header';
 import { MuiChip } from './chip';
+import { MuiContainer } from './container';
 import { MuiCssBaseline } from './css-baseline';
 import { MuiDialog } from './dialog';
 import { MuiDrawer } from './drawer';
@@ -29,6 +30,7 @@ export const components = {
   MuiCardContent,
   MuiCardHeader,
   MuiChip,
+  MuiContainer,
   MuiCssBaseline,
   MuiDialog,
   MuiDrawer,

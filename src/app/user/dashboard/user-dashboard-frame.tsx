@@ -13,6 +13,7 @@ import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
 import { AddListingPickerProvider, useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 import { UserDashboardBackLink, UserDashboardCloseButton } from '@/components/user/layout/user-dashboard-back-link';
+import { UserMainNav } from '@/components/user/layout/user-main-nav';
 import { UserSideNav } from '@/components/user/layout/user-side-nav';
 import {
   OwnerEditHeaderActionsProvider,
@@ -210,6 +211,9 @@ function UserDashboardFrameInner({
                 : null),
           }}
         >
+          <Box sx={{ flexShrink: 0 }}>
+            <UserMainNav />
+          </Box>
           <main style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
             <Container
               maxWidth="xl"

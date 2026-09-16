@@ -35,7 +35,7 @@ import {
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
 import { whatsappInquireHref as buildWhatsappInquireHref, whatsappInquireText } from '@/lib/listing-contact';
-import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES } from '@/lib/listing-detail-layout';
+import { LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX, LISTING_DETAIL_HERO_IMAGE_SIZES, LISTING_DETAIL_PAGE_MAX_WIDTH_PX } from '@/lib/listing-detail-layout';
 import { listingDetailGalleryPlaceholder } from '@/lib/listing-gallery-placeholder';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
@@ -346,7 +346,7 @@ export function VerticalListingDetailView(props: {
           <Box
             sx={{
               mx: 'auto',
-              maxWidth: { md: 1320 },
+              maxWidth: { md: LISTING_DETAIL_PAGE_MAX_WIDTH_PX },
               borderRadius: { xs: 0, md: 3 },
               overflow: 'hidden',
               bgcolor: 'background.paper',

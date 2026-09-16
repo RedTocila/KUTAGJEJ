@@ -12,39 +12,45 @@ import { PublicHeader } from './public-header';
 
 /**
  * Wraps a public page in the marketing chrome (header + footer) so individual
- * pages can focus on their content. Used by the homepage and browse pages.
+ * pages can focus on their content.
  *
- * @param hideHeaderBelowMd Use on listing **detail** routes: hides `PublicHeader`
- *   below `md`, so hero imagery can hug the viewport top edge on phones / small tablets.
- * @param hideHeader Hide `PublicHeader` on all breakpoints (e.g. public member profile).
- * @param hideFooter Hide `PublicFooter` (e.g. focused search page).
- * @param hideMobileNav Hide the floating bottom nav (search page replaces it with its own dock).
+ * Desktop: header only when `keepDesktopHeader` (homepage). Other routes omit it.
+ * Mobile: header unless `hideHeader` / `hideHeaderBelowMd`.
  */
 export function PublicShell({
   children,
   hideHeaderBelowMd = false,
   hideHeader = false,
+  keepDesktopHeader = false,
   hideFooter = false,
   hideMobileNav = false,
 }: {
   children: React.ReactNode;
-  /** Hide header below `md` (listing detail fullscreen hero). */
+  /** Hide header on mobile (browse / listing detail heroes). Desktop stays hidden unless homepage. */
   hideHeaderBelowMd?: boolean;
   /** Hide header on all viewports. */
   hideHeader?: boolean;
+  /** Show header on desktop too — homepage only. */
+  keepDesktopHeader?: boolean;
   /** Hide site footer. */
   hideFooter?: boolean;
   /** Hide floating bottom nav — used when the page renders its own bottom chrome. */
   hideMobileNav?: boolean;
 }) {
   const hostedTabs = useMainTabsHosted();
-  const header = hideHeader ? null : hideHeaderBelowMd ? (
-    <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-      <PublicHeader />
-    </Box>
-  ) : (
-    <PublicHeader />
-  );
+
+  let header: React.ReactNode = null;
+  if (hideHeader || hideHeaderBelowMd) {
+    header = null;
+  } else if (keepDesktopHeader) {
+    header = <PublicHeader />;
+  } else {
+    header = (
+      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+        <PublicHeader />
+      </Box>
+    );
+  }
 
   return (
     <Box

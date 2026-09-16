@@ -289,8 +289,20 @@ function isLikelyJunkImageUrl(url) {
     /sprite|icon|logo|favicon|pixel|tracking|1x1|blank\.|placeholder|avatar-default|spinner|loading\.gif|rsrc\.php/i.test(
       lower
     ) ||
-    // Analytics / ad beacons often appear as <img> tags (e.g. Facebook noscript pixel).
+    // Site chrome / brand marks / badges (not listing gallery).
+    /\/content\/images\//i.test(lower) ||
+    /opengraphics|merrjep_al\.png|apple-touch-icon|mstile-|site-logo|brand-logo|header-logo|footer-logo/i.test(
+      lower
+    ) ||
+    /\/(?:badge|banner|promo|advert|ads?|sponsor|widget|emoticon|emoji|smiley)\//i.test(lower) ||
+    /(?:^|\/)(?:banner|promo|advert|ads?|sponsor)[-_]/i.test(lower) ||
+    /play-store|app-store|google-play|appstore|download-app/i.test(lower) ||
+    /[_\-](?:16|20|24|32|36|48|64)(?:x\d+)?\.(?:jpe?g|png|webp|gif)(?:\?|$)/i.test(lower) ||
+    // Analytics / ad networks / beacons.
     /facebook\.com\/(?:tr|tr\/)\b|connect\.facebook\.net\/.*\/fbevents|google-analytics\.com|googletagmanager\.com|googleadservices\.com|doubleclick\.net|bat\.bing\.com|adservice\.google|scorecardresearch\.com|hotjar\.com/i.test(
+      lower
+    ) ||
+    /googlesyndication|pagead2\.|adsystem|adnxs\.com|adform\.net|taboola\.com|outbrain\.com|criteo\.com/i.test(
       lower
     ) ||
     /[?&]ev=pageview\b/i.test(lower) ||
@@ -298,6 +310,117 @@ function isLikelyJunkImageUrl(url) {
     /\.jpg_bo\d+/i.test(lower) ||
     /_sr\d+,\d+/i.test(lower)
   );
+}
+
+/**
+ * MerrJep listing HTML also embeds sidebar/related ad photos. Keep only gallery
+ * shots whose filename matches the listing slug from /njoftim/{slug}/{id}.
+ */
+function filterMerrjepListingImages(pageUrl, imageUrls) {
+  const list = Array.isArray(imageUrls) ? imageUrls : [];
+  if (!/merrjep\.al/i.test(String(pageUrl || ''))) return list;
+
+  let slug = '';
+  try {
+    const path = new URL(pageUrl).pathname;
+    const match = path.match(/\/njoftim\/([^/]+)\//i);
+    slug = match ? decodeURIComponent(match[1]) : '';
+  } catch {
+    slug = '';
+  }
+
+  const slugCompact = normalizeListingSlugToken(slug);
+  const tokens = String(slug || '')
+    .toLowerCase()
+    .replace(/\+/g, ' ')
+    .split(/[^a-z0-9ëç]+/i)
+    .map((t) => normalizeListingSlugToken(t))
+    .filter((t) => t.length >= 3 && !['ne', 'me', 'te', 'nga', 'per', 'dhe', 'all'].includes(t));
+
+  const mediaOnly = list.filter((url) => /media\.merrjep\.al\/image\//i.test(String(url || '')));
+  if (!slugCompact || !mediaOnly.length) {
+    return (mediaOnly.length ? mediaOnly : list).slice(0, MAX_SNAPSHOT_IMAGES);
+  }
+
+  const matched = mediaOnly.filter((url) => {
+    let file = '';
+    try {
+      file = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
+    } catch {
+      file = String(url);
+    }
+    const fileCompact = normalizeListingSlugToken(file).replace(/\d+$/g, '');
+    if (!fileCompact) return false;
+    if (fileCompact.includes(slugCompact.slice(0, Math.min(48, slugCompact.length)))) return true;
+    if (slugCompact.includes(fileCompact.slice(0, Math.min(48, fileCompact.length)))) return true;
+    const hits = tokens.filter((t) => fileCompact.includes(t)).length;
+    return hits >= Math.min(3, Math.max(2, Math.ceil(tokens.length * 0.45)));
+  });
+
+  return (matched.length ? matched : mediaOnly.slice(0, 1)).slice(0, MAX_SNAPSHOT_IMAGES);
+}
+
+function normalizeListingSlugToken(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\+/g, ' ')
+    .replace(/%2b/gi, ' ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * Prefer the main listing gallery cluster (same host + path family as cover),
+ * and drop unrelated sidebar/related/ad photos from marketplace pages.
+ */
+function preferGalleryImageCluster(imageUrls) {
+  const list = (Array.isArray(imageUrls) ? imageUrls : []).filter(
+    (url) => /^https?:\/\//i.test(String(url || '')) && !isLikelyJunkImageUrl(url)
+  );
+  if (list.length <= 2) return list.slice(0, MAX_SNAPSHOT_IMAGES);
+
+  const keyFor = (url) => {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      return `${parsed.hostname.toLowerCase()}/${parts.slice(0, 2).join('/')}`.toLowerCase();
+    } catch {
+      return String(url).split('?')[0].toLowerCase();
+    }
+  };
+
+  const counts = new Map();
+  for (const url of list) {
+    const key = keyFor(url);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  const coverKey = keyFor(list[0]);
+  let bestKey = coverKey;
+  let bestCount = counts.get(coverKey) || 0;
+  for (const [key, count] of counts.entries()) {
+    if (count > bestCount) {
+      bestKey = key;
+      bestCount = count;
+    }
+  }
+
+  if (bestCount >= 2 && bestCount >= Math.ceil(list.length * 0.4)) {
+    const clustered = list.filter((url) => keyFor(url) === bestKey);
+    if (clustered.length) return clustered.slice(0, MAX_SNAPSHOT_IMAGES);
+  }
+
+  return list.slice(0, MAX_SNAPSHOT_IMAGES);
+}
+
+/** Final gallery-only pass used by AI Build snapshots. */
+function sanitizeListingGalleryImages(pageUrl, imageUrls) {
+  const cleaned = (Array.isArray(imageUrls) ? imageUrls : []).filter(
+    (url) => /^https?:\/\//i.test(String(url || '')) && !isLikelyJunkImageUrl(url)
+  );
+  const siteFiltered = filterMerrjepListingImages(pageUrl, cleaned);
+  return preferGalleryImageCluster(siteFiltered);
 }
 
 function firstSrcsetUrl(srcset) {
@@ -435,10 +558,55 @@ function readImgAttr(tag, name) {
   return tag.match(new RegExp(`\\b${name}=(https?:\\/\\/[^\\s>]+|\\/[^\\s>]+)`, 'i'))?.[1] || null;
 }
 
+function isLikelyJunkImgTag(tag) {
+  const raw = String(tag || '');
+  const width = Number(raw.match(/\bwidth=["']?(\d+)/i)?.[1] || 0);
+  const height = Number(raw.match(/\bheight=["']?(\d+)/i)?.[1] || 0);
+  if (width > 0 && height > 0 && width <= 80 && height <= 80) return true;
+
+  const context = [
+    readImgAttr(tag, 'class') || '',
+    readImgAttr(tag, 'id') || '',
+    readImgAttr(tag, 'alt') || '',
+    readImgAttr(tag, 'title') || '',
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  return /(?:\b|_)(?:logo|icon|favicon|sprite|avatar|badge|banner|promo|advert|ads?(?:lot)?|sponsor|share|social|emoji|smiley|pixel|tracking|placeholder)(?:\b|_)/i.test(
+    context
+  );
+}
+
+function isLikelyGalleryImgTag(tag) {
+  const context = [
+    readImgAttr(tag, 'class') || '',
+    readImgAttr(tag, 'id') || '',
+    readImgAttr(tag, 'alt') || '',
+    readImgAttr(tag, 'data-gallery') || '',
+    readImgAttr(tag, 'itemprop') || '',
+  ]
+    .join(' ')
+    .toLowerCase();
+  if (
+    /gallery|carousel|slider|swiper|lightbox|fancybox|photoswipe|listing[-_]?image|product[-_]?image|thumbnail|main[-_]?photo|hero[-_]?image|media[-_]?item/i.test(
+      context
+    )
+  ) {
+    return true;
+  }
+  const width = Number(String(tag).match(/\bwidth=["']?(\d+)/i)?.[1] || 0);
+  const height = Number(String(tag).match(/\bheight=["']?(\d+)/i)?.[1] || 0);
+  return width >= 280 || height >= 280;
+}
+
 function extractImageCandidates(html, baseUrl) {
-  const urls = [];
+  const trusted = [];
+  const gallery = [];
+  const fallback = [];
   const seen = new Set();
-  const push = (raw) => {
+
+  const pushInto = (bucket, raw) => {
     if (!raw) return;
     try {
       const cleaned = decodeHtmlEntities(String(raw).trim()).replace(/\\\//g, '/');
@@ -447,45 +615,56 @@ function extractImageCandidates(html, baseUrl) {
       if (!/^https?:\/\//i.test(absolute)) return;
       if (isLikelyJunkImageUrl(absolute)) return;
       seen.add(absolute);
-      urls.push(absolute);
+      bucket.push(absolute);
     } catch {
       /* ignore */
     }
   };
 
-  for (const img of extractAllMeta(html, 'property', 'og:image')) push(img);
-  for (const img of extractAllMeta(html, 'name', 'twitter:image')) push(img);
-  for (const img of extractAllMeta(html, 'property', 'twitter:image')) push(img);
-  for (const img of extractJsonLdImages(html)) push(img);
-  for (const img of extractAmazonStyleImages(html)) push(img);
-  for (const img of extractEmbeddedPayloadImages(html)) push(img);
+  // 1) High-trust listing signals first (cover + structured gallery).
+  for (const img of extractAllMeta(html, 'property', 'og:image')) pushInto(trusted, img);
+  for (const img of extractAllMeta(html, 'name', 'twitter:image')) pushInto(trusted, img);
+  for (const img of extractAllMeta(html, 'property', 'twitter:image')) pushInto(trusted, img);
+  for (const img of extractJsonLdImages(html)) pushInto(trusted, img);
+  for (const img of extractAmazonStyleImages(html)) pushInto(trusted, img);
+  for (const img of extractEmbeddedPayloadImages(html)) pushInto(trusted, img);
 
+  // 2) Prefer <img> tags that look like gallery / large listing photos.
   const imgTags = html.match(/<img\b[^>]*>/gi) || [];
-  for (const tag of imgTags.slice(0, 120)) {
-    push(readImgAttr(tag, 'src'));
-    push(readImgAttr(tag, 'data-src'));
-    push(readImgAttr(tag, 'data-lazy-src'));
-    push(readImgAttr(tag, 'data-original'));
-    push(readImgAttr(tag, 'data-zoom-image'));
-    push(readImgAttr(tag, 'data-mfp-src'));
-    push(readImgAttr(tag, 'data-full'));
-    push(readImgAttr(tag, 'data-large_image'));
-    push(firstSrcsetUrl(readImgAttr(tag, 'srcset')));
-    if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
+  for (const tag of imgTags.slice(0, 160)) {
+    if (isLikelyJunkImgTag(tag)) continue;
+    const srcs = [
+      readImgAttr(tag, 'src'),
+      readImgAttr(tag, 'data-src'),
+      readImgAttr(tag, 'data-lazy-src'),
+      readImgAttr(tag, 'data-original'),
+      readImgAttr(tag, 'data-zoom-image'),
+      readImgAttr(tag, 'data-mfp-src'),
+      readImgAttr(tag, 'data-full'),
+      readImgAttr(tag, 'data-large_image'),
+      firstSrcsetUrl(readImgAttr(tag, 'srcset')),
+    ];
+    const bucket = isLikelyGalleryImgTag(tag) ? gallery : fallback;
+    for (const src of srcs) pushInto(bucket, src);
   }
 
-  if (urls.length < MAX_SNAPSHOT_IMAGES) {
-    // Also match JSON-escaped URLs (https:\/\/cdn...\/photo.jpeg).
-    const normalized = String(html || '').replace(/\\\//g, '/');
-    const embedded =
-      normalized.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
-    for (const match of embedded) {
-      push(match);
-      if (urls.length >= MAX_SNAPSHOT_IMAGES) break;
-    }
+  // Stop once we already have a full gallery from trusted + gallery tags.
+  // Avoid vacuuming unrelated ads from the rest of the page HTML.
+  const primary = [...trusted, ...gallery];
+  if (primary.length >= MAX_SNAPSHOT_IMAGES) {
+    return primary.slice(0, MAX_SNAPSHOT_IMAGES);
   }
 
-  return urls.slice(0, MAX_SNAPSHOT_IMAGES);
+  // 3) Last resort: loose URL regex, only to fill remaining slots.
+  const normalized = String(html || '').replace(/\\\//g, '/');
+  const embedded =
+    normalized.match(/https?:\/\/[^"'\\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\\s<>]*)?/gi) || [];
+  for (const match of embedded) {
+    pushInto(fallback, match);
+    if (primary.length + fallback.length >= MAX_SNAPSHOT_IMAGES * 2) break;
+  }
+
+  return [...primary, ...fallback].slice(0, MAX_SNAPSHOT_IMAGES);
 }
 
 function htmlRichnessScore(html) {
@@ -1109,7 +1288,8 @@ function buildSnapshotFromHtml({ url, pageResult, extraImageUrls = [], social = 
   const ogDescription =
     extractMeta(html, 'property', 'og:description') || extractMeta(html, 'name', 'description') || null;
 
-  const imageUrls = mergeImageUrlLists(extraImageUrls, extractImageCandidates(html, url));
+  const rawImageUrls = mergeImageUrlLists(extraImageUrls, extractImageCandidates(html, url));
+  const imageUrls = sanitizeListingGalleryImages(url, rawImageUrls);
 
   const textParts = [];
   if (ogTitle || ogDescription) {
@@ -1270,7 +1450,10 @@ async function fetchPageSnapshot(url, parentSignal) {
       extraImageUrls: mergedImages,
       social,
     });
-    snapshot.imageUrls = mergeImageUrlLists(mergedImages, snapshot.imageUrls);
+    snapshot.imageUrls = sanitizeListingGalleryImages(
+      url,
+      mergeImageUrlLists(mergedImages, snapshot.imageUrls)
+    );
     return snapshot;
   } catch (err) {
     if (parentSignal?.aborted) throw err;
@@ -1964,7 +2147,8 @@ Vision + text fusion (CRITICAL when attached images are present — applies to A
 
 Link / caption rules (when a URL snapshot is present and few/no attached photos):
 - Prefer caption, page description, og:description, and the user's prompt for what is offered.
-- Keep snapshotImageUrls as listing photos — only the post's own photos (carousel frames). Never invent extra images.
+- Keep snapshotImageUrls as listing photos — only the post's own gallery/carousel photos. Never invent extra images. Never include logos, icons, favicons, app-store badges, ads, banners, related-listing thumbnails, or other page chrome.
+- If snapshotImageUrls contains unrelated ads, ignore them and keep only photos that clearly belong to THIS listing.
 - Do NOT invent a profession from the username alone.
 - Google Maps links (sourceType google_maps): the snapshot contains structured place data (name, address, phone, hours, website, rating, types, photos). Default detectedCategory to "businesses" unless the user prompt clearly asks for another category. Build a complete business listing from googleMapsPlace — do NOT leave title, description, contactPhone, locationAddress, or hours empty when the snapshot provides them. Use place photos as imageUrls when available.
 - Instagram / social posts: each post needs its OWN listing title derived from THAT post's caption (and photos). NEVER use authorName, Instagram @handle, profile display name, or profile.businessName / fullName as the listing title when the caption describes a product, vehicle, service, job, or offer. Example: caption about a Yamaha T-MAX → title about the scooter, not "Geshtenja Light".
@@ -1981,7 +2165,7 @@ General rules:
 - cityName should be an Albanian city when mentioned (e.g. Tiranë, Durrës).
 - zoneName should be the neighborhood/lagje when mentioned (e.g. Blloku, Komuna e Parisit). Leave empty if unknown — never invent a zone.
 - surfaceM2 for real-estate when size is stated. Leave empty if unknown — never invent m².
-- imageUrls: keep absolute http(s) URLs from the page snapshot (snapshotImageUrls) whenever present (max 8). Never drop scraped listing photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
+- imageUrls: use ONLY absolute http(s) URLs from snapshotImageUrls (max 8). Do not invent URLs and do not pull logos/ads/icons from the page. Never drop scraped gallery photos that belong to the post. Attached images are sent separately — describe roles via imageRoles; do not invent fake image URLs.
 - If the page is thin (Instagram login wall, blocked scraper) but caption or photos are present, build the draft from caption + prompt + photos + profile.
 - When preferredCategory is job-listings: NEVER invent roles, titles, or offers from profile.businessName / businessCategory / accountType (e.g. do not turn every thin link into a fitness trainer / coach listing). Use only the link content, attached flyer photos, and the user prompt.`;
 }
@@ -3957,7 +4141,17 @@ async function importListingsFromLinks({
         signal,
       });
       throwIfAborted(signal);
-      interpreted.imageUrls = mergeImageUrlLists(snapshot.imageUrls, interpreted.imageUrls);
+      // Keep scraped gallery photos authoritative — never let the model invent/add page ads.
+      interpreted.imageUrls = sanitizeListingGalleryImages(
+        url,
+        mergeImageUrlLists(snapshot.imageUrls, interpreted.imageUrls)
+      );
+      // If snapshot already has a gallery, ignore any model-only URLs (often related ads).
+      if (Array.isArray(snapshot.imageUrls) && snapshot.imageUrls.length) {
+        const allowed = new Set(snapshot.imageUrls.map((u) => String(u)));
+        const kept = (interpreted.imageUrls || []).filter((u) => allowed.has(String(u)));
+        interpreted.imageUrls = kept.length ? kept : snapshot.imageUrls.slice(0, MAX_SNAPSHOT_IMAGES);
+      }
       const draft = await finalizeDraft({
         interpreted,
         sourceUrl: url,
@@ -4002,6 +4196,9 @@ module.exports = {
   normalizeVehicleTypeValue,
   inferVehicleTypeFromText,
   normalizeCarFormFields,
+  isLikelyJunkImageUrl,
+  sanitizeListingGalleryImages,
+  extractImageCandidates,
   MAX_IMPORT_URLS,
   CATEGORIES,
   CATEGORY_MISMATCH_CODE,

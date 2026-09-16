@@ -26,7 +26,7 @@ import { useUser } from '@/hooks/use-user';
 import { hardNavigate } from '@/lib/hard-navigate';
 import { paths } from '@/paths';
 
-import { HeaderMobileSearch } from './header-mobile-search';
+import { HeaderSearchBar } from './header-mobile-search';
 import { useMainTabs } from '@/components/main-tabs/main-tabs-shell';
 
 const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
@@ -145,7 +145,7 @@ export function PublicHeader() {
               />
             </Box>
 
-            <HeaderMobileSearch />
+            <HeaderSearchBar allBreakpoints />
 
             <Stack
               direction="row"

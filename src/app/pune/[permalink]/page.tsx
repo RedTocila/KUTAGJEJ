@@ -97,8 +97,18 @@ export default async function JobListingPage({ params, searchParams }: PageProps
         <JobListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}
-          similarSlot={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme')}
-          similarSlotDesktop={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme')}
+          similarSlot={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.industry,
+          })}
+          similarSlotDesktop={similarListingsSlot('jobs', listing.id, 'Punë të ngjashme', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.industry,
+          })}
         />
       </PublicShell>
     </>

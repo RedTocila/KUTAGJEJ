@@ -13,6 +13,7 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { config } from '@/config';
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha, secondaryMainAlpha } from '@/lib/css-var-alpha';
+import { footerCityHubLinks } from '@/lib/seo-internal-links';
 import { paths } from '@/paths';
 
 const SOCIAL = [
@@ -57,6 +58,11 @@ export function PublicFooter() {
     { label: t.chrome.footerTerms, href: paths.public.terms },
     { label: t.chrome.footerPrivacy, href: paths.public.privacy },
   ];
+
+  const cityHubLinks = footerCityHubLinks('real-estate').map((link) => ({
+    label: `Prona — ${link.label}`,
+    href: link.href,
+  }));
 
   return (
     <Box
@@ -217,7 +223,7 @@ export function PublicFooter() {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(2, minmax(0, 220px))' },
+              gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(3, minmax(0, 220px))' },
               columnGap: { xs: 2, sm: 4 },
               rowGap: 2,
               justifyContent: { md: 'flex-start' },
@@ -227,6 +233,7 @@ export function PublicFooter() {
               [
                 { title: t.chrome.footerUsers, links: userLinks },
                 { title: t.chrome.footerAbout, links: aboutLinks },
+                { title: 'Prona sipas qytetit', links: cityHubLinks },
               ] as const
             ).map((col) => (
               <Stack key={col.title} spacing={1}>

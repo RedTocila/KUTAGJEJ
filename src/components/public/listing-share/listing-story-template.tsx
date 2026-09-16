@@ -812,17 +812,19 @@ function StoryDashboardCard({ payload }: { payload: ListingSharePayload }) {
           </Stack>
         ) : null}
 
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 0.75 }}>
-          <Typography sx={{ fontSize: 22, color: 'rgba(255,255,255,0.42)', fontWeight: 550 }}>
-            {posted ?? ''}
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.42)' }}>
-            <EyeIcon size={24} weight="regular" />
-            <Typography sx={{ fontSize: 22, fontWeight: 650 }}>
-              {new Intl.NumberFormat('en-GB').format(viewCount)}
+        {payload.listingKind === 'businesses' || payload.listingKind === 'professionals' ? null : (
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', pt: 0.75 }}>
+            <Typography sx={{ fontSize: 22, color: 'rgba(255,255,255,0.42)', fontWeight: 550 }}>
+              {posted ?? ''}
             </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', color: 'rgba(255,255,255,0.42)' }}>
+              <EyeIcon size={24} weight="regular" />
+              <Typography sx={{ fontSize: 22, fontWeight: 650 }}>
+                {new Intl.NumberFormat('en-GB').format(viewCount)}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        )}
       </Stack>
     </Box>
   );

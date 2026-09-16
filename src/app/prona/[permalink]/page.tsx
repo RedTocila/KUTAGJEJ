@@ -88,7 +88,13 @@ export default async function RealEstateListingPage({ params, searchParams }: Pa
         <RealEstateListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}
-          similarSlot={similarListingsSlot('real-estate', listing.id, 'Prona të ngjashme')}
+          similarSlot={similarListingsSlot('real-estate', listing.id, 'Prona të ngjashme', {
+            listingTitle: listing.title,
+            locationLine: [listing.zoneName, listing.cityName].filter(Boolean).join(', ') || listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.propertyCategory,
+            transactionSlug: listing.transactionType === 'rent' || listing.transactionType === 'sale' ? listing.transactionType : null,
+          })}
         />
       </PublicShell>
     </>

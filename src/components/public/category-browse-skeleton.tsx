@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
+import { paths } from '@/paths';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
+
 /**
  * Instant route placeholder for public category browse pages.
  * Shown via `loading.tsx` as soon as the user navigates (before RSC data resolves).
@@ -16,7 +19,10 @@ export function CategoryBrowseSkeleton({
       <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 3 }, pb: 2 }}>
         <Container maxWidth="xl" disableGutters>
           <Stack spacing={2}>
-            <Skeleton variant="rounded" animation="wave" height={48} width="40%" sx={{ maxWidth: 280 }} />
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+              <ProductBackButton href={paths.home} aria-label="Kthehu në krye" />
+              <Skeleton variant="rounded" animation="wave" height={48} width="40%" sx={{ maxWidth: 280 }} />
+            </Stack>
             <Skeleton variant="rounded" animation="wave" height={56} sx={{ borderRadius: 2.5 }} />
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
               {Array.from({ length: 5 }, (_, i) => (
@@ -32,7 +38,7 @@ export function CategoryBrowseSkeleton({
           <Skeleton variant="text" animation="wave" width={200} />
           <Grid container spacing={{ xs: 2, md: 2.5 }}>
             {Array.from({ length: 8 }, (_, i) => (
-              <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+              <Grid key={i} size={{ xs: 12, sm: 6, md: 4, lg: 4 }}>
                 <Stack spacing={1.25}>
                   <Skeleton
                     variant="rounded"

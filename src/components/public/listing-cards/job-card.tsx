@@ -150,7 +150,7 @@ export function JobCard({
               />
             ) : undefined
           }
-          alt={listing.title}
+          alt={[listing.title, listing.cityName].filter(Boolean).join(' — ') || listing.title}
           height={browseLike ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
           aspectRatio={homepageLike || squareLike ? LISTING_CARD_HOMEPAGE_ASPECT_RATIO : undefined}
           compact

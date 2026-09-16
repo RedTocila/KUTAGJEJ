@@ -463,19 +463,25 @@ export function ListingOwnerMetrics({
   const refreshStatusText = `Mund ta ngreni në krye pas ${refreshTimer}`;
   const premiumDisabled = anyBusy || premiumOn || okazionOn;
   const okazionDisabled = anyBusy || okazionOn || premiumOn;
+  const premiumBlockedNotice = premiumOn
+    ? premiumUntil
+      ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
+      : 'Premium aktiv'
+    : okazionOn
+      ? 'Nuk mund të aktivizoni Premium kur Okazion është aktiv.'
+      : null;
+  const okazionBlockedNotice = okazionOn
+    ? okazionUntil
+      ? `Okazion aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
+      : 'Okazion aktiv'
+    : premiumOn
+      ? 'Nuk mund të aktivizoni Okazion kur Premium është aktiv.'
+      : null;
+  const closeNotice = () => setError(null);
 
   return (
     <Stack spacing={0.75} sx={{ pt: 0.5, mt: 0.35 }}>
       {!hideStats ? <ListingOwnerStats metrics={metrics} sx={{ pb: 0.4 }} /> : null}
-
-      {refreshLocked ? (
-        <Typography
-          variant="caption"
-          sx={{ color: 'error.main', fontSize: '0.64rem', fontWeight: 700, textAlign: 'left', lineHeight: 1.35 }}
-        >
-          {refreshStatusText}
-        </Typography>
-      ) : null}
 
       <Box sx={{ borderTop: 'none', boxShadow: 'inset 0 1px 0 light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))', pt: 0.8 }}>
         {listingId && kind && canRefresh ? (
@@ -492,7 +498,12 @@ export function ListingOwnerMetrics({
             }}
           >
             <Tooltip title={refreshLocked ? refreshStatusText : refreshTooltip}>
-              <span>
+              <span
+                onClick={() => {
+                  if (anyBusy) return;
+                  if (refreshLocked) setError(refreshStatusText);
+                }}
+              >
                 <Button
                   size="small"
                   variant="contained"
@@ -515,7 +526,6 @@ export function ListingOwnerMetrics({
                           border: 'none',
                           boxShadow: 'none',
                           opacity: 1,
-                          pointerEvents: 'none',
                           '&.Mui-disabled': {
                             bgcolor: 'light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
                             color: 'text.disabled',
@@ -532,16 +542,15 @@ export function ListingOwnerMetrics({
             </Tooltip>
             <Tooltip
               title={
-                premiumOn
-                  ? premiumUntil
-                    ? `Premium aktiv deri më ${new Date(premiumUntil).toLocaleDateString('sq-AL')}`
-                    : 'Premium aktiv'
-                  : okazionOn
-                    ? 'Nuk mund të aktivizoni Premium kur Okazion është aktiv.'
-                    : 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
+                premiumBlockedNotice ?? 'Bëje Premium me vendin nga paketa (Grow/Elite · 30 ditë)'
               }
             >
-              <span>
+              <span
+                onClick={() => {
+                  if (anyBusy) return;
+                  if (premiumBlockedNotice) setError(premiumBlockedNotice);
+                }}
+              >
                 <Button
                   size="small"
                   variant="contained"
@@ -569,16 +578,15 @@ export function ListingOwnerMetrics({
             {okazionSupported ? (
               <Tooltip
                 title={
-                  okazionOn
-                    ? okazionUntil
-                      ? `Okazion aktiv deri më ${new Date(okazionUntil).toLocaleDateString('sq-AL')}`
-                      : 'Okazion aktiv'
-                    : premiumOn
-                      ? 'Nuk mund të aktivizoni Okazion kur Premium është aktiv.'
-                      : 'Bëje Okazion me vendin nga paketa (Grow/Elite · 5 ditë)'
+                  okazionBlockedNotice ?? 'Bëje Okazion me vendin nga paketa (Grow/Elite · 5 ditë)'
                 }
               >
-                <span>
+                <span
+                  onClick={() => {
+                    if (anyBusy) return;
+                    if (okazionBlockedNotice) setError(okazionBlockedNotice);
+                  }}
+                >
                   <Button
                     size="small"
                     variant="contained"
@@ -631,11 +639,6 @@ export function ListingOwnerMetrics({
           <Box />
         )}
       </Box>
-      {error ? (
-        <Typography variant="caption" color="error" sx={{ fontSize: '0.68rem', fontWeight: 600 }}>
-          {error}
-        </Typography>
-      ) : null}
 
       {showAnnounce ? (
         <BusinessAnnouncementDialog
@@ -650,6 +653,23 @@ export function ListingOwnerMetrics({
           }}
         />
       ) : null}
+
+      <ProductDialog open={Boolean(error)} onClose={closeNotice} maxWidth="xs" fullWidth>
+        <ProductDialogTitle onClose={closeNotice}>{t.myListings.limitNoticeTitle}</ProductDialogTitle>
+        <ProductDialogContent>
+          <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>{error}</DialogContentText>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={closeNotice}
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            {t.common.close}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
 
       <ProductDialog open={confirmBoost !== null} onClose={closeConfirmBoost} maxWidth="xs" fullWidth>
         <ProductDialogTitle onClose={closeConfirmBoost}>

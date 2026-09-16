@@ -14,8 +14,13 @@ import {
 
 const HEADER_SEARCH_HEIGHT = 42;
 
-/** Mobile header search control — opens the full-page search sheet. */
-export function HeaderMobileSearch() {
+/** Header search control — opens the full-page search sheet. */
+export function HeaderSearchBar({
+  allBreakpoints = false,
+}: {
+  /** When true, show on desktop as well (dashboard header). */
+  allBreakpoints?: boolean;
+}) {
   const t = useCopy();
   const { open, openSearch } = useSearchOverlay();
 
@@ -30,9 +35,10 @@ export function HeaderMobileSearch() {
       sx={{
         flex: 1,
         minWidth: 0,
-        display: { xs: 'flex', md: 'none' },
+        display: allBreakpoints ? 'flex' : { xs: 'flex', md: 'none' },
         ...productSearchBarSx(false),
         height: HEADER_SEARCH_HEIGHT,
+        maxWidth: allBreakpoints ? { md: 520 } : undefined,
         px: 1.5,
         appearance: 'none',
         WebkitAppearance: 'none',
@@ -60,4 +66,9 @@ export function HeaderMobileSearch() {
       </Stack>
     </Box>
   );
+}
+
+/** @deprecated Prefer `HeaderSearchBar` — kept for existing public header imports. */
+export function HeaderMobileSearch() {
+  return <HeaderSearchBar />;
 }

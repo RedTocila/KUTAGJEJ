@@ -5,7 +5,6 @@ import { Box, Stack, Typography } from '@mui/material';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/CheckCircle';
 import { Clock as ClockIcon } from '@phosphor-icons/react/dist/ssr/Clock';
-import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
@@ -116,7 +115,7 @@ function BusinessVenueCardBody({
           listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={BusinessesCategoryIcon}
-          alt={listing.title}
+          alt={[listing.title, listing.cityName].filter(Boolean).join(' — ') || listing.title}
           height={
             variant === 'browse'
               ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
@@ -186,6 +185,7 @@ function BusinessVenueCardBody({
             }
             listing={listing}
             viewCount={viewCount}
+            showPostedViews={false}
             density={bodyDensity}
           />
         ) : variant === 'compact' ? (
@@ -277,28 +277,18 @@ function BusinessVenueCardBody({
 
             <Box sx={{ flex: 1 }} />
 
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              {location ? (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
-                >
-                  <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                  <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
-                    {location}
-                  </Typography>
-                </Stack>
-              ) : (
-                <Box />
-              )}
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <EyeIcon size={14} weight="regular" />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+            {location ? (
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+              >
+                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
+                  {location}
                 </Typography>
               </Stack>
-            </Stack>
+            ) : null}
           </Stack>
         )}
       </CardShell>
@@ -372,7 +362,7 @@ function ProfessionalListingCardBody({
           listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={BriefcaseIcon}
-          alt={listing.title}
+          alt={[listing.title, listing.cityName].filter(Boolean).join(' — ') || listing.title}
           height={
             variant === 'browse'
               ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
@@ -458,6 +448,7 @@ function ProfessionalListingCardBody({
             specs={specs}
             listing={listing}
             viewCount={viewCount}
+            showPostedViews={false}
             density={bodyDensity}
           />
         ) : variant === 'compact' ? (
@@ -532,28 +523,18 @@ function ProfessionalListingCardBody({
 
             <Box sx={{ flex: 1 }} />
 
-            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              {location ? (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0, flex: 1 }}
-                >
-                  <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
-                  <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
-                    {location}
-                  </Typography>
-                </Stack>
-              ) : (
-                <Box />
-              )}
-              <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
-                <EyeIcon size={14} weight="regular" />
-                <Typography variant="caption" color="text.disabled">
-                  {new Intl.NumberFormat('en-GB').format(viewCount)}
+            {location ? (
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{ alignItems: 'center', color: 'text.secondary', minWidth: 0 }}
+              >
+                <MapPinIcon size={14} weight="regular" color="var(--mui-palette-primary-main)" />
+                <Typography variant="caption" noWrap sx={{ color: 'text.secondary', fontWeight: 500, minWidth: 0 }}>
+                  {location}
                 </Typography>
               </Stack>
-            </Stack>
+            ) : null}
           </Stack>
         )}
       </CardShell>

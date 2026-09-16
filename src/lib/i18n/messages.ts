@@ -407,6 +407,7 @@ const sq = {
     okazionConfirmBody:
       'Njoftimi do të shfaqet me prioritet në Okazion për 7 ditë. Do të përdoret 1 vend Okazion nga paketa juaj (Grow/Elite). Doni të vazhdoni?',
     okazionConfirmAction: 'Aktivizo Okazion',
+    limitNoticeTitle: 'Kufizim',
   },
   messages: {
     title: 'Mesazhet',
@@ -1188,6 +1189,7 @@ const en: AppMessages = {
     okazionConfirmBody:
       'This listing will appear with priority on Okazion for 7 days. 1 Okazion slot from your plan (Grow/Elite) will be used. Do you want to continue?',
     okazionConfirmAction: 'Activate Okazion',
+    limitNoticeTitle: 'Limit',
   },
   messages: {
     title: 'Messages',

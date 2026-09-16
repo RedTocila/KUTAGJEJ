@@ -67,7 +67,7 @@ export default function HomePage() {
   const faq = faqJsonLd(HOME_SEO_COPY.faqs, `${siteOrigin}/`);
 
   return (
-    <PublicShell>
+    <PublicShell keepDesktopHeader>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />

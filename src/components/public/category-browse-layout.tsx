@@ -3,9 +3,11 @@
 import * as React from 'react';
 import { Container, Grid, Skeleton, Stack } from '@mui/material';
 
-import { isHomeVerticalId } from '@/lib/home-categories';
+import { HOME_VERTICALS, isHomeVerticalId } from '@/lib/home-categories';
 import type { TopViewedListing } from '@/lib/public-listings-client';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
+import { paths } from '@/paths';
 import { BrowseLoadProvider, type BrowseResolvedMeta } from '@/components/public/browse-load-context';
 import {
   BrowseListingsCountCaption,
@@ -15,6 +17,7 @@ import {
 } from '@/components/public/category-hero';
 import { CategoryTopViewedSlider } from '@/components/public/category-top-viewed-slider';
 import { BrowsePagination } from '@/components/public/listing-filters/browse-pagination';
+import { BrowseMidPageExplainer } from '@/components/public/browser-seo-heroes';
 import { PublicShell } from '@/components/public/public-shell';
 import { VerticalBrowseSeo } from '@/components/public/vertical-browse-seo';
 
@@ -34,6 +37,8 @@ interface CategoryBrowseLayoutProps {
   /** Optional SEO landing heading and human-readable introduction. */
   heading?: string;
   intro?: string;
+  /** When true, skip the generic mid-page vertical explainer (SEO landings supply their own copy). */
+  suppressMidExplainer?: boolean;
   children: React.ReactNode;
 }
 
@@ -58,6 +63,7 @@ export function CategoryBrowseLayout({
   ssrOk = true,
   heading,
   intro,
+  suppressMidExplainer = false,
   children,
 }: CategoryBrowseLayoutProps) {
   const isOkazion = verticalId === 'okazion';
@@ -95,6 +101,12 @@ export function CategoryBrowseLayout({
 
   const showTopViewed = isHomeVerticalId(verticalId) && topViewed.length > 0 && !hasFilters && phase !== 'loading';
   const pending = phase === 'loading';
+  const verticalCopy = isHomeVerticalId(verticalId) ? VERTICAL_SEO_COPY[verticalId] : null;
+  const relatedLinks = isHomeVerticalId(verticalId)
+    ? HOME_VERTICALS.filter((v) => v.id !== verticalId)
+        .slice(0, 4)
+        .map((v) => ({ href: v.href, label: v.label }))
+    : [];
 
   return (
     <PublicShell hideHeaderBelowMd>
@@ -108,17 +120,29 @@ export function CategoryBrowseLayout({
           intro={intro}
         />
         {showTopViewed ? <CategoryTopViewedSlider verticalId={verticalId} listings={topViewed} /> : null}
+        {verticalCopy && !suppressMidExplainer ? (
+          <BrowseMidPageExplainer
+            heading={HOME_VERTICALS.find((v) => v.id === verticalId)?.label || 'Kategoria'}
+            text={verticalCopy.paragraphs[0] || verticalCopy.subtext}
+            links={[
+              { href: paths.auth.signIn, label: 'Posto njoftim falas' },
+              ...relatedLinks,
+            ]}
+          />
+        ) : null}
         {phase === 'empty' ? (
           <PublicCategoryEmptyState verticalId={verticalId} hasFilters={hasFilters} />
         ) : (
           <Container
             maxWidth="xl"
             sx={{
-              pt: showTopViewed
-                ? { xs: 2, md: 2.5 }
-                : isOkazion || isProfiles
-                  ? { xs: 1, md: 2 }
-                  : { xs: 4, md: 6 },
+              pt: verticalCopy && !suppressMidExplainer
+                ? { xs: 1.5, md: 2 }
+                : showTopViewed
+                  ? { xs: 2, md: 2.5 }
+                  : isOkazion || isProfiles
+                    ? { xs: 1, md: 2 }
+                    : { xs: 4, md: 6 },
               pb: { xs: 4, md: 6 },
               position: 'relative',
             }}

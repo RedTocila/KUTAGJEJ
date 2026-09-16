@@ -192,11 +192,23 @@ function promptContextWithoutLinks(prompt: string): string {
 function isDisplayableImageUrl(url: unknown): url is string {
   if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return false;
   const lower = url.toLowerCase();
-  // Drop analytics beacons that scrape sometimes picks up as <img> sources.
+  // Drop analytics beacons / ad networks that scrape sometimes picks up as <img> sources.
   if (/facebook\.com\/(?:tr|tr\/)\b|[?&]ev=pageview\b/i.test(lower)) return false;
-  if (/google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google/i.test(lower)) {
+  if (
+    /google-analytics\.com|googletagmanager\.com|doubleclick\.net|bat\.bing\.com|adservice\.google|googlesyndication|pagead2\.|adnxs\.com|taboola\.com|outbrain\.com|criteo\.com/i.test(
+      lower
+    )
+  ) {
     return false;
   }
+  // Site chrome / logos / tiny UI assets — not listing gallery.
+  if (/\.svg(\?|$)/i.test(lower)) return false;
+  if (/sprite|icon|logo|favicon|pixel|tracking|1x1|placeholder|opengraphics|merrjep_al\.png|apple-touch-icon|mstile-/i.test(lower)) {
+    return false;
+  }
+  if (/\/content\/images\//i.test(lower)) return false;
+  if (/\/(?:badge|banner|promo|advert|ads?|sponsor)\//i.test(lower)) return false;
+  if (/(?:^|\/)(?:banner|promo|advert|ads?|sponsor)[-_]/i.test(lower)) return false;
   return true;
 }
 

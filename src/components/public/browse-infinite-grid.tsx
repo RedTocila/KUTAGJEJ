@@ -240,8 +240,11 @@ export function BrowseInfiniteGrid({
     })();
   }, [applyFirstPage, filters, initialPage, reportResolved, verticalId]);
 
+  // Desktop: 3 cards/row for all verticals. Cars + market keep 2-col on mobile.
   const isTwoColumnMobile = verticalId === 'cars' || verticalId === 'marketplace';
-  const itemGridSize = isTwoColumnMobile ? { xs: 6, sm: 6, md: 4, lg: 3 } : { xs: 12, sm: 6, md: 4, lg: 3 };
+  const itemGridSize = isTwoColumnMobile
+    ? { xs: 6, sm: 6, md: 4, lg: 4 }
+    : { xs: 12, sm: 6, md: 4, lg: 4 };
 
   if (recovering && error && !loading) {
     return (

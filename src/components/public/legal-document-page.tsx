@@ -3,7 +3,10 @@
 import * as React from 'react';
 import { Box, Container, Stack, Typography } from '@mui/material';
 
+import { paths } from '@/paths';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { PublicShell } from '@/components/public/public-shell';
+import { useCopy } from '@/hooks/use-copy';
 
 export function LegalDocumentPage({
   title,
@@ -14,18 +17,23 @@ export function LegalDocumentPage({
   updated: string;
   children: React.ReactNode;
 }) {
+  const t = useCopy();
+
   return (
     <PublicShell>
       <Box sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
         <Container maxWidth="md">
           <Stack spacing={1.5} sx={{ mb: 4 }}>
-            <Typography
-              component="h1"
-              sx={{ fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.1rem' }, letterSpacing: '-0.02em' }}
-            >
-              {title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+              <ProductBackButton href={paths.home} aria-label={t.browse.backHomeAria} />
+              <Typography
+                component="h1"
+                sx={{ fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.1rem' }, letterSpacing: '-0.02em' }}
+              >
+                {title}
+              </Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, pl: { xs: 0, md: 4.5 } }}>
               Përditësuar: {updated}
             </Typography>
           </Stack>

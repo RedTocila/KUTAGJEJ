@@ -12,16 +12,15 @@ import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/P
 import { listingCarPublicHref } from '@/paths';
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
 import type { PublicCarListing } from '@/lib/public-listings-client';
-import { useLanguage } from '@/hooks/use-language';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
 import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
-import { findOptionLabel, formatKilometers, formatPrice, listingCardRelativeDate } from './format-helpers';
+import { findOptionLabel, formatKilometers, formatPrice } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
-import { ListingCardHomepageBody } from './listing-card-homepage-body';
+import { ListingCardHomepageBody, ListingCardPostedDate } from './listing-card-homepage-body';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
@@ -42,7 +41,6 @@ export function CarCard({
   variant?: CarCardVariant;
   hideOkazionBadge?: boolean;
 }) {
-  const { language } = useLanguage();
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
@@ -79,7 +77,7 @@ export function CarCard({
           listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={CarIcon}
-          alt={title}
+          alt={[title, listing.cityName].filter(Boolean).join(' — ') || title}
           height={variant === 'browse' ? LISTING_CARD_BROWSE_MEDIA_HEIGHT : undefined}
           aspectRatio={
             variant === 'homepage' || variant === 'compact'
@@ -211,9 +209,7 @@ export function CarCard({
             <Box sx={{ flex: 1 }} />
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing, language)}
-              </Typography>
+              <ListingCardPostedDate listing={listing} />
               <CardLocationBadge cityName={listing.cityName} iconSize={14} />
             </Stack>
           </Stack>

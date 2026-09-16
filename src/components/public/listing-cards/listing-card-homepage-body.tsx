@@ -35,6 +35,32 @@ export function CardLocationInline({
   );
 }
 
+/**
+ * Posted/bumped label deferred until mount.
+ * Soft nav SSR always uses default language while the live LanguageProvider may already
+ * be `en`, and `Date.now()` relative buckets can also drift across the SSR/hydrate boundary.
+ */
+export function ListingCardPostedDate({
+  listing,
+  sx,
+}: {
+  listing: { bumpedAt?: string | null; createdAt: string };
+  sx?: React.ComponentProps<typeof Typography>['sx'];
+}) {
+  const { language } = useLanguage();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <Typography variant="caption" color="text.disabled" noWrap sx={sx} suppressHydrationWarning>
+      {mounted ? listingCardRelativeDate(listing, language) : '\u00a0'}
+    </Typography>
+  );
+}
+
 export function CardPostedViewsRow({
   listing,
   viewCount,
@@ -42,12 +68,9 @@ export function CardPostedViewsRow({
   listing: { bumpedAt?: string | null; createdAt: string };
   viewCount: number;
 }) {
-  const { language } = useLanguage();
   return (
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-      <Typography variant="caption" color="text.disabled" noWrap sx={{ minWidth: 0 }}>
-        {listingCardRelativeDate(listing, language)}
-      </Typography>
+      <ListingCardPostedDate listing={listing} sx={{ minWidth: 0 }} />
       <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled', flexShrink: 0 }}>
         <EyeIcon size={14} weight="regular" />
         <Typography variant="caption" color="text.disabled">
@@ -73,6 +96,7 @@ export function ListingCardHomepageBody({
   specsSlot,
   listing,
   viewCount,
+  showPostedViews = true,
   density = 'carousel',
 }: {
   title: string;
@@ -91,6 +115,8 @@ export function ListingCardHomepageBody({
   specsSlot?: React.ReactNode;
   listing: { bumpedAt?: string | null; createdAt: string };
   viewCount: number;
+  /** Hide relative date + view count (directory / business & professional cards). */
+  showPostedViews?: boolean;
   /** `compact` matches cars/marketplace browse cards; `carousel` is for homepage rows. */
   density?: 'carousel' | 'compact';
 }) {
@@ -151,7 +177,7 @@ export function ListingCardHomepageBody({
 
       {specsSlot != null ? specsSlot : <SpecRow specs={specs} />}
 
-      <CardPostedViewsRow listing={listing} viewCount={viewCount} />
+      {showPostedViews ? <CardPostedViewsRow listing={listing} viewCount={viewCount} /> : null}
     </Stack>
   );
 }

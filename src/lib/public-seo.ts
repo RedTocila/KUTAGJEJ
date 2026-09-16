@@ -5,6 +5,7 @@ import { config as siteConfig } from '@/config';
 import { paths, pathsPublicLocationLanding } from '@/paths';
 import { ALL_VEHICLE_MAKES, type CarMake } from '@/lib/car-constants';
 import { JOB_INDUSTRY_OPTIONS } from '@/lib/job-constants';
+import { enrichSeoLandingCopy } from '@/lib/seo-landing-copy';
 import {
   BROWSE_PAGE_SIZE,
   BUSINESS_FILTER_OPTIONS,
@@ -363,15 +364,16 @@ export const loadSeoLandingRoute = cache(async function loadSeoLandingRoute(vert
 });
 
 export function seoLandingMetadata(config: SeoLandingConfig, total: number, indexable: boolean): Metadata {
+  const enriched = enrichSeoLandingCopy(config, total);
   const canonical = config.path;
   return {
-    title: config.heading,
-    description: config.description,
+    title: enriched.heading,
+    description: enriched.description,
     alternates: { canonical },
     robots: { index: indexable, follow: true },
     openGraph: {
-      title: `${config.heading} | KuTaGjej`,
-      description: config.description,
+      title: `${enriched.heading} | KuTaGjej`,
+      description: enriched.description,
       url: new URL(canonical.replace(/^\//, ''), siteConfig.site.url).toString(),
       type: 'website',
       locale: 'sq_AL',

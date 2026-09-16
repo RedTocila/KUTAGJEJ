@@ -180,7 +180,7 @@ export function BannerSlideCard({
             src={imageSrc}
             alt={title || ''}
             fill
-            sizes="(max-width: 900px) 100vw, min(1400px, 92vw)"
+            sizes="(max-width: 900px) 100vw, min(1200px, 92vw)"
             priority={priority}
             loading={priority ? undefined : eager ? 'eager' : 'lazy'}
             style={{ objectFit: 'cover' }}

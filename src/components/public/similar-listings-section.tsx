@@ -16,11 +16,21 @@ import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
+import { ListingDetailBrowserSeo } from '@/components/public/listing-detail-browser-seo';
+import type { HomeVerticalId } from '@/lib/home-categories';
 
 export type SimilarListingsKind = HomepageLatestVerticalId;
 
 const SIMILAR_FETCH = 12;
 const SIMILAR_SHOW = 10;
+
+export type ListingSeoContext = {
+  listingTitle: string;
+  locationLine?: string | null;
+  cityName?: string | null;
+  categorySlug?: string | null;
+  transactionSlug?: string | null;
+};
 
 /** Placeholder while similar listings stream in under the detail hero. */
 export function SimilarListingsSkeleton(): React.JSX.Element {
@@ -40,11 +50,28 @@ export function SimilarListingsSkeleton(): React.JSX.Element {
   );
 }
 
-export function similarListingsSlot(kind: SimilarListingsKind, excludeId: string, title: string): React.ReactNode {
+export function similarListingsSlot(
+  kind: SimilarListingsKind,
+  excludeId: string,
+  title: string,
+  seo?: ListingSeoContext,
+): React.ReactNode {
   return (
-    <React.Suspense fallback={<SimilarListingsSkeleton />}>
-      <SimilarListingsSection kind={kind} excludeId={excludeId} title={title} />
-    </React.Suspense>
+    <>
+      {seo ? (
+        <ListingDetailBrowserSeo
+          vertical={kind as HomeVerticalId}
+          listingTitle={seo.listingTitle}
+          locationLine={seo.locationLine}
+          cityName={seo.cityName}
+          categorySlug={seo.categorySlug}
+          transactionSlug={seo.transactionSlug}
+        />
+      ) : null}
+      <React.Suspense fallback={<SimilarListingsSkeleton />}>
+        <SimilarListingsSection kind={kind} excludeId={excludeId} title={title} />
+      </React.Suspense>
+    </>
   );
 }
 

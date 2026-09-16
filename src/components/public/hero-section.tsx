@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box, Container, Stack } from '@mui/material';
 
 import { HeroCategoryCircles } from './hero-category-circles';
+import { HomeBrowserHeroSeo } from './browser-seo-heroes';
 
 /**
  * Home hero — category circles paint immediately; banners stream in as `children`.
@@ -23,6 +24,7 @@ export function HeroSection({ children }: { children?: React.ReactNode }) {
       >
         <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
           <Stack spacing={{ xs: 1.5, md: 3 }} sx={{ alignItems: 'stretch', width: '100%' }}>
+            <HomeBrowserHeroSeo />
             <HeroCategoryCircles variant="links" includeAi={false} />
             {children}
           </Stack>

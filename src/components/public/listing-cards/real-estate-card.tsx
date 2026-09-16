@@ -24,9 +24,9 @@ import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
 import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
-import { formatPrice, listingCardRelativeDate } from './format-helpers';
+import { formatPrice } from './format-helpers';
 import { ListingCardRating, resolveListingCardRating, type ListingCardRatingSummary } from './listing-card-rating';
-import { ListingCardHomepageBody } from './listing-card-homepage-body';
+import { ListingCardHomepageBody, ListingCardPostedDate } from './listing-card-homepage-body';
 import { ListingPrice } from './listing-price';
 import { ListingTitleWithVerified } from './listing-title-with-verified';
 import { SpecRow, type Spec } from './spec-row';
@@ -124,7 +124,7 @@ export function RealEstateCard({
           listingId={listing.id}
           imageUrl={listing.imageUrl}
           FallbackIcon={listing.propertyCategory === 'villa' ? HouseIcon : BuildingsIcon}
-          alt={listing.title}
+          alt={[listing.title, listing.cityName].filter(Boolean).join(' — ') || listing.title}
           height={
             variant === 'browse'
               ? LISTING_CARD_BROWSE_MEDIA_HEIGHT
@@ -357,9 +357,7 @@ export function RealEstateCard({
             <Box sx={{ flex: 1 }} />
 
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.disabled">
-                {listingCardRelativeDate(listing, language)}
-              </Typography>
+              <ListingCardPostedDate listing={listing} />
               <Stack direction="row" spacing={0.45} sx={{ alignItems: 'center', color: 'text.disabled' }}>
                 <EyeIcon size={14} weight="regular" />
                 <Typography variant="caption" color="text.disabled">

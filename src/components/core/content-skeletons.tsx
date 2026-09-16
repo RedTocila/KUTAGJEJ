@@ -117,7 +117,7 @@ export function ListingCardsSkeleton({
       aria-label="Duke u ngarkuar"
     >
       {Array.from({ length: count }, (_, i) => (
-        <Grid key={i} size={{ xs: xsSize, sm: 6, md: 4, lg: 3 }}>
+        <Grid key={i} size={{ xs: xsSize, sm: 6, md: 4, lg: 4 }}>
           <Stack spacing={1.25}>
             <Skeleton
               variant="rounded"

@@ -1,5 +1,7 @@
-/** Shared max width for listing detail page content (`md+`) — matches MUI `maxWidth="lg"`. */
-export const LISTING_DETAIL_PAGE_MAX_WIDTH_PX = 1200;
+import { DESKTOP_CONTENT_MAX_WIDTH_PX } from '@/lib/desktop-content-width';
+
+/** Shared max width for listing detail page content (`md+`) — site desktop column. */
+export const LISTING_DETAIL_PAGE_MAX_WIDTH_PX = DESKTOP_CONTENT_MAX_WIDTH_PX;
 
 /** Max width of the photo hero on public listing detail pages (`md+`). */
 export const LISTING_DETAIL_HERO_GALLERY_MAX_WIDTH_PX = 840;

@@ -12,12 +12,25 @@ import {
   type SeoLandingConfig,
   type SeoLandingListings,
 } from '@/lib/public-seo';
+import { enrichSeoLandingCopy } from '@/lib/seo-landing-copy';
+import { SEO_HUB_CITIES } from '@/lib/seo-internal-links';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { pathsPublicLocationLanding } from '@/paths';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
+import { BrowseMidPageExplainer } from '@/components/public/browser-seo-heroes';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
-export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
+const VERTICAL_LABEL: Record<SeoLandingConfig['vertical'], string> = {
+  'real-estate': 'Prona',
+  cars: 'Makina',
+  jobs: 'Punë',
+  marketplace: 'Tregu',
+  businesses: 'Biznese',
+  professionals: 'Profesionistë',
+};
+
+export function seoLandingJsonLd(config: SeoLandingConfig, total: number, description: string) {
   const homeUrl = '/';
   const canonicalUrl = new URL(config.path.replace(/^\//, ''), siteConfig.site.url).toString();
   const verticalPath = `/${config.path.split('/').filter(Boolean).slice(0, 1).join('/')}`;
@@ -26,7 +39,7 @@ export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
     {
       '@type': 'ListItem',
       position: 2,
-      name: config.vertical,
+      name: VERTICAL_LABEL[config.vertical],
       item: new URL(verticalPath.replace(/^\//, ''), siteConfig.site.url).toString(),
     },
     { '@type': 'ListItem', position: 3, name: config.heading, item: canonicalUrl },
@@ -35,7 +48,7 @@ export function seoLandingJsonLd(config: SeoLandingConfig, total: number) {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: config.heading,
-    description: config.description,
+    description,
     url: canonicalUrl,
     numberOfItems: total,
     breadcrumb: { '@type': 'BreadcrumbList', itemListElement: crumbs },
@@ -48,7 +61,17 @@ function contextualLinks(config: SeoLandingConfig, index: PublicSeoIndex | null)
   return index.landings
     .filter((landing) => landing.path.startsWith(`${verticalPrefix}/`) && landing.path !== config.path)
     .sort((a, b) => b.count - a.count)
-    .slice(0, 6);
+    .slice(0, 8);
+}
+
+function hubCityLinks(config: SeoLandingConfig) {
+  const base = `/${config.path.split('/').filter(Boolean)[0]}`;
+  return SEO_HUB_CITIES.filter((city) => !config.city || city.slug !== config.city.slug)
+    .slice(0, 5)
+    .map((city) => ({
+      href: pathsPublicLocationLanding(base, city.slug),
+      label: `${VERTICAL_LABEL[config.vertical]} në ${city.name}`,
+    }));
 }
 
 function listingData(result: SeoLandingListings) {
@@ -63,8 +86,6 @@ function listingData(result: SeoLandingListings) {
 
 /**
  * @param prefetchedPage1 Optional listings already loaded by `loadSeoLandingRoute` (always page 1).
- *   Reused when rendering page 1 so SEO landings do not hit browse/list+count twice.
- *   Page 2+ still fetches fresh; metadata/total from page 1 remains unchanged.
  */
 export async function renderSeoLandingPage(
   config: SeoLandingConfig,
@@ -83,8 +104,13 @@ export async function renderSeoLandingPage(
     notFound();
   }
 
+  const enriched = enrichSeoLandingCopy(config, data.total);
   const links = contextualLinks(config, index);
-  const jsonLd = JSON.stringify(seoLandingJsonLd(config, data.total)).replace(/</g, '\\u003c');
+  const hubs = hubCityLinks(config);
+  const jsonLd = JSON.stringify(seoLandingJsonLd(config, data.total, enriched.description)).replace(
+    /</g,
+    '\\u003c',
+  );
 
   return (
     <>
@@ -99,11 +125,17 @@ export async function renderSeoLandingPage(
         hasFilters={hasActiveBrowseFilters(config.filters)}
         cities={cities}
         ssrOk={data.ok}
-        heading={config.heading}
-        intro={config.description}
+        heading={enriched.heading}
+        intro={enriched.description}
+        suppressMidExplainer
       >
+        <BrowseMidPageExplainer
+          heading={enriched.midHeading}
+          text={enriched.midText}
+          links={hubs}
+        />
         <BrowserSeoSection component="div">
-          <Container maxWidth="xl" sx={{ pb: 1 }}>
+          <Container maxWidth="xl" sx={{ pb: 1.5 }}>
             <Stack spacing={1}>
               <Breadcrumbs aria-label="Vendndodhja e faqes">
                 <MuiLink href="/" underline="hover" color="inherit">
@@ -114,15 +146,15 @@ export async function renderSeoLandingPage(
                   underline="hover"
                   color="inherit"
                 >
-                  {config.vertical}
+                  {VERTICAL_LABEL[config.vertical]}
                 </MuiLink>
                 <Typography color="text.primary">{config.heading}</Typography>
               </Breadcrumbs>
               {links.length ? (
-                <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                <Stack direction="row" spacing={1.25} useFlexGap sx={{ flexWrap: 'wrap' }}>
                   {links.map((link) => (
-                    <MuiLink key={link.path} href={link.path} underline="hover">
-                      {link.path.split('/').at(-1)?.replaceAll('-', ' ')}
+                    <MuiLink key={link.path} href={link.path} underline="hover" sx={{ fontWeight: 650, fontSize: '0.9rem' }}>
+                      {decodeURIComponent(link.path.split('/').at(-1) || '').replaceAll('-', ' ')}
                     </MuiLink>
                   ))}
                 </Stack>

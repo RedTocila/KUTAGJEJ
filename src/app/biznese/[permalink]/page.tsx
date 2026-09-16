@@ -98,8 +98,18 @@ export default async function BusinessListingPage({ params, searchParams }: Page
         <BusinessListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}
-          similarSlot={similarListingsSlot('businesses', listing.id, 'Biznese të ngjashme')}
-          similarSlotDesktop={similarListingsSlot('businesses', listing.id, 'Biznese të ngjashme')}
+          similarSlot={similarListingsSlot('businesses', listing.id, 'Biznese të ngjashme', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.category,
+          })}
+          similarSlotDesktop={similarListingsSlot('businesses', listing.id, 'Biznese të ngjashme', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.category,
+          })}
         />
       </PublicShell>
     </>

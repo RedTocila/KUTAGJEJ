@@ -22,8 +22,10 @@ import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
-import { BrowserSeoSection } from '@/components/public/browser-seo-section';
+import { BrowseBrowserHeroSeo } from '@/components/public/browser-seo-heroes';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { isNativeApp } from '@/lib/native-app';
+import { VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 import { CategoryBrowseControls } from './listing-filters/category-browse-controls';
@@ -73,12 +75,22 @@ export function PublicCategoryHero({
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
+  const [nativeApp, setNativeApp] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const barRef = React.useRef<HTMLDivElement>(null);
   const [barHeight, setBarHeight] = React.useState(0);
 
+  const seoTitle =
+    heading ||
+    (isHomeVerticalId(verticalId) ? VERTICAL_SEO_COPY[verticalId].headline : label);
+  const seoSubtext =
+    intro ||
+    (isHomeVerticalId(verticalId) ? VERTICAL_SEO_COPY[verticalId].subtext : '');
+  const showBrowserSeoHero = Boolean(seoSubtext) || isHomeVerticalId(verticalId) || Boolean(heading);
+
   React.useEffect(() => {
     setMounted(true);
+    setNativeApp(isNativeApp());
   }, []);
 
   React.useEffect(() => {
@@ -117,7 +129,7 @@ export function PublicCategoryHero({
               xs: 'max(10px, env(safe-area-inset-top, 0px))',
               md: 5,
             },
-            pb: isOkazion || isProfiles ? { xs: 0.75, md: 2 } : { xs: 1.5, md: 5 },
+            pb: isOkazion || isProfiles ? { xs: 0.75, md: 2 } : { xs: 1.5, md: 3 },
             bgcolor: {
               xs: showFrost ? frosted : 'background.default',
               md: 'transparent',
@@ -144,20 +156,20 @@ export function PublicCategoryHero({
             <ProductBackButton
               href={paths.home}
               aria-label={t.browse.backHomeAria}
-              sx={{ display: { xs: 'inline-flex', md: 'none' } }}
             />
             <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0, lineHeight: 0 }}>
               <HomeVerticalIcon verticalId={verticalId} size={34} />
             </Box>
             <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
               <Typography
-                component="h1"
+                component={nativeApp || !showBrowserSeoHero ? 'h1' : 'p'}
                 sx={{
                   fontWeight: 700,
                   fontSize: { xs: '1.4rem', md: '1.75rem' },
                   lineHeight: 1.2,
                   letterSpacing: '-0.015em',
                   minWidth: 0,
+                  m: 0,
                 }}
               >
                 {heading || label}
@@ -173,13 +185,6 @@ export function PublicCategoryHero({
                       ? t.browse.noProfilesYet
                       : t.browse.noListingsYet}
               </Typography>
-              {intro ? (
-                <BrowserSeoSection component="div">
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 760, mt: 0.5 }}>
-                    {intro}
-                  </Typography>
-                </BrowserSeoSection>
-              ) : null}
             </Stack>
             {isProfiles ? null : (
               <IconButton
@@ -247,6 +252,11 @@ export function PublicCategoryHero({
           visibility: 'hidden',
         }}
       />
+      {showBrowserSeoHero ? (
+        <Box sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}>
+          <BrowseBrowserHeroSeo title={seoTitle} subtext={seoSubtext} titleId={`browse-seo-${verticalId}`} />
+        </Box>
+      ) : null}
     </>
   );
 }

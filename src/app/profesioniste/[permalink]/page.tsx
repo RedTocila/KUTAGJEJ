@@ -97,8 +97,18 @@ export default async function ProfessionalListingPage({ params, searchParams }: 
         <ProfessionalListingDetailView
           listing={listing}
           canonicalUrl={canonicalUrl}
-          similarSlot={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
-          similarSlotDesktop={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm')}
+          similarSlot={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.category,
+          })}
+          similarSlotDesktop={similarListingsSlot('professionals', listing.id, 'Profesionistë të ngjashëm', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.category,
+          })}
         />
       </PublicShell>
     </>

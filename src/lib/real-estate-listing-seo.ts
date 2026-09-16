@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { formatPrice } from '@/components/public/listing-cards/format-helpers';
 import { config } from '@/config';
 import type { PublicRealEstateListingDetail } from '@/lib/public-listings-client';
+import { seoSlug } from '@/lib/public-seo';
 import { brandIconMetadata, listingSocialImages } from '@/lib/public-vertical-listing-metadata';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 
@@ -69,6 +70,7 @@ export function buildRealEstateListingMetadata(listing: PublicRealEstateListingD
 }
 
 export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, canonicalHref: string) {
+  const origin = config.site.url.replace(/\/$/, '');
   const loc = [listing.zoneName, listing.cityName, 'Shqipëri'].filter(Boolean).join(', ');
   const images =
     listing.imageUrls.length > 0
@@ -77,11 +79,7 @@ export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, 
         ? [listing.imageUrl]
         : [];
 
-  const phone =
-    listing.contactPhone?.trim() ||
-    listing.seller?.phone?.trim() ||
-    '';
-
+  const phone = listing.contactPhone?.trim() || listing.seller?.phone?.trim() || '';
   const offer: Record<string, unknown> = {
     '@type': 'Offer',
     price: listing.price,
@@ -106,8 +104,27 @@ export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, 
     url: canonicalHref,
     ...(images.length ? { image: images } : {}),
     additionalType: residenceAdditionalType(listing.propertyCategory),
+    category: listing.propertyCategory,
     offers: offer,
   };
+
+  if (listing.cityName || listing.zoneName || listing.locationAddress) {
+    property.address = {
+      '@type': 'PostalAddress',
+      addressCountry: 'AL',
+      ...(listing.cityName ? { addressLocality: listing.cityName } : {}),
+      ...(listing.zoneName ? { addressRegion: listing.zoneName } : {}),
+      ...(listing.locationAddress ? { streetAddress: listing.locationAddress } : {}),
+    };
+  }
+
+  if (listing.locationLat != null && listing.locationLng != null) {
+    property.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: listing.locationLat,
+      longitude: listing.locationLng,
+    };
+  }
 
   if (listing.surfaceM2) {
     property.floorSize = {
@@ -116,19 +133,31 @@ export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, 
       unitCode: 'MTK',
     };
   }
+  if (listing.bedrooms != null) property.numberOfRooms = listing.bedrooms;
+  if (listing.yearBuilt != null) property.yearBuilt = listing.yearBuilt;
 
-  const breadcrumb = {
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Kreu', item: `${config.site.url.replace(/\/$/, '')}/` },
-      { '@type': 'ListItem', position: 2, name: 'Prona', item: `${config.site.url.replace(/\/$/, '')}/prona` },
-      { '@type': 'ListItem', position: 3, name: listing.title },
-    ],
-  };
+  const crumbs: Array<Record<string, unknown>> = [
+    { '@type': 'ListItem', position: 1, name: 'Kreu', item: `${origin}/` },
+    { '@type': 'ListItem', position: 2, name: 'Prona', item: `${origin}/prona` },
+  ];
+  if (listing.cityName) {
+    crumbs.push({
+      '@type': 'ListItem',
+      position: 3,
+      name: listing.cityName,
+      item: `${origin}/prona/${encodeURIComponent(seoSlug(listing.cityName))}`,
+    });
+  }
+  crumbs.push({
+    '@type': 'ListItem',
+    position: crumbs.length + 1,
+    name: listing.title,
+    item: canonicalHref,
+  });
 
   return {
     '@context': 'https://schema.org',
-    '@graph': [breadcrumb, property],
+    '@graph': [{ '@type': 'BreadcrumbList', itemListElement: crumbs }, property],
   };
 }
 

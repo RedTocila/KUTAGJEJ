@@ -100,7 +100,12 @@ export default async function MarketplaceListingPage({ params, searchParams }: P
           canonicalUrl={canonicalUrl}
           browseHref={paths.public.marketplace}
           similarSectionTitle="Artikuj të ngjashëm në treg"
-          similarSlot={similarListingsSlot('marketplace', listing.id, 'Artikuj të ngjashëm në treg')}
+          similarSlot={similarListingsSlot('marketplace', listing.id, 'Artikuj të ngjashëm në treg', {
+            listingTitle: listing.title,
+            locationLine: listing.cityName,
+            cityName: listing.cityName,
+            categorySlug: listing.category,
+          })}
         />
       </PublicShell>
     </>

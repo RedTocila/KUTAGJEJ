@@ -2,6 +2,7 @@ import type * as React from 'react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { ChatsCircle as ChatsCircleIcon } from '@phosphor-icons/react/dist/ssr/ChatsCircle';
+import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { ListBullets as ListBulletsIcon } from '@phosphor-icons/react/dist/ssr/ListBullets';
 import { Receipt as ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
@@ -26,6 +27,7 @@ export const userPortalNavIcons = {
   'list-bullets': ListBulletsIcon,
   bookmark: BookmarkSimpleIcon,
   'chats-circle': ChatsCircleIcon,
+  'gear-six': GearSixIcon,
   handshake: HandshakeIcon,
   coins: BoostCoinIcon,
   receipt: ReceiptIcon,

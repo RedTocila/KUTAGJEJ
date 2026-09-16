@@ -40,6 +40,13 @@ export const USER_PORTAL_NAV_ITEMS = [
     matcher: { type: 'equals', href: paths.user.messages } as const,
   },
   {
+    key: 'notification-settings',
+    title: 'Cilësimet e njoftimeve',
+    href: paths.user.notificationSettings,
+    icon: 'gear-six',
+    matcher: { type: 'startsWith', href: paths.user.notificationSettings } as const,
+  },
+  {
     key: 'referral',
     title: 'Referimi',
     href: paths.user.referral,
@@ -89,6 +96,7 @@ export function getUserPortalNavItemsForUser(user: User | null | undefined): Nav
       item.key === 'my-listings' ||
       item.key === 'saved-listings' ||
       item.key === 'messages' ||
+      item.key === 'notification-settings' ||
       item.key === 'referral' ||
       item.key === 'credits' ||
       item.key === 'payments' ||
@@ -111,6 +119,8 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
       return t.nav.saved;
     case 'messages':
       return t.nav.messages;
+    case 'notification-settings':
+      return t.notifications.prefsTitle;
     case 'referral':
       return t.nav.referral;
     case 'credits':

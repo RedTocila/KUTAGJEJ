@@ -229,3 +229,68 @@ export function faqJsonLd(faqs: readonly SeoFaqItem[], pageUrl: string) {
     url: pageUrl,
   };
 }
+
+/** Short “about this listing / how to use” copy for detail pages (browser SEO). */
+export const LISTING_DETAIL_SEO: Record<
+  HomeVerticalId,
+  { sectionTitle: string; howTo: string; browseCta: string }
+> = {
+  'real-estate': {
+    sectionTitle: 'Rreth këtij njoftimi të pronës',
+    howTo:
+      'Lexo përshkrimin, shiko fotot dhe specifika (sipërfaqe, tip, çmim). Kontakto publikuesin me telefon, WhatsApp ose mesazh për vizitë ose pyetje. Krahaso me prona të ngjashme më poshtë ose kthehu te lista e pronave.',
+    browseCta: 'Shfleto më shumë prona',
+  },
+  cars: {
+    sectionTitle: 'Rreth këtij njoftimi automjeti',
+    howTo:
+      'Kontrollo vitin, kilometrazhin, karburantin dhe fotot. Kontakto shitësin për provë ose negociim. Shiko edhe automjete të ngjashme ose kthehu te lista e makinave në KuTaGjej.',
+    browseCta: 'Shfleto më shumë makina',
+  },
+  jobs: {
+    sectionTitle: 'Rreth kësaj oferte pune',
+    howTo:
+      'Lexo kërkesat, tipin e kontrates dhe vendndodhjen. Apliko ose kontakto punëdhënësin sipas udhëzimeve në njoftim. Gjej oferta të ngjashme më poshtë ose shfleto të gjitha vendet e lira.',
+    browseCta: 'Shfleto më shumë punë',
+  },
+  marketplace: {
+    sectionTitle: 'Rreth këtij artikulli në treg',
+    howTo:
+      'Shiko gjendjen, çmimin dhe fotot. Kontakto shitësin për disponueshmëri dhe dorëzim. Krahaso me artikuj të ngjashëm ose hap tregun për më shumë oferta.',
+    browseCta: 'Shfleto më shumë në treg',
+  },
+  businesses: {
+    sectionTitle: 'Rreth këtij biznesi',
+    howTo:
+      'Shiko kategorinë, vendndodhjen dhe kontaktin. Telefono, shkruaj ose vizito sipas orarit të publikuar. Zbulo biznese të ngjashme ose shfleto të gjitha bizneset në KuTaGjej.',
+    browseCta: 'Shfleto më shumë biznese',
+  },
+  professionals: {
+    sectionTitle: 'Rreth këtij profesionisti',
+    howTo:
+      'Lexo përshkrimin e shërbimit dhe zonën. Kontakto për ofertë ose takim. Shiko profesionistë të ngjashëm ose hap listën e plotë të shërbimeve.',
+    browseCta: 'Shfleto më shumë profesionistë',
+  },
+};
+
+export function listingDetailSeoParagraphs(opts: {
+  vertical: HomeVerticalId;
+  listingTitle: string;
+  locationLine?: string | null;
+}): string[] {
+  const loc = String(opts.locationLine || '').trim();
+  const title = opts.listingTitle.trim() || 'Ky njoftim';
+  const where = loc ? ` në ${loc}` : ' në Shqipëri';
+  const verticalLabel: Record<HomeVerticalId, string> = {
+    'real-estate': 'pronë',
+    cars: 'automjet',
+    jobs: 'ofertë pune',
+    marketplace: 'artikull',
+    businesses: 'biznes',
+    professionals: 'shërbim profesional',
+  };
+  return [
+    `${title} është një ${verticalLabel[opts.vertical]} i publikuar në KuTaGjej${where}. Platforma të lejon të shohësh detajet dhe të kontaktosh publikuesin drejtpërdrejt.`,
+    LISTING_DETAIL_SEO[opts.vertical].howTo,
+  ];
+}

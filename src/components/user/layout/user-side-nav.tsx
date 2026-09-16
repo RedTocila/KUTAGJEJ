@@ -2,8 +2,11 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Badge, alpha, Box, Divider, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { Badge, alpha, Box, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
+import { Moon as MoonIcon } from '@phosphor-icons/react/dist/ssr/Moon';
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
+import { Translate as TranslateIcon } from '@phosphor-icons/react/dist/ssr/Translate';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
@@ -11,7 +14,6 @@ import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ThemeModeToggle } from '@/components/dashboard/layout/theme-mode-toggle';
 import { HeaderLanguageToggle } from '@/components/user/header-language-toggle';
-import { UserNotificationsMenu } from '@/components/user/layout/user-notifications-menu';
 import { authClient } from '@/lib/auth/client';
 
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
@@ -20,13 +22,30 @@ import { useCopy } from '@/hooks/use-copy';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
+import { useUserNotificationsInbox } from '@/hooks/use-user-notifications-inbox';
 import { useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
+
+const navRowSx = {
+  alignItems: 'center',
+  borderRadius: 1,
+  color: 'var(--NavItem-color)',
+  display: 'flex',
+  flex: '0 0 auto',
+  gap: 1,
+  minHeight: 40,
+  px: '10px',
+  py: '4px',
+  position: 'relative',
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+} as const;
 
 export function UserSideNav() {
   const pathname = useDisplayPathname();
   const { user } = useUser();
   const t = useCopy();
   const unreadMessages = useUnreadMessagesCount();
+  const { canUse: canUseNotifications, unread: unreadNotifications } = useUserNotificationsInbox();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -69,7 +88,11 @@ export function UserSideNav() {
         '&::-webkit-scrollbar': { display: 'none' },
       }}
     >
-      <Stack spacing={1.5} sx={{ px: 3, pt: 0, pb: 2 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ px: 2, pt: 1.25, pb: 1.5, alignItems: 'center', justifyContent: 'space-between' }}
+      >
         <Box
           component={RouterLink}
           href={paths.home}
@@ -77,7 +100,8 @@ export function UserSideNav() {
             display: 'inline-flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
-            alignSelf: 'flex-start',
+            alignSelf: 'center',
+            minWidth: 0,
             textDecoration: 'none',
             color: 'inherit',
             borderRadius: 2,
@@ -102,32 +126,73 @@ export function UserSideNav() {
             wordmarkSx={{ fontSize: '1.125rem' }}
           />
         </Box>
+
+        <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0, alignItems: 'center' }}>
+          {canUseNotifications ? (
+            <Tooltip title={t.notifications.title}>
+              <IconButton
+                component={RouterLink}
+                href={paths.user.notifications}
+                aria-label={t.notifications.title}
+                size="large"
+                sx={{ color: 'text.secondary' }}
+              >
+                <Badge
+                  badgeContent={unreadNotifications > 0 ? unreadNotifications : 0}
+                  color="error"
+                  invisible={unreadNotifications <= 0}
+                >
+                  <BellIcon size={22} />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          <Tooltip title={t.nav.signOut}>
+            <IconButton
+              size="large"
+              aria-label={t.nav.signOut}
+              onClick={() => {
+                void authClient.signOut();
+              }}
+              sx={{ color: 'text.secondary' }}
+            >
+              <SignOutIcon size={22} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
-      <Divider />
-      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto' }}>
+      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto', minHeight: 0 }}>
         <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {navItems.map((item) => (
             <UserNavRow key={item.key} item={item} pathname={pathname} unreadMessages={unreadMessages} />
           ))}
         </Stack>
-      </Box>
-      <Divider />
-      <Box sx={{ px: 1.5, py: 1.25, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 }}>
-        <UserNotificationsMenu />
-        <ThemeModeToggle />
-        <HeaderLanguageToggle />
-        <Tooltip title={t.nav.signOut}>
-          <IconButton
-            size="large"
-            aria-label={t.nav.signOut}
-            onClick={() => {
-              void authClient.signOut();
-            }}
-            sx={{ color: 'text.secondary' }}
-          >
-            <SignOutIcon size={22} />
-          </IconButton>
-        </Tooltip>
+
+        <Stack spacing={0.75} sx={{ mt: 1 }}>
+          <Box sx={{ ...navRowSx, justifyContent: 'space-between', p: '6px 16px' }}>
+            <Box sx={{ alignItems: 'center', display: 'flex', gap: 1, minWidth: 0 }}>
+              <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
+                <MoonIcon size={20} color="var(--NavItem-icon-color)" />
+              </Box>
+              <Typography component="span" sx={{ fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}>
+                {t.theme.title}
+              </Typography>
+            </Box>
+            <ThemeModeToggle />
+          </Box>
+
+          <Box sx={{ ...navRowSx, justifyContent: 'space-between', p: '6px 16px' }}>
+            <Box sx={{ alignItems: 'center', display: 'flex', gap: 1, minWidth: 0 }}>
+              <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
+                <TranslateIcon size={20} color="var(--NavItem-icon-color)" />
+              </Box>
+              <Typography component="span" sx={{ fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}>
+                {t.language.title}
+              </Typography>
+            </Box>
+            <HeaderLanguageToggle />
+          </Box>
+        </Stack>
       </Box>
     </Box>
   );
@@ -166,17 +231,9 @@ function UserNavRow({
             : undefined
         }
         sx={{
-          alignItems: 'center',
-          borderRadius: 1,
-          color: 'var(--NavItem-color)',
-          cursor: 'pointer',
-          display: 'flex',
-          flex: '0 0 auto',
-          gap: 1,
+          ...navRowSx,
           p: '6px 16px',
-          position: 'relative',
-          textDecoration: 'none',
-          whiteSpace: 'nowrap',
+          cursor: 'pointer',
           transition:
             'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
           ...(active && {

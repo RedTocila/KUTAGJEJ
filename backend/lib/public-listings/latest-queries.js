@@ -24,6 +24,7 @@ const {
   isRatingSortSpec,
   rankListingIdsByReviews,
   prioritizeActivePremium,
+  isJobListingActive,
   withoutPremiumSort,
   withoutBumpedAtSort,
   withoutBumpedAtFilter,
@@ -250,9 +251,14 @@ async function runListingQuery(table, filterSpec, sortSpec, limit, skip = 0) {
   const rows = camelizeRows(data);
   // Only re-pin featured ads when the sort intentionally boosts them (browse/home).
   // Keyword search uses chronological/price sort — keep that order.
-  return sortLooksPremium(effectiveSort)
+  let ordered = sortLooksPremium(effectiveSort)
     ? prioritizeActivePremium(rows, { sortRestByBump: sortIsNewestFeed(effectiveSort) })
     : rows;
+  // Hard drop jobs whose 15-day visibility window has ended (guards cache / clock skew).
+  if (table === 'job_listings') {
+    ordered = ordered.filter(isJobListingActive);
+  }
+  return ordered;
 }
 
 async function countListingQuery(table, filterSpec) {

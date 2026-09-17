@@ -131,7 +131,7 @@ export function ListingsSection({
                 component="h2"
                 sx={{
                   fontWeight: 800,
-                  fontSize: { xs: '1.1rem', md: '1.25rem' },
+                  fontSize: { xs: '1.35rem', md: '1.5rem' },
                   lineHeight: 1.3,
                   letterSpacing: '-0.01em',
                   ...(meta.titleColor ? { color: meta.titleColor } : null),

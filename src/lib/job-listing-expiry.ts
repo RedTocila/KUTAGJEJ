@@ -43,13 +43,13 @@ export function isJobListingVisible(
   },
   now: Date = new Date()
 ): boolean {
-  const baseExpiresAt = getJobListingExpiresAt(createdAt, fields.bumpedAt);
-  const reportedExpiresAt = fields.expiresAt ? new Date(fields.expiresAt) : null;
   const nowMs = now.getTime();
-  const timestamps = [baseExpiresAt, reportedExpiresAt].map((value) =>
-    value instanceof Date ? value.getTime() : value ? new Date(value).getTime() : Number.NaN
-  );
-  return timestamps.some((expiresMs) => Number.isFinite(expiresMs) && expiresMs > nowMs);
+  // Prefer the API `expiresAt` shown on the countdown so UI and feed stay in sync.
+  if (fields.expiresAt) {
+    const reportedMs = new Date(fields.expiresAt).getTime();
+    if (Number.isFinite(reportedMs)) return reportedMs > nowMs;
+  }
+  return nowMs < getJobListingExpiresAt(createdAt, fields.bumpedAt).getTime();
 }
 
 /** Time remaining until the listing is hidden (`Dd Hh Mm Ss`). */

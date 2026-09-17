@@ -19,12 +19,21 @@ const DEDUP_MS = {
   view: 30 * 60 * 1000,
 };
 
-function metricsKey(kind, listingId) {
-  return `${kind}:${String(listingId)}`;
+/** Public vanity: shown views = real + offset once there is at least 1 real view (0 stays 0). */
+const VIEW_DISPLAY_OFFSET = 3;
+
+function toDisplayedViewCount(real) {
+  const n = typeof real === 'number' && Number.isFinite(real) ? Math.max(0, Math.trunc(real)) : 0;
+  if (n === 0) return 0;
+  return n + VIEW_DISPLAY_OFFSET;
 }
 
 function emptyMetrics() {
   return { viewCount: 0, shareCount: 0, saveCount: 0 };
+}
+
+function metricsKey(kind, listingId) {
+  return `${kind}:${String(listingId)}`;
 }
 
 function isValidKind(kind) {
@@ -320,7 +329,7 @@ async function fetchPeriodMetricsMap(refs, period) {
       }
     }
 
-    out.set(key, { viewCount, shareCount, saveCount });
+    out.set(key, { viewCount: toDisplayedViewCount(viewCount), shareCount, saveCount });
   }
   return out;
 }
@@ -452,7 +461,7 @@ async function fetchMetricsMap(refs, saver = null) {
     const key = metricsKey(r.kind, r.listingId);
     const base = engagementByKey.get(key) ?? { viewCount: 0, shareCount: 0 };
     const payload = {
-      viewCount: base.viewCount,
+      viewCount: toDisplayedViewCount(base.viewCount),
       shareCount: base.shareCount,
       saveCount: savesByKey.get(key) ?? 0,
     };
@@ -557,7 +566,7 @@ async function recordListingEvent(req, { kind, listingId, event, includeMetrics 
   return {
     ok: true,
     metrics: {
-      viewCount: engagement.viewCount ?? 0,
+      viewCount: toDisplayedViewCount(engagement.viewCount ?? 0),
       shareCount: engagement.shareCount ?? 0,
       saveCount: reportedSaveCount(counted, saved),
       saved,
@@ -608,7 +617,7 @@ async function toggleSavedListing(req, { kind, listingId }) {
     ok: true,
     saved,
     metrics: {
-      viewCount: engagement.viewCount ?? 0,
+      viewCount: toDisplayedViewCount(engagement.viewCount ?? 0),
       shareCount: engagement.shareCount ?? 0,
       saveCount,
       saved,
@@ -626,8 +635,10 @@ async function enrichListingsSaverState(listings, saver) {
 module.exports = {
   LISTING_KINDS,
   TABLE_BY_KIND,
+  VIEW_DISPLAY_OFFSET,
   isValidKind,
   emptyMetrics,
+  toDisplayedViewCount,
   metricsKey,
   visitorKeyFromRequest,
   saverFromUser,

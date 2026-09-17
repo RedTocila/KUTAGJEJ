@@ -14,8 +14,9 @@ import { CaretDown as CaretDownIcon } from '@phosphor-icons/react/dist/ssr/Caret
 
 import type { SeoFaqItem } from '@/lib/public-seo-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { BannerSurface } from '@/components/public/banner-surface';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
-import { SeoEyebrow, SeoHeadingPanel } from '@/components/public/seo-heading-panel';
+import { SeoEyebrow } from '@/components/public/seo-heading-panel';
 
 export function PublicFaqList({ items, headingId }: { items: readonly SeoFaqItem[]; headingId: string }) {
   return (
@@ -90,35 +91,50 @@ export function PublicSeoContentBlock({
 }) {
   return (
     <BrowserSeoSection aria-labelledby={headingId} sx={{ py: { xs: 3.5, md: 5 } }}>
-      <Container maxWidth="md">
-        <Stack spacing={2.5}>
-          <SeoHeadingPanel
-            titleId={headingId}
-            title={headline}
-            subtext={subtext}
-            titleComponent="h2"
-            eyebrow={<SeoEyebrow>Udhëzues</SeoEyebrow>}
-            maxWidth="100%"
-          />
-          <Box
-            sx={{
-              px: { xs: 0.25, md: 0.5 },
-              display: 'grid',
-              gap: 1.5,
-            }}
-          >
-            {paragraphs.map((text) => (
-              <Typography
-                key={text.slice(0, 48)}
-                component="p"
-                sx={{ m: 0, color: 'text.secondary', lineHeight: 1.75, fontWeight: 500, fontSize: '0.98rem' }}
-              >
-                {text}
-              </Typography>
-            ))}
-          </Box>
-          <PublicFaqList items={faqs} headingId={faqHeadingId} />
-        </Stack>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
+        <BannerSurface>
+          <Stack spacing={2.5} sx={{ maxWidth: 720 }}>
+            <SeoEyebrow>Udhëzues</SeoEyebrow>
+            <Typography
+              id={headingId}
+              component="h2"
+              sx={{
+                m: 0,
+                fontWeight: 800,
+                fontSize: { xs: '1.45rem', sm: '1.75rem', md: '2.1rem' },
+                lineHeight: 1.15,
+                letterSpacing: '-0.02em',
+                color: 'text.primary',
+              }}
+            >
+              {headline}
+            </Typography>
+            <Typography
+              component="p"
+              sx={{
+                m: 0,
+                fontSize: { xs: '0.95rem', md: '1.05rem' },
+                lineHeight: 1.55,
+                fontWeight: 500,
+                color: 'text.secondary',
+              }}
+            >
+              {subtext}
+            </Typography>
+            <Stack spacing={1.5}>
+              {paragraphs.map((text) => (
+                <Typography
+                  key={text.slice(0, 48)}
+                  component="p"
+                  sx={{ m: 0, color: 'text.secondary', lineHeight: 1.7, fontWeight: 500, fontSize: '0.98rem' }}
+                >
+                  {text}
+                </Typography>
+              ))}
+            </Stack>
+            <PublicFaqList items={faqs} headingId={faqHeadingId} />
+          </Stack>
+        </BannerSurface>
       </Container>
     </BrowserSeoSection>
   );

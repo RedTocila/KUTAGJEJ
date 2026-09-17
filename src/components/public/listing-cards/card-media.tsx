@@ -22,6 +22,8 @@ import { ListingSharePage } from '@/components/public/listing-share/listing-shar
 import { ListingVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 
 import { OkazionCountdown } from './okazion-countdown';
+import { isUntilActive } from '@/lib/listing-promo-live';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 
 function CardMediaOverlayAction({
   'aria-label': ariaLabel,
@@ -144,6 +146,8 @@ export interface CardMediaProps {
   hideOkazionBadge?: boolean;
   /** When Okazion ends (ISO). Countdown falls back to 7 days if omitted. */
   okazionUntil?: string | null;
+  /** When Premium ends (ISO). Used so chrome demotes live without a refetch. */
+  premiumUntil?: string | null;
   /** Seller verification status. Rendered at bottom-right of the image. */
   sellerVerified?: boolean;
   /** Rich data for the share sheet / Instagram story template. */
@@ -178,6 +182,7 @@ export function CardMedia({
   okazion = false,
   hideOkazionBadge = false,
   okazionUntil = null,
+  premiumUntil = null,
   sellerVerified = false,
   sharePayload,
   priority = false,
@@ -194,6 +199,14 @@ export function CardMedia({
   const originalUrl = React.useMemo(() => storageImageOriginalUrl(imageUrl), [imageUrl]);
   const [displaySrc, setDisplaySrc] = React.useState<string | null>(thumbUrl);
   const [imageFailed, setImageFailed] = React.useState(false);
+  const nowMs = useSharedSecondTick();
+  const effectiveNow = nowMs > 0 ? nowMs : Date.now();
+  const liveOkazion =
+    okazionUntil != null && String(okazionUntil).length > 0 ? isUntilActive(okazionUntil, effectiveNow) : okazion;
+  const livePremium =
+    premiumUntil != null && String(premiumUntil).length > 0
+      ? isUntilActive(premiumUntil, effectiveNow)
+      : premium;
 
   const listingKeyRef = React.useRef(listingId);
 
@@ -273,10 +286,10 @@ export function CardMedia({
     [listingKind, listingId, router, saveCount, saved, savedCtx, user]
   );
 
-  const showOkazionBadge = okazion && !hideOkazionBadge;
+  const showOkazionBadge = liveOkazion && !hideOkazionBadge;
   const countdownCompact = okazionCountdownCompact ?? compact;
   // Job timer overlay can include the premium seal as its icon; skip the standalone crown then.
-  const showPremiumBadge = premium && !showOkazionBadge && !topLeftOverlay;
+  const showPremiumBadge = livePremium && !liveOkazion && !topLeftOverlay;
   // Keep the Okazion countdown in the media badge so it remains visible without
   // competing with the listing price.
   const showBottomRight = Boolean(bottomRightOverlay);

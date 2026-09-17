@@ -235,12 +235,18 @@ async function attachPublicMetrics(listings) {
       });
     }
   }
+  const { toDisplayedViewCount } = require('../lib/listing-metrics');
   return listings.map((l) => {
     const m = metricsByKey.get(`${l.kind}:${l.id}`) || {
       viewCount: 0,
       shareCount: 0,
     };
-    return { ...l, ...m, saveCount: 0 };
+    return {
+      ...l,
+      ...m,
+      viewCount: toDisplayedViewCount(m.viewCount),
+      saveCount: 0,
+    };
   });
 }
 

@@ -13,6 +13,7 @@ import type {
   TopViewedListing,
 } from '@/lib/public-listings-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useLiveFeedListings } from '@/hooks/use-live-feed-listings';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
 import { JobCard } from '@/components/public/listing-cards/job-card';
@@ -62,7 +63,10 @@ export function CategoryTopViewedSlider({
   const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const total = listings.length;
+  const liveListings = useLiveFeedListings(listings, {
+    dropExpiredJobs: verticalId === 'jobs',
+  });
+  const total = liveListings.length;
 
   if (total === 0) return null;
 
@@ -124,7 +128,7 @@ export function CategoryTopViewedSlider({
           onActiveIndexChange={setActiveIndex}
           autoplay
         >
-          {listings.map((listing) => (
+          {liveListings.map((listing) => (
             <TopViewedCard key={listing.id} verticalId={verticalId} listing={listing} />
           ))}
         </ListingsCarousel>

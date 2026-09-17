@@ -11,6 +11,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
+import { useLiveFeedListings } from '@/hooks/use-live-feed-listings';
 import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 function OkazionCard({ listing }: { listing: PublicOkazionListing }) {
@@ -98,23 +99,28 @@ export function HomepageOkazionSection({
     }
   });
 
-  if (!loading && listings.length === 0) return null;
+  const liveListings = useLiveFeedListings(listings, {
+    dropExpiredJobs: true,
+    dropExpiredOkazion: true,
+  });
+
+  if (!loading && liveListings.length === 0) return null;
 
   return (
     <ListingsSection
       verticalId="okazion"
       total={total}
-      isEmpty={!loading && listings.length === 0}
+      isEmpty={!loading && liveListings.length === 0}
       titleKey="okazionListings"
       useMuiVerticalIcon
       hideSubcategoryPills
       compactTop
     >
-      {loading && listings.length === 0 ? (
+      {loading && liveListings.length === 0 ? (
         <CarouselSkeleton />
       ) : (
         <ListingsCarousel>
-          {listings.map((listing) => (
+          {liveListings.map((listing) => (
             <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
           ))}
         </ListingsCarousel>

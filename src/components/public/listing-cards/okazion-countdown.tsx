@@ -146,6 +146,9 @@ export function OkazionCountdown({
   }
 
   const label = compact ? formatCompactCountdown(until, new Date(nowMs)) : formatCountdown(until, new Date(nowMs));
+  const parts = getJobCountdownParts(until, new Date(nowMs));
+  // Expired Okazion demotes to free/premium — do not leave a "Skaduar" badge on public cards.
+  if (parts.expired) return null;
 
   return <OkazionCountdownChip label={label} live compact={compact} />;
 }

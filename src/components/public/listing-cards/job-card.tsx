@@ -15,9 +15,11 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
+import { isPublicJobListed, livePromoFlags } from '@/lib/listing-promo-live';
 import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 
 import { CardMedia, LISTING_CARD_BROWSE_MEDIA_HEIGHT, LISTING_CARD_HOMEPAGE_ASPECT_RATIO } from './card-media';
 import { CardShell } from './card-shell';
@@ -52,6 +54,11 @@ export function JobCard({
   variant?: JobCardVariant;
   locationInPriceRow?: boolean;
 }) {
+  const nowMs = useSharedSecondTick();
+  const effectiveNow = nowMs > 0 ? nowMs : Date.now();
+  const { isPremium, isOkazion } = livePromoFlags(listing, effectiveNow);
+  const stillListed = isPublicJobListed(listing, effectiveNow);
+
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
@@ -62,9 +69,11 @@ export function JobCard({
   const CoverIcon = resolveJobCoverIcon(listing.title, listing.industry);
   const usesMockupCover = jobListingUsesMockupCover(listing);
   const displayImageUrl = jobListingCoverImageUrl(listing);
-  const expiresAt = listing.isOkazion
-    ? listing.okazionUntil || listing.expiresAt || getJobListingExpiresAt(listing.createdAt).toISOString()
-    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
+  const expiresAt = isOkazion
+    ? listing.okazionUntil ||
+      listing.expiresAt ||
+      getJobListingExpiresAt(listing.createdAt, listing.bumpedAt).toISOString()
+    : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt, listing.bumpedAt).toISOString());
 
   const homepageLike = variant === 'homepage' || variant === 'carousel';
   const squareLike = variant === 'compact';
@@ -126,6 +135,9 @@ export function JobCard({
     ]
   );
 
+  // Listing visibility timer finished — drop from public lists (do not show "Skaduar").
+  if (!stillListed) return null;
+
   return (
     <ListingCardLink
       listingKind="job"
@@ -133,7 +145,7 @@ export function JobCard({
       href={listingJobPublicHref(listing)}
       style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}
     >
-      <CardShell compact premium={Boolean(listing.isPremium)} okazion={Boolean(listing.isOkazion)}>
+      <CardShell compact premium={isPremium} okazion={isOkazion}>
         <CardMedia
           listingKind="job"
           listingId={listing.id}
@@ -159,17 +171,14 @@ export function JobCard({
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
-          premium={Boolean(listing.isPremium)}
-          okazion={Boolean(listing.isOkazion)}
+          premium={isPremium}
+          okazion={isOkazion}
           okazionUntil={listing.okazionUntil}
+          premiumUntil={listing.premiumUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           topLeftOverlay={
-            listing.isOkazion ? undefined : (
-              <JobListingCountdown
-                expiresAt={expiresAt}
-                variant="overlay"
-                premium={Boolean(listing.isPremium)}
-              />
+            isOkazion ? undefined : (
+              <JobListingCountdown expiresAt={expiresAt} variant="overlay" premium={isPremium} />
             )
           }
           priority={imagePriority}

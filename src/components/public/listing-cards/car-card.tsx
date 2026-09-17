@@ -11,8 +11,10 @@ import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/P
 
 import { listingCarPublicHref } from '@/paths';
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
+import { livePromoFlags } from '@/lib/listing-promo-live';
 import type { PublicCarListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
@@ -41,6 +43,8 @@ export function CarCard({
   variant?: CarCardVariant;
   hideOkazionBadge?: boolean;
 }) {
+  const nowMs = useSharedSecondTick();
+  const { isPremium, isOkazion } = livePromoFlags(listing, nowMs > 0 ? nowMs : Date.now());
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);
@@ -69,8 +73,8 @@ export function CarCard({
     >
       <CardShell
         compact={isDense}
-        premium={Boolean(listing.isPremium)}
-        okazion={Boolean(listing.isOkazion)}
+        premium={isPremium}
+        okazion={isOkazion}
       >
         <CardMedia
           listingKind="car"
@@ -93,10 +97,11 @@ export function CarCard({
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
-          premium={Boolean(listing.isPremium)}
-          okazion={Boolean(listing.isOkazion)}
+          premium={isPremium}
+          okazion={isOkazion}
           hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
+          premiumUntil={listing.premiumUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
           sharePayload={{

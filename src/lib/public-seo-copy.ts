@@ -17,29 +17,54 @@ export const HOME_SEO_COPY = {
   subtext:
     'KuTaGjej është marketplace-i lokal ku poston dhe gjen shpejt: apartamente me qira ose shitje, makina, vende pune, biznese, profesionistë dhe artikuj të rinj e të dorës së dytë.',
   paragraphs: [
-    'Çdo ditë mijëra përdorues kërkojnë dhe publikojnë njoftime në Tiranë, Durrës, Vlorë, Shkodër, Elbasan dhe në gjithë Shqipërinë. Postimi është falas: shto foto, çmim, vendndodhje dhe detajet kryesore — njoftimi shfaqet menjëherë në kategorinë përkatëse.',
-    'Krahaso oferta, filtro sipas qytetit dhe kategorisë, dhe kontakto drejtpërdrejt shitësin, qiradhënësin ose punëdhënësin. Nëse shet, jep me qira ose punëson, KuTaGjej të ndihmon të arrijë audiencën e duhur pa kompleksitet.',
+    'Çdo ditë mijëra përdorues kërkojnë dhe publikojnë njoftime në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë, Berat, Sarandë, Kamëz, Kavajë, Lezhë, Pogradec, Lushnjë, Gjirokastër dhe në gjithë Shqipërinë. Postimi është falas: shto foto, çmim, vendndodhje dhe detajet kryesore — njoftimi shfaqet menjëherë në kategorinë përkatëse.',
+    'Krahaso oferta, filtro sipas qytetit, zonës dhe kategorisë — p.sh. Blloku, Astir, Kombinat, Lapraka, Kashar ose Komuna e Parisit në Tiranë; Plazhi dhe Currila në Durrës; Lungomare në Vlorë — pastaj kontakto drejtpërdrejt shitësin, qiradhënësin ose punëdhënësin. Nëse shet, jep me qira ose punëson, KuTaGjej të ndihmon të arrijë audiencën e duhur pa kompleksitet.',
   ],
   faqs: [
     {
       question: 'A është falas postimi i njoftimeve në KuTaGjej?',
       answer:
-        'Po. Mund të krijosh llogari dhe të postosh njoftime falas për prona, makina, punë, treg, biznese dhe profesionistë. Paketat premium janë opsionale për më shumë dukshmëri.',
+        'Po. Mund të krijosh llogari dhe të postosh njoftime falas për prona, makina, punë, treg, biznese dhe profesionistë në çdo qytet të Shqipërisë. Paketat premium janë opsionale për më shumë dukshmëri.',
     },
     {
       question: 'Në cilat qytete funksionon KuTaGjej?',
       answer:
-        'KuTaGjej mbulon gjithë Shqipërinë. Njoftimet më të shpeshta janë në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë dhe qytete të tjera.',
+        'KuTaGjej mbulon gjithë Shqipërinë. Njoftimet më të shpeshta janë në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë, Berat, Sarandë, Kamëz, Kavajë, Lezhë, Pogradec, Lushnjë, Gjirokastër, Himarë, Krujë dhe bashki të tjera.',
+    },
+    {
+      question: 'A mund të filtroj sipas zonës ose lagjes?',
+      answer:
+        'Po. Përveç qytetit, shumë njoftime kanë zonë ose lagje. Në Tiranë gjen p.sh. Blloku, Komuna e Parisit, Astir, Kombinat, Lapraka, Kinostudio, Don Bosko, Ali Demi, Yzberisht dhe Kashar; në Durrës Plazhi, Currila dhe Shkozet; në Vlorë Lungomare, Uji i Ftohtë dhe Skelë.',
     },
     {
       question: 'Si gjej apartament me qira ose makinë për shitje?',
       answer:
-        'Hap kategorinë Prona ose Makina, filtro sipas qytetit, çmimit dhe tipit, pastaj hap njoftimin dhe kontakto publikuesin me telefon, WhatsApp ose mesazh.',
+        'Hap kategorinë Prona ose Makina, filtro sipas qytetit (Tiranë, Durrës, Vlorë, etj.), zonës, çmimit dhe tipit, pastaj hap njoftimin dhe kontakto publikuesin me telefon, WhatsApp ose mesazh.',
+    },
+    {
+      question: 'Ku gjej prona me qira në Tiranë ose plazh në Durrës dhe Vlorë?',
+      answer:
+        'Në Prona filtro “Tiranë” dhe zonën (Blloku, Astir, Kashar, Lapraka…). Për plazh hap Durrës (Plazhi, Currila) ose Vlorë (Lungomare, Uji i Ftohtë). Ka edhe njoftime në Sarandë, Himarë dhe Pogradec.',
     },
     {
       question: 'A mund të postoj oferta pune ose shërbime profesionale?',
       answer:
-        'Po. Seksioni Punë është për vende të lira; Profesionistë dhe Biznese janë për shërbime, freelance dhe aktivitete lokale.',
+        'Po. Seksioni Punë është për vende të lira në Tiranë, Durrës, Fier, Elbasan dhe më gjerë; Profesionistë dhe Biznese janë për shërbime, freelance dhe aktivitete lokale në qytetin ose zonën tënde.',
+    },
+    {
+      question: 'Si funksionon Tregu dhe Okazion?',
+      answer:
+        'Tregu është për elektronikë, mobilje, veshje dhe artikuj të dorës së dytë pranë teje — filtro sipas qytetit. Okazion thekson oferta me kohë të kufizuar që shfaqen me prioritet në krye të listës.',
+    },
+    {
+      question: 'A ka njoftime edhe jashtë qyteteve të mëdha?',
+      answer:
+        'Po. Përveç qendrave urbane, gjen njoftime në Kamëz (përfshirë Bathore), Kavajë, Shijak, Lushnjë, Kuçovë, Librazhd, Gramsh, Peqin dhe bashki të tjera — zgjidh qytetin nga filtrat.',
+    },
+    {
+      question: 'Si kontaktohet shitësi ose qiradhënësi?',
+      answer:
+        'Hap njoftimin dhe përdor telefonin, WhatsApp ose mesazhin në platformë. Detajet e vendndodhjes (qytet, zonë, adresë kur është publikuar) ndihmojnë të organizosh vizitë ose dorëzim.',
     },
     {
       question: 'Si fshihet llogaria ime?',
@@ -48,6 +73,30 @@ export const HOME_SEO_COPY = {
     },
   ] satisfies SeoFaqItem[],
 } as const;
+
+/** Short interludes inserted between homepage carousel pairs (SEO + readability). */
+export const HOME_FEED_SEO_INTERLUDES = [
+  {
+    id: 'home-seo-okazion-recommended',
+    title: 'Okazion dhe njoftime të rekomanduara',
+    text: 'Në krye gjen ofertat Okazion me kohë të kufizuar dhe njoftimet e rekomanduara për ty — në Tiranë, Durrës, Vlorë, Shkodër, Elbasan dhe më gjerë. Hap kategorinë, filtro sipas qytetit, zonës dhe çmimit, pastaj kontakto publikuesin drejtpërdrejt — postimi mbetet falas për shitës dhe qiradhënës.',
+  },
+  {
+    id: 'home-seo-prona-makina',
+    title: 'Prona dhe makina në një vend',
+    text: 'Shfleto apartamente me qira ose shitje në Tiranë (Blloku, Astir, Kombinat, Kashar…), Durrës, Vlorë, Korçë ose Sarandë, pastaj kalon te makina, motora dhe mjete pune. Krahaso foto, çmim dhe detaje teknike; kur gjen atë që të duhet, telefononi, shkruani në WhatsApp ose dërgoni mesazh nga platforma.',
+  },
+  {
+    id: 'home-seo-pune-tregu',
+    title: 'Punë dhe tregu lokal',
+    text: 'Seksioni Punë mbledh vende të lira full-time, part-time dhe remote në Tiranë, Durrës, Fier, Kamëz dhe qytete të tjera; Tregu është për elektronikë, mobilje, veshje dhe artikuj të dorës së dytë pranë teje. Posto ose kërko falas — KuTaGjej lidh blerës, shitës dhe punëdhënës në gjithë Shqipërinë.',
+  },
+  {
+    id: 'home-seo-biznese-profesioniste',
+    title: 'Biznese dhe profesionistë pranë teje',
+    text: 'Gjej restorante, dyqane, sallone dhe shërbime lokale në Tiranë, Durrës, Vlorë, Shkodër, Berat ose Gjirokastër, ose profesionistë për riparime, design dhe freelance në zonën tënde. Listo biznesin ose profilin tënd për dukshmëri lokale — me kontakt, foto dhe kategori të qarta për klientët që kërkojnë sot.',
+  },
+] as const;
 
 export const VERTICAL_SEO_COPY: Record<HomeVerticalId, VerticalSeoCopy> = {
   'real-estate': {

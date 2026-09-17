@@ -9,8 +9,10 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { listingMarketplacePublicHref } from '@/paths';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
+import { livePromoFlags } from '@/lib/listing-promo-live';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
+import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
 
 import { CardDescription } from './card-description';
 import { CardLocationBadge } from './card-location-badge';
@@ -44,6 +46,8 @@ export function MarketplaceCard({
   variant?: MarketplaceCardVariant;
   hideOkazionBadge?: boolean;
 }) {
+  const nowMs = useSharedSecondTick();
+  const { isPremium, isOkazion } = livePromoFlags(listing, nowMs > 0 ? nowMs : Date.now());
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;
@@ -65,8 +69,8 @@ export function MarketplaceCard({
     >
       <CardShell
         compact={isDense}
-        premium={Boolean(listing.isPremium)}
-        okazion={Boolean(listing.isOkazion)}
+        premium={isPremium}
+        okazion={isOkazion}
       >
         <CardMedia
           listingKind="marketplace"
@@ -89,10 +93,11 @@ export function MarketplaceCard({
           shareCount={listing.shareCount}
           saveCount={listing.saveCount}
           saved={listing.saved}
-          premium={Boolean(listing.isPremium)}
-          okazion={Boolean(listing.isOkazion)}
+          premium={isPremium}
+          okazion={isOkazion}
           hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
+          premiumUntil={listing.premiumUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           priority={imagePriority}
           sharePayload={{

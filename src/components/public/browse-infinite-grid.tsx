@@ -28,6 +28,7 @@ import { DirectoryListingCard } from '@/components/public/listing-cards/director
 import { JobCard } from '@/components/public/listing-cards/job-card';
 import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-card';
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
+import { useLiveFeedListings } from '@/hooks/use-live-feed-listings';
 
 export type BrowseInfiniteVerticalId =
   | 'real-estate'
@@ -218,6 +219,11 @@ export function BrowseInfiniteGrid({
 
   const recovering = recoverEmpty && listings.length === 0 && (loading || error);
 
+  const liveListings = useLiveFeedListings(listings, {
+    dropExpiredJobs: verticalId === 'jobs',
+    dropExpiredOkazion: verticalId === 'okazion',
+  });
+
   const retryFirstPage = React.useCallback(() => {
     setError(false);
     setLoading(true);
@@ -263,7 +269,7 @@ export function BrowseInfiniteGrid({
   return (
     <Stack spacing={3}>
       <Grid container spacing={isTwoColumnMobile ? { xs: 1.25, sm: 2, md: 2.5 } : { xs: 2, md: 2.5 }}>
-        {listings.map((listing, index) => (
+        {liveListings.map((listing, index) => (
           <Grid key={listingKey(listing)} size={itemGridSize}>
             {renderBrowseCard(verticalId, listing, index === 0)}
           </Grid>

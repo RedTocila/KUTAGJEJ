@@ -141,6 +141,7 @@ function BusinessVenueCardBody({
           okazion={Boolean(listing.isOkazion)}
           hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
+          premiumUntil={listing.premiumUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
             title: listing.title,
@@ -387,6 +388,7 @@ function ProfessionalListingCardBody({
           okazion={Boolean(listing.isOkazion)}
           hideOkazionBadge={hideOkazionBadge}
           okazionUntil={listing.okazionUntil}
+          premiumUntil={listing.premiumUntil}
           sellerVerified={Boolean(listing.sellerVerified)}
           sharePayload={{
             title: listing.title,

@@ -20,6 +20,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingsSection } from '@/components/public/listings-section';
+import { useLiveFeedListings } from '@/hooks/use-live-feed-listings';
 import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 
 type HomeListing =
@@ -193,19 +194,23 @@ export function LazyHomeSection({
     setLoaded(true);
   });
 
+  const liveListings = useLiveFeedListings(listings, {
+    dropExpiredJobs: verticalId === 'jobs',
+  });
+
   return (
     <Box ref={rootRef}>
       <ListingsSection
         verticalId={verticalId}
         total={total}
-        isEmpty={loaded && listings.length === 0}
+        isEmpty={loaded && liveListings.length === 0}
         useMuiVerticalIcon
       >
-        {!loaded && listings.length === 0 ? (
+        {!loaded && liveListings.length === 0 ? (
           <CarouselSkeleton />
         ) : (
           <ListingsCarousel>
-            {listings.map((listing) => renderListingCard(verticalId, listing))}
+            {liveListings.map((listing) => renderListingCard(verticalId, listing))}
           </ListingsCarousel>
         )}
       </ListingsSection>

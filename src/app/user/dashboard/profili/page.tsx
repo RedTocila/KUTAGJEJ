@@ -1107,10 +1107,12 @@ export default function UserProfilePage() {
                 fullWidth
                 required
                 autoComplete="off"
-                inputProps={{
-                  'aria-label': t.profileAccount.deleteConfirmLabel,
-                  spellCheck: false,
-                  autoCapitalize: 'characters',
+                slotProps={{
+                  htmlInput: {
+                    'aria-label': t.profileAccount.deleteConfirmLabel,
+                    spellCheck: false,
+                    autoCapitalize: 'characters',
+                  },
                 }}
                 sx={{
                   '& .MuiInputBase-input': {

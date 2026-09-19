@@ -5,7 +5,7 @@ const { getFrontendBaseUrl } = require('../site-url');
 const { sendResendEmail, isResendConfigured } = require('./resend');
 const { renderAuthEmail } = require('./templates');
 
-const GENERATE_LINK_TIMEOUT_MS = 12_000;
+const GENERATE_LINK_TIMEOUT_MS = 6_000;
 
 async function withTimeout(promise, ms, label) {
   let timer;
@@ -25,6 +25,10 @@ async function withTimeout(promise, ms, label) {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function frontendAuthUrl(path, tokenHash, type) {
   const params = new URLSearchParams();
   if (tokenHash) params.set('token_hash', tokenHash);
@@ -33,7 +37,7 @@ function frontendAuthUrl(path, tokenHash, type) {
   return `${getFrontendBaseUrl()}${path}${qs ? `?${qs}` : ''}`;
 }
 
-async function generateAuthLink(type, email, extra = {}) {
+async function generateAuthLinkOnce(type, email, extra = {}) {
   const sb = getSupabaseAdmin();
   const payload = { type, email };
   if (extra.password) payload.password = extra.password;
@@ -48,6 +52,22 @@ async function generateAuthLink(type, email, extra = {}) {
   );
   if (error) throw error;
   return data;
+}
+
+/**
+ * generateLink can hang when Supabase Send Email Hook points at this same
+ * instance (hook waits on us / we wait on generateLink). Retry once after a
+ * short yield so a concurrent hook ACK can land.
+ */
+async function generateAuthLink(type, email, extra = {}) {
+  try {
+    return await generateAuthLinkOnce(type, email, extra);
+  } catch (err) {
+    if (err?.code !== 'TIMEOUT') throw err;
+    console.warn(`generateLink(${type}) timed out; retrying once…`);
+    await sleep(250);
+    return generateAuthLinkOnce(type, email, extra);
+  }
 }
 
 function linkFromGenerate(data, fallbackPath, fallbackType) {
@@ -67,6 +87,7 @@ function linkFromGenerate(data, fallbackPath, fallbackType) {
 }
 
 async function sendSignupConfirmation(email, { name } = {}) {
+  // magiclink works for admin-created unconfirmed users; confirm page accepts it.
   const data = await generateAuthLink('magiclink', email);
   const link = linkFromGenerate(data, '/user/auth/confirm', 'magiclink');
   await sendResendEmail({

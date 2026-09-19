@@ -23,6 +23,7 @@ const {
 } = require('../lib/mail/auth-emails');
 const { isResendConfigured } = require('../lib/mail/resend');
 const { verifySendEmailHook } = require('../lib/mail/hook-secret');
+const { runAfterResponse } = require('../lib/run-after');
 
 const router = express.Router();
 const rateLimit = require('../middleware/rate-limit');
@@ -195,12 +196,14 @@ async function queueAuthEmail(label, fn) {
   try {
     if (!isResendConfigured()) {
       console.warn(`auth email skipped (${label}): RESEND_API_KEY is not set`);
-      return;
+      return { ok: false, reason: 'RESEND_NOT_CONFIGURED' };
     }
     await fn();
     console.log(`auth email sent (${label})`);
+    return { ok: true };
   } catch (err) {
-    console.error(`auth email (${label}):`, err?.message || err);
+    console.error(`auth email (${label}):`, err?.message || err, err?.code || '', err?.details || '');
+    return { ok: false, reason: err?.code || 'SEND_FAILED', message: err?.message || String(err) };
   }
 }
 
@@ -401,7 +404,7 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      await queueAuthEmail('signup', () => sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }));
+      await sendSignupMailAfterCreate(emailNorm, doc);
       return res.status(201).json({
         needsEmailConfirmation: true,
         email: emailNorm,
@@ -466,7 +469,7 @@ router.post('/register', authRateLimit, async (req, res) => {
       if (refRaw) await processReferralOnSignup(doc, refRaw);
       await ensureUserReferralCode(doc);
 
-      await queueAuthEmail('signup', () => sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(doc) }));
+      await sendSignupMailAfterCreate(emailNorm, doc);
       return res.status(201).json({
         needsEmailConfirmation: true,
         email: emailNorm,
@@ -831,6 +834,17 @@ function yieldEventLoop() {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
+/**
+ * Send signup mail after the account exists. Yield first so a concurrent Send
+ * Email Hook (triggered by generateLink) can ACK on this same instance.
+ */
+async function sendSignupMailAfterCreate(emailNorm, profile) {
+  await yieldEventLoop();
+  return queueAuthEmail('signup', () =>
+    sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) })
+  );
+}
+
 router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
   try {
     const emailNorm = String(req.body?.email || '')
@@ -850,10 +864,11 @@ router.post('/resend-confirmation', mailRateLimit, async (req, res) => {
       ok: true,
       message: 'Nëse llogaria ekziston, të dërguam një email konfirmimi.',
     });
-    await yieldEventLoop();
     if (profile) {
-      await queueAuthEmail('resend-signup', () =>
-        sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) })
+      runAfterResponse(() =>
+        queueAuthEmail('resend-signup', () =>
+          sendSignupConfirmation(emailNorm, { name: displayNameFromProfile(profile) })
+        )
       );
     }
   } catch (error) {
@@ -878,9 +893,10 @@ router.post('/forgot-password', mailRateLimit, async (req, res) => {
       ok: true,
       message: 'Nëse llogaria ekziston, të dërguam një link për rivendosjen e fjalëkalimit. Kontrollo kutinë dhe spam.',
     });
-    await yieldEventLoop();
     if (profile || authUser) {
-      await queueAuthEmail('recovery', () => sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }));
+      runAfterResponse(() =>
+        queueAuthEmail('recovery', () => sendPasswordReset(emailNorm, { name: displayNameFromProfile(profile) }))
+      );
     }
   } catch (error) {
     console.error('POST /forgot-password:', error?.message || error);
@@ -954,8 +970,7 @@ router.post('/hooks/send-email', async (req, res) => {
     // ACK first: generateLink waits on this webhook. Awaiting Resend here can
     // deadlock forgot-password on a single-concurrency instance.
     res.status(200).json({ ok: true });
-    await yieldEventLoop();
-    await sendFromSupabaseHook(payload);
+    runAfterResponse(() => sendFromSupabaseHook(payload));
   } catch (error) {
     console.error('POST /hooks/send-email:', error?.message || error);
     if (!res.headersSent) {

@@ -132,10 +132,20 @@ function ensureBooted() {
 
 function isFastAuthPath(path) {
   const p = String(path || '');
+  // Auth + mail must not wait on full schema bootstrap — cold starts were
+  // eating the function budget so generateLink/Resend never finished.
   return (
+    p === '/api/auth/login' ||
+    p === '/api/auth/register' ||
+    p === '/api/auth/confirm' ||
+    p === '/api/auth/reset-password' ||
     p === '/api/auth/forgot-password' ||
     p === '/api/auth/resend-confirmation' ||
     p === '/api/auth/hooks/send-email' ||
+    p.endsWith('/auth/login') ||
+    p.endsWith('/auth/register') ||
+    p.endsWith('/auth/confirm') ||
+    p.endsWith('/auth/reset-password') ||
     p.endsWith('/auth/forgot-password') ||
     p.endsWith('/auth/resend-confirmation') ||
     p.endsWith('/auth/hooks/send-email')

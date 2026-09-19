@@ -195,7 +195,7 @@ async function createAuthUser({ email, password, metadata }) {
 async function queueAuthEmail(label, fn) {
   try {
     if (!isResendConfigured()) {
-      console.warn(`auth email skipped (${label}): RESEND_API_KEY is not set`);
+      console.warn(`auth email skipped (${label}): RESEND_API_KEY / RESEND_API is not set`);
       return { ok: false, reason: 'RESEND_NOT_CONFIGURED' };
     }
     await fn();

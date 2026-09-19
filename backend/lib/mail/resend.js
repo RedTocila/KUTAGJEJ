@@ -1,7 +1,8 @@
 'use strict';
 
 function resendApiKey() {
-  return String(process.env.RESEND_API_KEY || '').trim();
+  // Production historically used RESEND_API; code + .env.example use RESEND_API_KEY.
+  return String(process.env.RESEND_API_KEY || process.env.RESEND_API || '').trim();
 }
 
 function resendFrom() {

@@ -111,12 +111,11 @@ router.post('/save', authMiddleware, requirePortalUser, async (req, res) => {
   }
 });
 
-/** GET /api/listing-metrics/owner-period?period=all|1d|7d|30d|90d&items=kind:id,kind:id */
-router.get('/owner-period', authMiddleware, requirePortalUser, async (req, res) => {
-  try {
-    const period = normalizeStatsPeriod(req.query.period);
-    const raw = String(req.query.items ?? '').trim();
-    const refs = raw
+/** Parse owner-period listing refs from query `items=` or JSON body `items`. */
+function parseOwnerPeriodRefs(req) {
+  const fromQuery = String(req.query?.items ?? '').trim();
+  if (fromQuery) {
+    return fromQuery
       .split(',')
       .map((part) => part.trim())
       .filter(Boolean)
@@ -129,7 +128,26 @@ router.get('/owner-period', authMiddleware, requirePortalUser, async (req, res) 
         return { kind, listingId };
       })
       .filter(Boolean);
+  }
 
+  const bodyItems = req.body?.items;
+  if (!Array.isArray(bodyItems)) return [];
+  return bodyItems
+    .slice(0, 500)
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const kind = String(item.kind || item.listingKind || '').trim();
+      const listingId = String(item.listingId || item.id || '').trim();
+      if (!isValidKind(kind) || !listingId) return null;
+      return { kind, listingId };
+    })
+    .filter(Boolean);
+}
+
+async function handleOwnerPeriod(req, res) {
+  try {
+    const period = normalizeStatsPeriod(req.query?.period ?? req.body?.period);
+    const refs = parseOwnerPeriodRefs(req);
     const map = await fetchPeriodMetricsMap(refs, period);
     const metrics = Object.fromEntries(map.entries());
     const totals = { views: 0, shares: 0, saves: 0 };
@@ -140,10 +158,16 @@ router.get('/owner-period', authMiddleware, requirePortalUser, async (req, res) 
     }
     res.json({ period, metrics, totals });
   } catch (err) {
-    console.error('GET /listing-metrics/owner-period:', err?.message || err);
+    console.error('owner-period:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
-});
+}
+
+/** GET /api/listing-metrics/owner-period?period=all|1d|7d|30d|90d&items=kind:id,kind:id */
+router.get('/owner-period', authMiddleware, requirePortalUser, handleOwnerPeriod);
+
+/** POST /api/listing-metrics/owner-period — body avoids long query strings for many listings. */
+router.post('/owner-period', authMiddleware, requirePortalUser, handleOwnerPeriod);
 
 /** GET /api/listing-metrics/batch?items=kind:id,kind:id */
 router.get('/batch', metricsRateLimit, optionalAuth, async (req, res) => {

@@ -21,8 +21,8 @@ import { UserMobileNav } from './user-mobile-nav';
 import { UserPortalPopover } from './user-portal-popover';
 
 /**
- * Dashboard top bar — same chrome as the old public header:
- * logo, search, theme, profile, post. Only used inside the user dashboard.
+ * Dashboard home top bar — logo, search, theme, profile, post.
+ * Shown only on `/user/dashboard` (not profile/subpages).
  */
 export function UserMainNav() {
   const pathname = usePathname();

@@ -1,6 +1,6 @@
 'use client';
 
-import { authHeaders, clientFetch } from '@/lib/api-client';
+import { authHeaders, authHeadersAsync, clientFetch } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import { AUTH_USER_KEY, readAuthItem } from '@/lib/auth/storage';
 
@@ -22,11 +22,15 @@ export async function fetchOwnerPeriodMetrics(
     return { period, metrics: {}, totals: { views: 0, shares: 0, saves: 0 } };
   }
   try {
-    const items = refs.map((ref) => `${ref.kind}:${ref.listingId}`).join(',');
-    const params = new URLSearchParams({ period, items });
-    const res = await fetch(getApiUrl(`/listing-metrics/owner-period?${params}`), {
-      headers: authHeaders(),
+    // POST body avoids Vercel/proxy URL limits when the owner has many listings.
+    const res = await fetch(getApiUrl('/listing-metrics/owner-period'), {
+      method: 'POST',
+      headers: await authHeadersAsync(),
       cache: 'no-store',
+      body: JSON.stringify({
+        period,
+        items: refs.map((ref) => ({ kind: ref.kind, listingId: ref.listingId })),
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { error: typeof data.message === 'string' ? data.message : 'Gabim.' };

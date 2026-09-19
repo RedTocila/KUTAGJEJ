@@ -6,6 +6,9 @@ const { reportedSaveCount } = require('./save-count-utils');
 
 const LISTING_KINDS = new Set(['real-estate', 'car', 'job', 'marketplace', 'businesses', 'professionals']);
 
+/** Keep PostgREST `.or()` filters under URL length limits (Bad Request otherwise). */
+const METRICS_REF_CHUNK = 20;
+
 const TABLE_BY_KIND = {
   'real-estate': 'real_estate_listings',
   car: 'car_listings',
@@ -38,6 +41,16 @@ function metricsKey(kind, listingId) {
 
 function isValidKind(kind) {
   return LISTING_KINDS.has(kind);
+}
+
+function chunkRefs(refs, size = METRICS_REF_CHUNK) {
+  const out = [];
+  for (let i = 0; i < refs.length; i += size) out.push(refs.slice(i, i + size));
+  return out;
+}
+
+function orFilterForRefs(refs) {
+  return refs.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
 }
 
 function visitorKeyFromRequest(req) {
@@ -243,18 +256,9 @@ async function fetchListingCreatedAtMap(refs) {
  * history yet fall back to listing_engagements totals only when the listing
  * was created inside the selected window (all activity must be within range).
  */
-async function fetchPeriodMetricsMap(refs, period) {
-  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
-  if (valid.length === 0) return new Map();
-
-  const normalized = normalizeStatsPeriod(period);
-  if (normalized === 'all') return fetchMetricsMap(valid);
-
-  const since = statsPeriodSince(normalized);
-  if (!since) return fetchMetricsMap(valid);
-
+async function fetchPeriodMetricsMapChunk(valid, since) {
   const sb = getSupabaseAdmin();
-  const orFilter = valid.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
+  const orFilter = orFilterForRefs(valid);
   const sinceIso = since.toISOString();
 
   const [eventsResult, savesResult, engagementResult, everEventsResult, listingCreatedAt] = await Promise.all([
@@ -330,6 +334,26 @@ async function fetchPeriodMetricsMap(refs, period) {
     }
 
     out.set(key, { viewCount: toDisplayedViewCount(viewCount), shareCount, saveCount });
+  }
+  return out;
+}
+
+async function fetchPeriodMetricsMap(refs, period) {
+  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
+  if (valid.length === 0) return new Map();
+
+  const normalized = normalizeStatsPeriod(period);
+  if (normalized === 'all') return fetchMetricsMap(valid);
+
+  const since = statsPeriodSince(normalized);
+  if (!since) return fetchMetricsMap(valid);
+
+  if (valid.length <= METRICS_REF_CHUNK) return fetchPeriodMetricsMapChunk(valid, since);
+
+  const out = new Map();
+  for (const chunk of chunkRefs(valid)) {
+    const part = await fetchPeriodMetricsMapChunk(chunk, since);
+    for (const [key, value] of part) out.set(key, value);
   }
   return out;
 }
@@ -411,27 +435,32 @@ async function fetchEngagementRows(sb, orFilter) {
 
 async function getSavedSet(saver, refs) {
   if (!saver || refs.length === 0) return new Set();
-  const orFilter = refs.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
-  const { data, error } = await getSupabaseAdmin()
-    .from('saved_listings')
-    .select('listing_kind, listing_id')
-    .eq('saver_id', saver.saverId)
-    .or(orFilter);
-  if (error) throw error;
-
-  return new Set((data || []).map((row) => metricsKey(row.listing_kind, row.listing_id)));
+  const out = new Set();
+  for (const chunk of chunkRefs(refs)) {
+    const orFilter = orFilterForRefs(chunk);
+    const { data, error } = await getSupabaseAdmin()
+      .from('saved_listings')
+      .select('listing_kind, listing_id')
+      .eq('saver_id', saver.saverId)
+      .or(orFilter);
+    if (error) throw error;
+    for (const row of data || []) {
+      out.add(metricsKey(row.listing_kind, row.listing_id));
+    }
+  }
+  return out;
 }
 
 /**
  * @param {{ kind: string, listingId: string }[]} refs
  * @param {{ saverId: string, saverModel: string } | null} saver
  */
-async function fetchMetricsMap(refs, saver = null) {
+async function fetchMetricsMapChunk(refs, saver = null) {
   const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
   if (valid.length === 0) return new Map();
 
   const sb = getSupabaseAdmin();
-  const orFilter = valid.map((r) => `and(listing_kind.eq."${r.kind}",listing_id.eq."${r.listingId}")`).join(',');
+  const orFilter = orFilterForRefs(valid);
 
   const [engagementResult, savedSet] = await Promise.all([
     fetchEngagementRows(sb, orFilter),
@@ -467,6 +496,23 @@ async function fetchMetricsMap(refs, saver = null) {
     };
     if (saver) payload.saved = savedSet.has(key);
     map.set(key, payload);
+  }
+  return map;
+}
+
+/**
+ * @param {{ kind: string, listingId: string }[]} refs
+ * @param {{ saverId: string, saverModel: string } | null} saver
+ */
+async function fetchMetricsMap(refs, saver = null) {
+  const valid = refs.filter((r) => isValidKind(r.kind) && isUuid(r.listingId));
+  if (valid.length === 0) return new Map();
+  if (valid.length <= METRICS_REF_CHUNK) return fetchMetricsMapChunk(valid, saver);
+
+  const map = new Map();
+  for (const chunk of chunkRefs(valid)) {
+    const part = await fetchMetricsMapChunk(chunk, saver);
+    for (const [key, value] of part) map.set(key, value);
   }
   return map;
 }

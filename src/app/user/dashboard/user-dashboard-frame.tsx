@@ -122,6 +122,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               showMobileBottomNav={showMobileBottomNav && !hostedTabs}
               showBackLink={showBackLink}
               backHref={backHref}
+              isDashboardHome={isDashboardHome}
               isMessages={isMessages}
               isPackagesHub={isPackagesHub}
               showFrameClose={showFrameClose}
@@ -141,6 +142,7 @@ function UserDashboardFrameInner({
   showMobileBottomNav,
   showBackLink,
   backHref,
+  isDashboardHome,
   isMessages,
   isPackagesHub,
   showFrameClose,
@@ -149,6 +151,7 @@ function UserDashboardFrameInner({
   showMobileBottomNav: boolean;
   showBackLink: boolean;
   backHref: string;
+  isDashboardHome: boolean;
   isMessages: boolean;
   isPackagesHub: boolean;
   showFrameClose: boolean;
@@ -211,9 +214,11 @@ function UserDashboardFrameInner({
                 : null),
           }}
         >
-          <Box sx={{ flexShrink: 0 }}>
-            <UserMainNav />
-          </Box>
+          {isDashboardHome ? (
+            <Box sx={{ flexShrink: 0 }}>
+              <UserMainNav />
+            </Box>
+          ) : null}
           <main style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 }}>
             <Container
               maxWidth="xl"

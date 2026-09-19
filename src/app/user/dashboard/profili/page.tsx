@@ -36,10 +36,12 @@ import { deleteOwnAccount } from '@/lib/account-client';
 import { clientFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth/client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { getMessages } from '@/lib/i18n/messages';
 import { rememberListingLocation } from '@/lib/listing-form-defaults';
 import { memberInitials, mergeMemberReferralBadges, type PublicMemberReferralBadge } from '@/lib/public-member-client';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { DEFAULT_SHARE_THEME_COLOR, normalizeShareThemeColor } from '@/lib/share-theme-color';
+import { useLanguage } from '@/contexts/language-context';
 import { useUser } from '@/hooks/use-user';
 import { SearchableSelect } from '@/components/core/searchable-select';
 import { TransientNotification, TransientSuccessAlert } from '@/components/core/transient-success-alert';
@@ -76,6 +78,8 @@ function publicDisplayName(user: {
 
 export default function UserProfilePage() {
   const { user, checkSession } = useUser();
+  const { language } = useLanguage();
+  const t = getMessages(language);
   const searchParams = useSearchParams();
   const upgradeBusiness = searchParams.get('upgrade') === 'business';
   const businessUpgradeRef = React.useRef<HTMLDivElement | null>(null);
@@ -118,11 +122,16 @@ export default function UserProfilePage() {
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState('');
+  const [deleteConfirmPhrase, setDeleteConfirmPhrase] = React.useState('');
   const [deleteBusy, setDeleteBusy] = React.useState(false);
   const [deleteMsg, setDeleteMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [passwordMsg, setPasswordMsg] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [savingPassword, setSavingPassword] = React.useState(false);
+
+  React.useEffect(() => {
+    setDeleteConfirmPhrase('');
+    setDeleteMsg(null);
+  }, [language, t.profileAccount.deleteConfirmPhrase]);
 
   React.useEffect(() => {
     if (!user) return;
@@ -469,23 +478,20 @@ export default function UserProfilePage() {
   const onDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setDeleteMsg(null);
-    const email = String(user?.email || '').trim();
-    if (!email) {
-      setDeleteMsg({ type: 'error', text: 'Nuk u gjet emaili i llogarisë.' });
+    const requiredPhrase = t.profileAccount.deleteConfirmPhrase;
+    const typed = deleteConfirmPhrase.trim();
+    if (!typed) {
+      setDeleteMsg({ type: 'error', text: t.profileAccount.deletePhraseMissing });
       return;
     }
-    if (deleteConfirmEmail.trim().toLowerCase() !== email.toLowerCase()) {
-      setDeleteMsg({ type: 'error', text: 'Shkruani saktë emailin e llogarisë për të konfirmuar.' });
+    if (typed !== requiredPhrase) {
+      setDeleteMsg({ type: 'error', text: t.profileAccount.deletePhraseMismatch });
       return;
     }
-    const confirmed = window.confirm(
-      'Kjo fshin përgjithmonë llogarinë dhe të dhënat tuaja. Nuk mund të zhbëhet. Vazhdoni?'
-    );
-    if (!confirmed) return;
 
     setDeleteBusy(true);
     try {
-      const result = await deleteOwnAccount(deleteConfirmEmail.trim());
+      const result = await deleteOwnAccount(typed);
       if (result.error) {
         setDeleteMsg({ type: 'error', text: result.error });
         return;
@@ -1074,8 +1080,8 @@ export default function UserProfilePage() {
 
       {canEdit ? (
         <PortalSectionCard
-          title="Fshi llogarinë"
-          description="Fshirja është e përhershme (kërkesë e App Store / Play Store). Shkruani emailin tuaj për të konfirmuar."
+          title={t.profileAccount.deleteTitle}
+          description={t.profileAccount.deleteDescription}
           icon={<TrashIcon size={22} weight="duotone" />}
         >
           <Box component="form" onSubmit={(e) => void onDeleteAccount(e)}>
@@ -1090,27 +1096,38 @@ export default function UserProfilePage() {
                 />
               ) : null}
               <Alert severity="warning" variant="outlined">
-                Do të fshihen profili, sesioni dhe të dhënat e lidhura me llogarinë. Njoftimet tuaja mund të hiqen sipas
-                rregullave të platformës.
+                {t.profileAccount.deleteWarning}
               </Alert>
               <TextField
-                label="Konfirmo me email"
-                type="email"
-                value={deleteConfirmEmail}
-                onChange={(ev) => setDeleteConfirmEmail(ev.target.value)}
-                placeholder={user.email || undefined}
+                label={t.profileAccount.deleteConfirmLabel}
+                value={deleteConfirmPhrase}
+                onChange={(ev) => setDeleteConfirmPhrase(ev.target.value)}
+                placeholder={t.profileAccount.deleteConfirmPhrase}
+                helperText={t.profileAccount.deleteConfirmHint(t.profileAccount.deleteConfirmPhrase)}
                 fullWidth
                 required
-                autoComplete="email"
+                autoComplete="off"
+                inputProps={{
+                  'aria-label': t.profileAccount.deleteConfirmLabel,
+                  spellCheck: false,
+                  autoCapitalize: 'characters',
+                }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    letterSpacing: '0.04em',
+                    fontWeight: 700,
+                  },
+                }}
               />
               <Button
                 type="submit"
                 variant="outlined"
                 color="error"
-                disabled={deleteBusy}
+                disabled={deleteBusy || deleteConfirmPhrase.trim() !== t.profileAccount.deleteConfirmPhrase}
                 sx={{ alignSelf: 'flex-start', fontWeight: 800, borderRadius: 2.5 }}
               >
-                {deleteBusy ? 'Duke fshirë…' : 'Fshi llogarinë përgjithmonë'}
+                {deleteBusy ? t.profileAccount.deleteBusy : t.profileAccount.deleteSubmit}
               </Button>
             </Stack>
           </Box>

@@ -871,6 +871,20 @@ const sq = {
     back: 'Kthehu',
     backAria: 'Kthehu te faqja e mëparshme',
   },
+  profileAccount: {
+    deleteTitle: 'Fshi llogarinë',
+    deleteDescription:
+      'Fshirja është e përhershme (kërkesë e App Store / Play Store). Shkruani frazën e konfirmimit me shkronja kapitale.',
+    deleteWarning:
+      'Do të fshihen profili, sesioni dhe të dhënat e lidhura me llogarinë. Njoftimet tuaja mund të hiqen sipas rregullave të platformës.',
+    deleteConfirmLabel: 'Shkruani frazën e konfirmimit',
+    deleteConfirmHint: (phrase: string) => `Shkruani saktësisht: ${phrase}`,
+    deleteSubmit: 'Fshi llogarinë përgjithmonë',
+    deleteBusy: 'Duke fshirë…',
+    deletePhraseMismatch: 'Fraza e konfirmimit nuk përputhet. Shkruajeni me shkronja kapitale.',
+    deletePhraseMissing: 'Shkruani frazën e konfirmimit për të vazhduar.',
+    deleteConfirmPhrase: 'DOREZOHEM!',
+  },
 } as const satisfies Record<string, unknown>;
 
 type DeepStringWiden<T> = {
@@ -1649,6 +1663,20 @@ const en: AppMessages = {
     emailNotConfirmed: 'Confirm your email to log in. Check your inbox.',
     back: 'Back',
     backAria: 'Go back to the previous page',
+  },
+  profileAccount: {
+    deleteTitle: 'Delete account',
+    deleteDescription:
+      'Deletion is permanent (App Store / Play Store requirement). Type the confirmation phrase in capital letters.',
+    deleteWarning:
+      'Your profile, session, and account-linked data will be removed. Listings may be removed according to platform rules.',
+    deleteConfirmLabel: 'Type the confirmation phrase',
+    deleteConfirmHint: (phrase: string) => `Type exactly: ${phrase}`,
+    deleteSubmit: 'Delete account permanently',
+    deleteBusy: 'Deleting…',
+    deletePhraseMismatch: 'Confirmation phrase does not match. Type it in capital letters.',
+    deletePhraseMissing: 'Enter the confirmation phrase to continue.',
+    deleteConfirmPhrase: 'GIVE UP!',
   },
 };
 

@@ -485,7 +485,7 @@ function BaseCard({
             color="text.disabled"
             sx={{ fontSize: '0.68rem', flexShrink: 0, pt: 0.2, whiteSpace: 'nowrap' }}
           >
-            {format(new Date(createdAt), 'd MMM yyyy')}
+            {format(new Date(createdAt), 'd MMM yyyy · HH:mm')}
           </Typography>
         </Stack>
         {!isPublic ? <ListingModerationNotice status={moderationStatus} /> : null}

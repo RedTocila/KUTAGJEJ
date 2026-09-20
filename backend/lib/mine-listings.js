@@ -10,8 +10,12 @@ const { okazionFieldsFromDoc } = require('./okazion-listing');
 const { extractPlaceQueryFromMapsUrl } = require('./google-maps-location');
 const { mapsJsonFromDoc } = require('./listing-maps-fields');
 
-/** Soft cap so a pathological owner cannot dump unbounded payloads. */
-const DEFAULT_LIMIT_PER_KIND = 200;
+/**
+ * Soft cap per category for "my listings".
+ * PostgREST often caps a single response at 1000 rows — queryMineRows pages past that.
+ */
+const DEFAULT_LIMIT_PER_KIND = 20000;
+const MINE_PAGE_SIZE = 1000;
 
 const MINE_SELECT = {
   real_estate_listings: [
@@ -575,13 +579,13 @@ function formatMineProfessionalFull(doc, cityById) {
 async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
   const cap = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_LIMIT_PER_KIND;
 
-  async function run(orderCol) {
+  async function runPage(orderCol, from, to) {
     let q = getSupabaseAdmin()
       .from(table)
       .select(MINE_SELECT[table] || '*')
       .eq('poster_id', posterId)
       .order(orderCol, { ascending: false })
-      .limit(cap);
+      .range(from, to);
     if (extraEq) {
       for (const [col, val] of Object.entries(extraEq)) {
         q = q.eq(col, val);
@@ -590,19 +594,31 @@ async function queryMineRows(table, posterId, { limit, extraEq } = {}) {
     return q;
   }
 
+  async function fetchAll(orderCol) {
+    const rows = [];
+    let from = 0;
+    while (rows.length < cap) {
+      const to = Math.min(from + MINE_PAGE_SIZE - 1, cap - 1);
+      let { data, error } = await runPage(orderCol, from, to);
+      // One retry for transient network blips (hotspot / DNS / undici "fetch failed").
+      if (error && /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network/i.test(String(error.message || error))) {
+        await new Promise((r) => setTimeout(r, 350));
+        ({ data, error } = await runPage(orderCol, from, to));
+      }
+      if (error) return { data: null, error };
+      const batch = data || [];
+      rows.push(...batch);
+      if (batch.length < to - from + 1) break;
+      from += MINE_PAGE_SIZE;
+    }
+    return { data: rows.slice(0, cap), error: null };
+  }
+
   // Prefer updated_at so refresh/premium bumps (which only touch bumped_at) do not
   // reshuffle the owner's dashboard. Fall back to created_at if the column is missing.
-  let { data, error } = await run('updated_at');
+  let { data, error } = await fetchAll('updated_at');
   if (error && /updated_at/i.test(String(error.message || ''))) {
-    ({ data, error } = await run('created_at'));
-  }
-  // One retry for transient network blips (hotspot / DNS / undici "fetch failed").
-  if (error && /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network/i.test(String(error.message || error))) {
-    await new Promise((r) => setTimeout(r, 350));
-    ({ data, error } = await run('updated_at'));
-    if (error && /updated_at/i.test(String(error.message || ''))) {
-      ({ data, error } = await run('created_at'));
-    }
+    ({ data, error } = await fetchAll('created_at'));
   }
   if (error) throw error;
   return camelizeRows(data);

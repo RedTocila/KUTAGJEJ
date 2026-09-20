@@ -12,6 +12,7 @@ import { PencilSimple as EditIcon } from '@phosphor-icons/react/dist/ssr/PencilS
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
 import { ShareNetwork as ShareIcon } from '@phosphor-icons/react/dist/ssr/ShareNetwork';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
+import { Timer as TimerIcon } from '@phosphor-icons/react/dist/ssr/Timer';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { paths } from '@/paths';
@@ -514,21 +515,30 @@ export function ListingOwnerMetrics({
                     void handleRefresh();
                   }}
                   startIcon={
-                    busy ? <CircularProgress size={14} color="inherit" /> : <RefreshIcon size={16} weight="bold" />
+                    busy ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : refreshLocked ? (
+                      <TimerIcon size={16} weight="bold" />
+                    ) : (
+                      <RefreshIcon size={16} weight="bold" />
+                    )
                   }
                   sx={{
                     ...labeledBtnSx,
                     whiteSpace: 'nowrap',
+                    gap: refreshLocked ? 0.4 : 0,
+                    '& .MuiButton-startIcon': { mr: refreshLocked ? 0.4 : 0, ml: 0 },
                     ...(refreshLocked
                       ? {
                           bgcolor: 'light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
-                          color: 'text.disabled',
+                          color: 'text.secondary',
                           border: 'none',
                           boxShadow: 'none',
                           opacity: 1,
+                          fontVariantNumeric: 'tabular-nums',
                           '&.Mui-disabled': {
                             bgcolor: 'light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08))',
-                            color: 'text.disabled',
+                            color: 'text.secondary',
                             border: 'none',
                             opacity: 1,
                           },
@@ -536,7 +546,7 @@ export function ListingOwnerMetrics({
                       : fadedPrimarySx),
                   }}
                 >
-                  {refreshLocked ? null : bumpButtonLabel}
+                  {refreshLocked ? refreshTimer : bumpButtonLabel}
                 </Button>
               </span>
             </Tooltip>

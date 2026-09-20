@@ -5,6 +5,7 @@ import { config } from '@/config';
 import type { PublicRealEstateListingDetail } from '@/lib/public-listings-client';
 import { seoSlug } from '@/lib/public-seo';
 import { brandIconMetadata, listingSocialImages } from '@/lib/public-vertical-listing-metadata';
+import { schemaPriceCurrency } from '@/lib/schema-currency';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
 
 function metaSnippet(text: string, max = 158): string {
@@ -15,19 +16,29 @@ function metaSnippet(text: string, max = 158): string {
   return `${(lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim()}…`;
 }
 
-function residenceAdditionalType(cat: string): string {
+/** Schema.org type for RE listings — never Product (avoids GSC Merchant listings). */
+function residenceSchemaType(cat: string): string {
   switch (cat) {
     case 'villa':
     case 'part-of-villa':
-      return 'https://schema.org/SingleFamilyResidence';
+      return 'SingleFamilyResidence';
     case 'apartment':
     case 'penthouse-duplex':
     case 'room-studio-attic':
-      return 'https://schema.org/Apartment';
+      return 'Apartment';
     case 'warehouse':
-      return 'https://schema.org/Warehouse';
+      return 'Warehouse';
+    case 'shop':
+    case 'office':
+    case 'commercial-local':
+    case 'business-space':
+    case 'industrial-shed':
+      return 'Place';
+    case 'building-plot':
+    case 'agricultural-land':
+      return 'Place';
     default:
-      return 'https://schema.org/Place';
+      return 'Accommodation';
   }
 }
 
@@ -83,7 +94,7 @@ export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, 
   const offer: Record<string, unknown> = {
     '@type': 'Offer',
     price: listing.price,
-    priceCurrency: listing.currency,
+    priceCurrency: schemaPriceCurrency(listing.currency),
     availability: 'https://schema.org/InStock',
     url: canonicalHref,
   };
@@ -98,12 +109,11 @@ export function realEstateListingJsonLd(listing: PublicRealEstateListingDetail, 
   }
 
   const property: Record<string, unknown> = {
-    '@type': 'Product',
+    '@type': residenceSchemaType(listing.propertyCategory),
     name: listing.title,
     description: listing.description.trim() || `${listing.title} — ${loc}`,
     url: canonicalHref,
     ...(images.length ? { image: images } : {}),
-    additionalType: residenceAdditionalType(listing.propertyCategory),
     category: listing.propertyCategory,
     offers: offer,
   };

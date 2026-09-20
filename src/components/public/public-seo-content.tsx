@@ -16,7 +16,7 @@ import type { SeoFaqItem } from '@/lib/public-seo-copy';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { BannerSurface } from '@/components/public/banner-surface';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
-import { SeoEyebrow } from '@/components/public/seo-heading-panel';
+import { SeoEyebrow, SeoTextLinkRow } from '@/components/public/seo-heading-panel';
 
 export function PublicFaqList({ items, headingId }: { items: readonly SeoFaqItem[]; headingId: string }) {
   return (
@@ -81,6 +81,7 @@ export function PublicSeoContentBlock({
   faqs,
   headingId,
   faqHeadingId,
+  relatedLinks,
 }: {
   headline: string;
   subtext: string;
@@ -88,6 +89,7 @@ export function PublicSeoContentBlock({
   faqs: readonly SeoFaqItem[];
   headingId: string;
   faqHeadingId: string;
+  relatedLinks?: ReadonlyArray<{ href: string; label: string }>;
 }) {
   return (
     <BrowserSeoSection aria-labelledby={headingId} sx={{ py: { xs: 3.5, md: 5 } }}>
@@ -132,6 +134,7 @@ export function PublicSeoContentBlock({
                 </Typography>
               ))}
             </Stack>
+            {relatedLinks?.length ? <SeoTextLinkRow links={relatedLinks} /> : null}
             <PublicFaqList items={faqs} headingId={faqHeadingId} />
           </Stack>
         </BannerSurface>

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Box, Container } from '@mui/material';
 
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
+import { verticalCityHubLinks } from '@/lib/seo-internal-links';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { SeoEyebrow, SeoHeadingPanel, SeoTextLinkRow } from '@/components/public/seo-heading-panel';
 
@@ -38,6 +39,10 @@ function OkazionAccent({ children }: { children: React.ReactNode }) {
  * Sits under the banner slider so the promo leads, then the SEO paragraph.
  */
 export function HomeBrowserHeroSeo() {
+  const cityLinks = [
+    ...verticalCityHubLinks('real-estate', { includeVerticalLabel: true }).slice(0, 4),
+    ...verticalCityHubLinks('cars', { includeVerticalLabel: true }).slice(0, 2),
+  ];
   return (
     <BrowserSeoSection
       aria-labelledby="home-seo-h1"
@@ -65,6 +70,7 @@ export function HomeBrowserHeroSeo() {
             <Accent>biznese</Accent>, <Accent>profesionistë</Accent> dhe artikuj të rinj e të dorës së dytë.
           </>
         }
+        actions={<SeoTextLinkRow links={cityLinks} />}
       />
     </BrowserSeoSection>
   );

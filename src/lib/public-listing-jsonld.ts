@@ -7,6 +7,7 @@ import type {
 } from '@/lib/public-listings-client';
 import { cityLandingHref } from '@/lib/seo-internal-links';
 import type { HomeVerticalId } from '@/lib/home-categories';
+import { schemaPriceCurrency } from '@/lib/schema-currency';
 
 type JsonLdObject = Record<string, unknown>;
 
@@ -87,8 +88,9 @@ function mapEmploymentType(raw: string | null | undefined): string | string[] | 
 
 function carJsonLd(listing: PublicCarListingDetail, canonicalUrl: string): JsonLdObject {
   const images = absoluteImages(listing);
+  // Car only — do not dual-type as Product (triggers GSC Merchant listings for classifieds).
   const car: JsonLdObject = {
-    '@type': ['Product', 'Car'],
+    '@type': 'Car',
     name: listing.title,
     description: listing.description,
     url: canonicalUrl,
@@ -115,7 +117,7 @@ function carJsonLd(listing: PublicCarListingDetail, canonicalUrl: string): JsonL
     car.offers = {
       '@type': 'Offer',
       price: listing.price,
-      priceCurrency: listing.currency || 'EUR',
+      priceCurrency: schemaPriceCurrency(listing.currency),
       availability: 'https://schema.org/InStock',
       url: canonicalUrl,
       itemCondition: 'https://schema.org/UsedCondition',
@@ -124,25 +126,26 @@ function carJsonLd(listing: PublicCarListingDetail, canonicalUrl: string): JsonL
   return car;
 }
 
-function productJsonLd(listing: PublicMarketplaceListingDetail, canonicalUrl: string): JsonLdObject {
-  const product: JsonLdObject = {
-    '@type': 'Product',
+/**
+ * Marketplace classifieds are not Google Merchant products. Emit Offer (not Product)
+ * so GSC does not flag every /tregu URL for Shopping / Merchant rich results.
+ */
+function marketplaceJsonLd(listing: PublicMarketplaceListingDetail, canonicalUrl: string): JsonLdObject {
+  const offer: JsonLdObject = {
+    '@type': 'Offer',
     name: listing.title,
     description: listing.description,
     url: canonicalUrl,
     image: absoluteImages(listing),
-    category: listing.category,
+    ...(listing.category ? { category: listing.category } : {}),
+    ...(listing.cityName ? { areaServed: listing.cityName } : {}),
   };
   if (listing.price != null && Number.isFinite(Number(listing.price))) {
-    product.offers = {
-      '@type': 'Offer',
-      price: listing.price,
-      priceCurrency: listing.currency || 'EUR',
-      availability: 'https://schema.org/InStock',
-      url: canonicalUrl,
-    };
+    offer.price = listing.price;
+    offer.priceCurrency = schemaPriceCurrency(listing.currency);
+    offer.availability = 'https://schema.org/InStock';
   }
-  return product;
+  return offer;
 }
 
 function jobJsonLd(listing: PublicJobListingDetail, canonicalUrl: string): JsonLdObject {
@@ -167,7 +170,7 @@ function jobJsonLd(listing: PublicJobListingDetail, canonicalUrl: string): JsonL
   if (listing.salary != null) {
     job.baseSalary = {
       '@type': 'MonetaryAmount',
-      currency: listing.currency || 'EUR',
+      currency: schemaPriceCurrency(listing.currency),
       value: { '@type': 'QuantitativeValue', value: listing.salary, unitText: 'MONTH' },
     };
   }
@@ -195,7 +198,7 @@ export function publicListingJsonLd(listing: AnyPublicListingDetail, canonicalUr
   } else if (listing.kind === 'car') {
     entity = carJsonLd(listing, canonicalUrl);
   } else if (listing.kind === 'marketplace') {
-    entity = productJsonLd(listing, canonicalUrl);
+    entity = marketplaceJsonLd(listing, canonicalUrl);
   } else {
     entity = directoryJsonLd(listing as PublicDirectoryListingDetail, canonicalUrl);
   }

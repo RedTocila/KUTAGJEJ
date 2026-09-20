@@ -6,6 +6,7 @@ import { config } from '@/config';
 import { paths } from '@/paths';
 import { HOME_VERTICALS, isHomeVerticalId, type HomeVerticalId } from '@/lib/home-categories';
 import { faqJsonLd, OKAZION_SEO_COPY, VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
+import { verticalCityHubLinks } from '@/lib/seo-internal-links';
 import type { BrowseCategoryId } from '@/components/public/category-hero';
 import { PublicSeoContentBlock } from '@/components/public/public-seo-content';
 
@@ -34,6 +35,7 @@ export function VerticalBrowseSeo({ verticalId }: { verticalId: BrowseCategoryId
   const href = HOME_VERTICALS.find((v) => v.id === verticalId)?.href || '/';
   const pageUrl = new URL(href.replace(/^\//, ''), config.site.url).toString();
   const jsonLd = JSON.stringify(faqJsonLd(copy.faqs, pageUrl)).replace(/</g, '\\u003c');
+  const cityLinks = verticalCityHubLinks(verticalId as HomeVerticalId, { includeVerticalLabel: true });
 
   return (
     <>
@@ -45,6 +47,7 @@ export function VerticalBrowseSeo({ verticalId }: { verticalId: BrowseCategoryId
         faqs={copy.faqs}
         headingId={`seo-${verticalId}`}
         faqHeadingId={`faq-${verticalId}`}
+        relatedLinks={cityLinks}
       />
     </>
   );

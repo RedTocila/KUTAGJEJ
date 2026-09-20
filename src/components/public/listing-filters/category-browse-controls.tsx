@@ -25,6 +25,7 @@ import {
   type BrowseRealEstateFilters,
 } from '@/lib/listing-filters';
 import { applyBrowseSearchToken } from '@/lib/smart-search';
+import { cityLandingHref } from '@/lib/seo-internal-links';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import {
   PRODUCT_BROWSE_CONTROL_HEIGHT,
@@ -62,6 +63,25 @@ function filtersEqual(a: BrowseFilters, b: BrowseFilters): boolean {
     if (as !== bs) return false;
   }
   return true;
+}
+
+/** Prefer /prona/tirane over /prona?city=… when the only filter is a city. */
+function cityOnlyLandingHref(
+  verticalId: HomeVerticalId,
+  filters: BrowseFilters,
+  cities: RealEstateCityDto[],
+): string | null {
+  const cityId = String((filters as { city?: string }).city || '').trim();
+  if (!cityId) return null;
+  const zones = normalizeZoneIds((filters as BrowseRealEstateFilters).zone);
+  if (zones.length) return null;
+  const rest = { ...(filters as Record<string, unknown>) };
+  delete rest.city;
+  delete rest.zone;
+  if (countActiveBrowseFilters(rest as BrowseFilters) > 0) return null;
+  const city = cities.find((c) => c.id === cityId);
+  if (!city) return null;
+  return cityLandingHref(verticalId, city.slug || city.name);
 }
 
 export function CategoryBrowseControls({
@@ -136,8 +156,9 @@ export function CategoryBrowseControls({
   );
 
   const applyDraft = (next: BrowseFilters, closePanel = false) => {
+    const landing = cityOnlyLandingHref(verticalId, next, cities);
     React.startTransition(() => {
-      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
+      router.replace(landing || `${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
     });
     if (closePanel) closeFilters();
   };
@@ -152,8 +173,9 @@ export function CategoryBrowseControls({
 
   const removeChip = (key: string) => {
     const next = removeBrowseFilterKey(applied, key);
+    const landing = cityOnlyLandingHref(verticalId, next, cities);
     React.startTransition(() => {
-      router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
+      router.replace(landing || `${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
     });
   };
 
@@ -163,8 +185,9 @@ export function CategoryBrowseControls({
       if (!trimmed) return;
       const next = applyBrowseSearchToken(verticalId, applied, trimmed, cities);
       setDraft(next);
+      const landing = cityOnlyLandingHref(verticalId, next, cities);
       React.startTransition(() => {
-        router.replace(`${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
+        router.replace(landing || `${pathname}${buildBrowseUrlQuery(next)}`, { scroll: false });
       });
     },
     [applied, cities, pathname, router, verticalId],

@@ -12,6 +12,7 @@
 8. **Search Console HTML tag**: set `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` in Vercel / `.env` (value from GSC → HTML tag method)
 9. **Sitemap fetch**: canonical host is `www.kutagjej.al` (matches Vercel’s apex→www redirect so GSC gets HTTP 200)
 10. **seo-index 500**: fixed job visibility check that crashed `/api/public/listings/seo-index`
+11. **No Product JSON-LD for Merchant**: homepage ItemLists are URL-only; `/tregu` uses Offer; cars use `Car` only; `/prona` uses Apartment/Residence/etc. (not Product) so GSC Merchant listings stay quiet on classifieds
 
 ## You must do manually (highest remaining impact)
 

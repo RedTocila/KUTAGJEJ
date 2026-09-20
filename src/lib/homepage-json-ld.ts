@@ -1,14 +1,15 @@
 import { brandLogoSrc, config } from '@/config';
-import { paths } from '@/paths';
 import { HOME_VERTICALS } from '@/lib/home-categories';
-import type {
-  PublicCarListing,
-  PublicDirectoryListing,
-  PublicJobListing,
-  PublicListingsBundle,
-  PublicMarketplaceListing,
-  PublicRealEstateListing,
-} from '@/lib/public-listings-client';
+import type { PublicListingsBundle } from '@/lib/public-listings-client';
+import {
+  listingBusinessPublicHref,
+  listingCarPublicHref,
+  listingJobPublicHref,
+  listingMarketplacePublicHref,
+  listingProfessionalPublicHref,
+  listingRealEstatePublicHref,
+  paths,
+} from '@/paths';
 
 export function homepageStaticJsonLd(siteOrigin: string) {
   return {
@@ -48,183 +49,64 @@ export function homepageStaticJsonLd(siteOrigin: string) {
   };
 }
 
+/**
+ * Homepage ItemLists point at listing URLs only — no nested Product/Offer/JobPosting.
+ * Full product schema on the homepage triggers GSC Merchant listings errors for a
+ * classifieds marketplace that cannot satisfy Shopping rich-result requirements.
+ * Detail pages keep their own Product / JobPosting / etc. JSON-LD.
+ */
 export function homepageItemListJsonLd(bundle: PublicListingsBundle, siteOrigin: string) {
   return HOME_VERTICALS.map((v) => {
-    const items = (() => {
+    const entries = (() => {
       switch (v.id) {
         case 'real-estate':
-          return bundle.realEstate.map((l) => realEstateItem(l));
+          return bundle.realEstate.map((l) => ({
+            name: l.title,
+            path: listingRealEstatePublicHref(l),
+          }));
         case 'cars':
-          return bundle.cars.map((l) => carItem(l));
+          return bundle.cars.map((l) => ({
+            name: [l.make, l.model, l.variant].filter(Boolean).join(' '),
+            path: listingCarPublicHref(l),
+          }));
         case 'jobs':
-          return bundle.jobs.map((l) => jobItem(l));
+          return bundle.jobs.map((l) => ({
+            name: l.title,
+            path: listingJobPublicHref(l),
+          }));
         case 'marketplace':
-          return bundle.marketplace.map((l) => marketplaceItem(l));
+          return bundle.marketplace.map((l) => ({
+            name: l.title,
+            path: listingMarketplacePublicHref(l),
+          }));
         case 'businesses':
-          return bundle.businesses.map((l) => directoryItem(l));
+          return bundle.businesses.map((l) => ({
+            name: l.title,
+            path: listingBusinessPublicHref(l),
+          }));
         case 'professionals':
-          return bundle.professionals.map((l) => directoryItem(l));
+          return bundle.professionals.map((l) => ({
+            name: l.title,
+            path: listingProfessionalPublicHref(l),
+          }));
         default:
           return [];
       }
     })();
+
     return {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       name: v.label,
       description: v.tagline,
       url: `${siteOrigin}${v.href}`,
-      numberOfItems: items.length,
-      itemListElement: items.map((item, index) => ({
+      numberOfItems: entries.length,
+      itemListElement: entries.map((entry, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        ...item,
+        name: entry.name,
+        url: `${siteOrigin}${entry.path}`,
       })),
     };
   });
-}
-
-function realEstateItem(l: PublicRealEstateListing) {
-  return {
-    item: {
-      '@type': 'Accommodation',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: l.cityName ?? undefined,
-        addressRegion: l.zoneName ?? undefined,
-        addressCountry: 'AL',
-      },
-      floorSize: l.surfaceM2 ? { '@type': 'QuantitativeValue', value: l.surfaceM2, unitCode: 'MTK' } : undefined,
-      numberOfBedrooms: l.bedrooms ?? undefined,
-      numberOfBathroomsTotal: l.bathrooms ?? undefined,
-      offers: {
-        '@type': 'Offer',
-        price: l.price,
-        priceCurrency: l.currency,
-        availability: 'https://schema.org/InStock',
-      },
-    },
-  };
-}
-
-function carItem(l: PublicCarListing) {
-  return {
-    item: {
-      '@type': 'Car',
-      name: [l.make, l.model, l.variant].filter(Boolean).join(' '),
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      brand: { '@type': 'Brand', name: l.make },
-      model: l.model,
-      vehicleModelDate: l.year,
-      mileageFromOdometer: { '@type': 'QuantitativeValue', value: l.kilometers, unitCode: 'KMT' },
-      fuelType: l.fuelType,
-      vehicleTransmission: l.transmission,
-      color: l.color,
-      offers: {
-        '@type': 'Offer',
-        price: l.price,
-        priceCurrency: l.currency,
-        availability: 'https://schema.org/InStock',
-        areaServed: l.cityName ?? 'AL',
-      },
-    },
-  };
-}
-
-function jobItem(l: PublicJobListing) {
-  return {
-    item: {
-      '@type': 'JobPosting',
-      title: l.title,
-      description: l.description,
-      datePosted: l.createdAt,
-      employmentType: l.jobType,
-      industry: l.industry,
-      jobLocationType: l.workLocation,
-      hiringOrganization: { '@type': 'Organization', name: config.site.name },
-      jobLocation: l.cityName
-        ? {
-            '@type': 'Place',
-            address: {
-              '@type': 'PostalAddress',
-              addressLocality: l.cityName,
-              addressCountry: 'AL',
-            },
-          }
-        : undefined,
-      baseSalary:
-        l.salary != null
-          ? {
-              '@type': 'MonetaryAmount',
-              currency: l.currency ?? 'EUR',
-              value: { '@type': 'QuantitativeValue', value: l.salary, unitText: 'MONTH' },
-            }
-          : undefined,
-    },
-  };
-}
-
-function marketplaceItem(l: PublicMarketplaceListing) {
-  return {
-    item: {
-      '@type': 'Product',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      category: l.category,
-      offers:
-        l.price != null
-          ? {
-              '@type': 'Offer',
-              price: l.price,
-              priceCurrency: l.currency ?? 'EUR',
-              availability: 'https://schema.org/InStock',
-              areaServed: l.cityName ?? 'AL',
-            }
-          : undefined,
-    },
-  };
-}
-
-function directoryItem(l: PublicDirectoryListing) {
-  if (l.kind === 'businesses') {
-    return {
-      item: {
-        '@type': 'Restaurant',
-        name: l.title,
-        description: l.description,
-        image: l.imageUrl ?? undefined,
-        address: l.cityName
-          ? {
-              '@type': 'PostalAddress',
-              addressLocality: l.cityName,
-              addressCountry: 'AL',
-            }
-          : undefined,
-        telephone: l.contactPhone ?? undefined,
-        openingHours: l.openingHours ?? undefined,
-        servesCuisine: l.servicesHighlight ?? undefined,
-      },
-    };
-  }
-  return {
-    item: {
-      '@type': 'ProfessionalService',
-      name: l.title,
-      description: l.description,
-      image: l.imageUrl ?? undefined,
-      address: l.cityName
-        ? {
-            '@type': 'PostalAddress',
-            addressLocality: l.cityName,
-            addressCountry: 'AL',
-          }
-        : undefined,
-      priceRange: l.price != null ? `${l.price} ${l.currency === 'LEK' ? 'ALL' : (l.currency ?? 'EUR')}` : undefined,
-    },
-  };
 }

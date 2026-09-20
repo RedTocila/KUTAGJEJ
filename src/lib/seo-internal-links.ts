@@ -87,4 +87,17 @@ export function footerCityHubLinks(vertical: HomeVerticalId = 'real-estate'): Ar
   }));
 }
 
+/** Crawlable city landings for browse hubs (e.g. /prona → /prona/tirane). */
+export function verticalCityHubLinks(
+  vertical: HomeVerticalId,
+  opts?: { includeVerticalLabel?: boolean },
+): Array<{ href: string; label: string }> {
+  const base = verticalPublicBase(vertical);
+  const verticalLabel = HOME_VERTICALS.find((v) => v.id === vertical)?.label;
+  return SEO_HUB_CITIES.map((city) => ({
+    href: pathsPublicLocationLanding(base, city.slug),
+    label: opts?.includeVerticalLabel && verticalLabel ? `${verticalLabel} në ${city.name}` : city.name,
+  }));
+}
+
 export { VERTICAL_TO_SEO };

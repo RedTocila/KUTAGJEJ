@@ -7,6 +7,7 @@ import { HOME_VERTICALS, isHomeVerticalId } from '@/lib/home-categories';
 import type { TopViewedListing } from '@/lib/public-listings-client';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
+import { verticalCityHubLinks } from '@/lib/seo-internal-links';
 import { paths } from '@/paths';
 import { BrowseLoadProvider, type BrowseResolvedMeta } from '@/components/public/browse-load-context';
 import {
@@ -107,6 +108,7 @@ export function CategoryBrowseLayout({
         .slice(0, 4)
         .map((v) => ({ href: v.href, label: v.label }))
     : [];
+  const cityHubLinks = isHomeVerticalId(verticalId) ? verticalCityHubLinks(verticalId) : [];
 
   return (
     <PublicShell hideHeaderBelowMd>
@@ -126,6 +128,7 @@ export function CategoryBrowseLayout({
             text={verticalCopy.paragraphs[0] || verticalCopy.subtext}
             links={[
               { href: paths.auth.signIn, label: 'Posto njoftim falas' },
+              ...cityHubLinks,
               ...relatedLinks,
             ]}
           />

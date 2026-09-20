@@ -3,24 +3,30 @@
 import * as React from 'react';
 import RouterLink from 'next/link';
 import { Box, Container, Divider, IconButton, Link, Stack, Typography } from '@mui/material';
-import { FacebookLogo as FacebookIcon } from '@phosphor-icons/react/dist/ssr/FacebookLogo';
 import { InstagramLogo as InstagramIcon } from '@phosphor-icons/react/dist/ssr/InstagramLogo';
-import { LinkedinLogo as LinkedinIcon } from '@phosphor-icons/react/dist/ssr/LinkedinLogo';
+import { TiktokLogo as TiktokIcon } from '@phosphor-icons/react/dist/ssr/TiktokLogo';
+import { YoutubeLogo as YoutubeIcon } from '@phosphor-icons/react/dist/ssr/YoutubeLogo';
 import { Envelope as EnvelopeIcon } from '@phosphor-icons/react/dist/ssr/Envelope';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
-import { config } from '@/config';
+import { brandSocials, config } from '@/config';
 import { useCopy } from '@/hooks/use-copy';
 import { primaryMainAlpha, secondaryMainAlpha } from '@/lib/css-var-alpha';
 import { footerCityHubLinks } from '@/lib/seo-internal-links';
 import { paths } from '@/paths';
 
-const SOCIAL = [
-  { label: 'Facebook', href: 'https://facebook.com', icon: FacebookIcon },
-  { label: 'Instagram', href: 'https://instagram.com', icon: InstagramIcon },
-  { label: 'LinkedIn', href: 'https://linkedin.com', icon: LinkedinIcon },
-] as const;
+const SOCIAL_ICONS = {
+  Instagram: InstagramIcon,
+  TikTok: TiktokIcon,
+  YouTube: YoutubeIcon,
+} as const;
+
+const SOCIAL = brandSocials.map((s) => ({
+  ...s,
+  icon: SOCIAL_ICONS[s.label],
+}));
+
 
 const linkSx = {
   color: 'text.secondary',

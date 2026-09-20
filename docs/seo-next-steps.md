@@ -13,7 +13,7 @@
 9. **Sitemap fetch**: canonical host is `www.kutagjej.al` (matches Vercel’s apex→www redirect so GSC gets HTTP 200)
 10. **seo-index 500**: fixed job visibility check that crashed `/api/public/listings/seo-index`
 11. **No Product JSON-LD for Merchant**: homepage ItemLists are URL-only; `/tregu` uses Offer; cars use `Car` only; `/prona` uses Apartment/Residence/etc. (not Product) so GSC Merchant listings stay quiet on classifieds
-12. **AI / GEO**: `/llms.txt`, explicit AI crawler allows in `robots.ts`, richer Organization JSON-LD (`sameAs` via env), answer-first `/rreth-nesh` + homepage entity FAQs, city hub crawl links on hubs/home
+12. **AI / GEO**: `/llms.txt`, explicit AI crawler allows in `robots.ts`, richer Organization JSON-LD (`sameAs` → Instagram/TikTok/YouTube), answer-first `/rreth-nesh` + homepage entity FAQs, city hub crawl links on hubs/home
 
 ## You must do manually (highest remaining impact)
 
@@ -27,7 +27,7 @@
 
 ### AI assistants (ChatGPT / Gemini / Claude)
 1. Deploy GEO changes; confirm `https://www.kutagjej.al/llms.txt` and `/robots.txt` allow OAI-SearchBot
-2. Set real brand social URLs in Vercel: `NEXT_PUBLIC_SOCIAL_FACEBOOK_URL`, `INSTAGRAM`, `LINKEDIN` (for Organization `sameAs`)
+2. Brand socials are hardcoded: Instagram, TikTok, YouTube (`brandSocials` in `src/config.ts`) — keep bios linking to www.kutagjej.al
 3. Monthly: ask ChatGPT/Gemini “Ku gjej njoftime prona në Shqipëri?” — check if KuTaGjej is cited
 4. Earn Albanian directory / partner / press mentions with links to city hubs
 

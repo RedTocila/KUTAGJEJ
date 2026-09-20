@@ -11,6 +11,13 @@ export const brand = {
 /** Public URL for {@link brand.logoFileName} (Next serves `public/` at `/`). */
 export const brandLogoSrc = `/${brand.logoFileName}` as const;
 
+/** Official KuTaGjej social profiles (footer + Organization `sameAs`). */
+export const brandSocials = [
+  { label: 'Instagram', href: 'https://www.instagram.com/kutagjej.al' },
+  { label: 'TikTok', href: 'https://www.tiktok.com/@kutagjej' },
+  { label: 'YouTube', href: 'https://www.youtube.com/@kutagjej' },
+] as const;
+
 export interface Config {
   site: {
     name: string;

@@ -1,42 +1,9 @@
-import { brandLogoSrc, config } from '@/config';
-
-/**
- * Optional public social profile URLs for Organization `sameAs`.
- * Set in Vercel / .env when real brand pages exist (not generic facebook.com).
- */
-function envSameAs(): string[] {
-  const keys = [
-    'NEXT_PUBLIC_SOCIAL_FACEBOOK_URL',
-    'NEXT_PUBLIC_SOCIAL_INSTAGRAM_URL',
-    'NEXT_PUBLIC_SOCIAL_LINKEDIN_URL',
-    'NEXT_PUBLIC_SOCIAL_TIKTOK_URL',
-    'NEXT_PUBLIC_SOCIAL_YOUTUBE_URL',
-  ] as const;
-  const out: string[] = [];
-  for (const key of keys) {
-    const raw = String(process.env[key] || '')
-      .trim()
-      .replace(/\/$/, '');
-    if (!raw) continue;
-    try {
-      const url = new URL(raw);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
-      // Skip generic homepage placeholders that are not brand pages.
-      if (/^https?:\/\/(www\.)?(facebook|instagram|linkedin|tiktok|youtube)\.com\/?$/i.test(url.href)) {
-        continue;
-      }
-      out.push(url.href);
-    } catch {
-      /* ignore invalid */
-    }
-  }
-  return out;
-}
+import { brandLogoSrc, brandSocials, config } from '@/config';
 
 /** Shared Organization entity for homepage, about, and GEO / AI citation signals. */
 export function organizationJsonLd(siteOrigin: string) {
   const origin = siteOrigin.replace(/\/$/, '');
-  const sameAs = envSameAs();
+  const sameAs = brandSocials.map((s) => s.href);
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -70,6 +37,6 @@ export function organizationJsonLd(siteOrigin: string) {
       url: `${origin}/kontakt`,
       availableLanguage: ['sq', 'en'],
     },
-    ...(sameAs.length ? { sameAs } : {}),
+    sameAs,
   };
 }

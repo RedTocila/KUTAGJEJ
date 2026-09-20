@@ -12,6 +12,8 @@ import {
   AI_SEARCH_BLUE_SOFT,
   localizeHomeBrowseCategories,
   localizeSearchCategories,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
 } from '@/lib/home-categories';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -20,7 +22,7 @@ import { MOTION } from '@/styles/motion';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
 
-/** Soft primary green fill for listing / Okazion / Profiles circles. */
+/** Soft primary green fill for listing / Profiles circles. */
 const CATEGORY_TILE_BG = 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
 const CATEGORY_TILE_BG_HOVER = 'rgba(var(--mui-palette-primary-mainChannel) / 0.22)';
 const CATEGORY_ICON_COLOR = 'var(--mui-palette-primary-main)';
@@ -39,30 +41,35 @@ export interface HeroCategoryCirclesProps {
   includeAi?: boolean;
 }
 
-type AccentMode = 'ai' | 'default';
+type AccentMode = 'ai' | 'okazion' | 'default';
 
 function accentColor(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE;
+  if (mode === 'okazion') return OKAZION_ACCENT;
   return 'var(--mui-palette-primary-main)';
 }
 
 function tileBg(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE_MUTED;
+  if (mode === 'okazion') return OKAZION_ACCENT_SOFT;
   return CATEGORY_TILE_BG;
 }
 
 function tileHoverBg(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE_SOFT;
+  if (mode === 'okazion') return 'rgba(239, 68, 68, 0.28)';
   return CATEGORY_TILE_BG_HOVER;
 }
 
 function iconColor(mode: AccentMode): string {
   if (mode === 'ai') return AI_SEARCH_BLUE;
+  if (mode === 'okazion') return OKAZION_ACCENT;
   return CATEGORY_ICON_COLOR;
 }
 
 function accentModeFor(id: string): AccentMode {
   if (id === 'ai') return 'ai';
+  if (id === 'okazion') return 'okazion';
   return 'default';
 }
 

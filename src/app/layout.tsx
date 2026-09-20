@@ -43,6 +43,9 @@ export const metadata = {
     template: `%s | ${config.site.name}`,
   },
   description: config.site.description,
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
   icons: {
     icon: [
       { url: brandLogoSrc, type: 'image/png', sizes: '1024x1024' },

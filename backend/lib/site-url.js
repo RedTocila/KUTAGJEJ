@@ -1,4 +1,4 @@
-const CANONICAL_FRONTEND_URL = 'https://kutagjej.al';
+const CANONICAL_FRONTEND_URL = 'https://www.kutagjej.al';
 
 function isLocalHostname(hostname) {
   const host = String(hostname || '').toLowerCase();

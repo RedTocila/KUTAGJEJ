@@ -135,8 +135,8 @@ export const AI_SEARCH_CATEGORY: SearchCategory = {
 };
 
 /**
- * Soft salmon accent — borders, icons, labels, chips (picker, packages, CTAs).
- * Homepage / Okazion browse page use brand primary green instead.
+ * Soft salmon accent — borders, icons, labels, chips (picker, packages, CTAs),
+ * homepage Okazion section, and Okazion browse.
  */
 export const OKAZION_ACCENT = '#ef4444';
 export const OKAZION_ACCENT_DARK = '#dc2626';

@@ -26,6 +26,7 @@ import {
 } from '@/lib/listing-filters';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
 import { formatBrowseLocationPhrase, formatCityLocationPhrase } from '@/lib/location-display';
+import { brandOgImageUrl } from '@/lib/public-vertical-listing-metadata';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 
@@ -318,6 +319,7 @@ export function buildBrowsePageMetadata({
   const canonicalPath = hasQuery ? basePath : page > 1 ? `${basePath}?page=${page}` : basePath;
   const canonicalUrl = new URL(canonicalPath.replace(/^\//, ''), config.site.url).toString();
   const fullTitle = `${pageTitle} | ${config.site.name}`;
+  const ogImage = brandOgImageUrl();
 
   return {
     title: pageTitle,
@@ -331,11 +333,13 @@ export function buildBrowsePageMetadata({
       type: 'website',
       locale: 'sq_AL',
       siteName: config.site.name,
+      images: [{ url: ogImage, alt: config.site.name, width: 512, height: 512 }],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: fullTitle,
       description,
+      images: [ogImage],
     },
   };
 }

@@ -74,6 +74,40 @@ export const HOME_SEO_COPY = {
   ] satisfies SeoFaqItem[],
 } as const;
 
+/** Browse page `/okazion` — H1, lead, long-form + FAQ for crawlers (red accents in UI). */
+export const OKAZION_SEO_COPY: VerticalSeoCopy = {
+  headline: 'Okazion — oferta me kohë të kufizuar në Shqipëri',
+  subtext:
+    'Okazion mbledh njoftime me prioritet për 7 ditë: prona, makina, punë dhe tregu. Ofertat shfaqen me temë të kuqe dhe timer — gjej shpejt dhe kontakto shitësin, qiradhënësin ose punëdhënësin drejtpërdrejt.',
+  paragraphs: [
+    'Në Okazion shfaqen njoftime që kanë aktivizuar boost-in Okazion — zakonisht 7 ditë me prioritet në listë dhe dukshmëri më të lartë. Filtro sipas kategorisë (prona, makina, punë, tregu) dhe fjalëve kyçe për të gjetur oferta me kohë të kufizuar në Tiranë, Durrës, Vlorë dhe në gjithë Shqipërinë.',
+    'Çdo njoftim Okazion ka timer deri në skadim. Hap njoftimin, shiko fotot dhe detajet, pastaj kontakto publikuesin me telefon, WhatsApp ose mesazh. Nëse shet ose jep me qira, mund të aktivizosh Okazion nga paneli i përdoruesit ose kur poston njoftim.',
+    'Krahaso me njoftimet standarde në Prona, Makina, Punë dhe Tregu — Okazion është shtresa e ofertave urgjente që duan vëmendje të shpejtë.',
+  ],
+  faqs: [
+    {
+      question: 'Çfarë është Okazion në KuTaGjej?',
+      answer:
+        'Okazion është seksioni i njoftimeve me prioritet për 7 ditë. Njoftimet shfaqen me temë të kuqe, timer dhe vend më të lartë në listë që blerësit t’i gjejnë më shpejt.',
+    },
+    {
+      question: 'Sa kohë zgjat një njoftim Okazion?',
+      answer:
+        'Zakonisht 7 ditë nga aktivizimi. Pas skadimit njoftimi mbetet në kategorinë e tij (p.sh. Prona ose Makina), por nuk mbahet më si Okazion aktiv.',
+    },
+    {
+      question: 'Cilat kategori mbështeten në Okazion?',
+      answer:
+        'Prona, makina, punë dhe tregu. Mund të filtrosh sipas kategorisë dhe të kërkosh me fjalë kyçe në faqen Okazion.',
+    },
+    {
+      question: 'Si aktivizoj Okazion për njoftimin tim?',
+      answer:
+        'Nga paneli i përdoruesit (Shpalljet e mia / paketat) ose kur poston njoftim. Mund të përdorësh vendet nga planet Grow/Elite ose të blesh Okazion me euro ose monedha Boost.',
+    },
+  ],
+};
+
 /** Short interludes inserted between homepage carousel pairs (SEO + readability). */
 export const HOME_FEED_SEO_INTERLUDES = [
   {

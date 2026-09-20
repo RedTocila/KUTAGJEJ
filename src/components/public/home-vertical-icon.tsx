@@ -12,7 +12,7 @@ import { Storefront as StorefrontIcon } from '@phosphor-icons/react/dist/ssr/Sto
 import { Users as UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import type { Icon as PhosphorIcon, IconProps, IconWeight } from '@phosphor-icons/react';
 
-import { AI_SEARCH_BLUE, PROFILES_ACCENT, type SearchCategoryId } from '@/lib/home-categories';
+import { AI_SEARCH_BLUE, OKAZION_ACCENT, PROFILES_ACCENT, type SearchCategoryId } from '@/lib/home-categories';
 
 export interface HomeVerticalIconProps {
   verticalId: SearchCategoryId;
@@ -56,9 +56,11 @@ export function HomeVerticalIcon({
     color ??
     (verticalId === 'ai'
       ? AI_SEARCH_BLUE
-      : verticalId === 'profiles'
-        ? PROFILES_ACCENT
-        : 'var(--mui-palette-primary-main)');
+      : verticalId === 'okazion'
+        ? OKAZION_ACCENT
+        : verticalId === 'profiles'
+          ? PROFILES_ACCENT
+          : 'var(--mui-palette-primary-main)');
   const shared = {
     weight: resolvedWeight,
     size,

@@ -325,7 +325,20 @@ export const productSearchFieldSx = {
 } as const;
 
 export function ProductSearchIcon({ color }: { color?: string } = {}) {
-  return <MagnifyingGlassIcon size={14} color={color ?? 'var(--mui-palette-primary-main)'} style={{ flexShrink: 0 }} />;
+  return (
+    <Box
+      component="span"
+      aria-hidden
+      sx={{
+        display: 'inline-flex',
+        flexShrink: 0,
+        lineHeight: 0,
+        color: color ?? 'primary.main',
+      }}
+    >
+      <MagnifyingGlassIcon size={14} />
+    </Box>
+  );
 }
 
 /** Circular filter trigger beside the search bar. */

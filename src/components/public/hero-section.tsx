@@ -25,8 +25,8 @@ export function HeroSection({ children }: { children?: React.ReactNode }) {
         <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
           <Stack spacing={{ xs: 1.5, md: 3 }} sx={{ alignItems: 'stretch', width: '100%' }}>
             <HeroCategoryCircles variant="links" includeAi={false} />
-            <HomeBrowserHeroSeo />
             {children}
+            <HomeBrowserHeroSeo />
           </Stack>
         </Container>
       </Box>

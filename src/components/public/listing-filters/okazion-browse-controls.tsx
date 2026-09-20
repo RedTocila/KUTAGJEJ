@@ -10,9 +10,12 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { useLanguage } from '@/hooks/use-language';
+import { paths } from '@/paths';
 import {
   localizeHomeVerticals,
   localizeSearchCategory,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   type HomeVerticalId,
 } from '@/lib/home-categories';
 import {
@@ -25,7 +28,6 @@ import {
   type BrowseOkazionFilters,
 } from '@/lib/listing-filters';
 import { parseSmartSearchQuery } from '@/lib/smart-search';
-import { paths } from '@/paths';
 import {
   PRODUCT_BROWSE_CONTROL_HEIGHT,
   ProductTag,
@@ -50,6 +52,10 @@ const OKAZION_VERTICAL_ICONS: Record<
   jobs: BriefcaseIcon,
   marketplace: MarketplaceCategoryIcon,
 };
+
+/** Tags + search chrome use Okazion red. */
+const OKAZION_TAG_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
+const OKAZION_SEARCH_ACCENT = { color: OKAZION_ACCENT, soft: OKAZION_ACCENT_SOFT } as const;
 
 const toolbarRowSx = {
   display: 'flex',
@@ -140,6 +146,7 @@ export function OkazionBrowseControls() {
             placeholder={searchPlaceholder}
             onChange={applyKeyword}
             commitToChip
+            accent={OKAZION_SEARCH_ACCENT}
           />
         </Box>
       </Box>
@@ -179,6 +186,7 @@ export function OkazionBrowseControls() {
                 icon={OKAZION_VERTICAL_ICONS[vertical.id as keyof typeof OKAZION_VERTICAL_ICONS]}
                 bareIcon
                 active={active}
+                accent={OKAZION_TAG_ACCENT}
               />
             );
           })}

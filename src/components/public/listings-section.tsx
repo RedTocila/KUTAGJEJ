@@ -10,6 +10,8 @@ import {
   isHomeVerticalId,
   localizeSearchCategory,
   localizeVertical,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
   type HomeVerticalId,
   type SearchCategoryId,
 } from '@/lib/home-categories';
@@ -56,10 +58,9 @@ function sectionMeta(verticalId: ListingsSectionVerticalId, language: AppLanguag
       label: cat.label,
       href: cat.href,
       postHref: isOkazion ? `${paths.user.realEstateListing}?okazion=1` : undefined,
-      /** Homepage Profiles: green icon, default title color; Okazion uses default green icon. */
-      accent: undefined as string | undefined,
-      accentSoft: undefined as string | undefined,
-      iconColor: isProfiles ? 'var(--mui-palette-primary-main)' : undefined,
+      accent: isOkazion ? OKAZION_ACCENT : undefined,
+      accentSoft: isOkazion ? OKAZION_ACCENT_SOFT : undefined,
+      iconColor: isOkazion ? OKAZION_ACCENT : isProfiles ? 'var(--mui-palette-primary-main)' : undefined,
       titleColor: isProfiles ? 'text.primary' : undefined,
     };
   }

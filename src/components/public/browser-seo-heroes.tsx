@@ -1,36 +1,106 @@
 'use client';
 
 import * as React from 'react';
-import { Container } from '@mui/material';
+import { Box, Container } from '@mui/material';
 
-import { paths } from '@/paths';
-import { HOME_SEO_COPY } from '@/lib/public-seo-copy';
+import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { SeoEyebrow, SeoHeadingPanel, SeoTextLinkRow } from '@/components/public/seo-heading-panel';
 
+const accentSx = {
+  color: 'primary.main',
+  fontWeight: 700,
+} as const;
+
+const okazionAccentSx = {
+  color: OKAZION_ACCENT,
+  fontWeight: 700,
+} as const;
+
+function Accent({ children }: { children: React.ReactNode }) {
+  return (
+    <Box component="span" sx={accentSx}>
+      {children}
+    </Box>
+  );
+}
+
+function OkazionAccent({ children }: { children: React.ReactNode }) {
+  return (
+    <Box component="span" sx={okazionAccentSx}>
+      {children}
+    </Box>
+  );
+}
+
 /**
  * Primary homepage H1 + lead for browsers/crawlers (hidden in native app).
- * Placed at the top of the hero so Google sees a real title above the fold.
+ * Sits under the banner slider so the promo leads, then the SEO paragraph.
  */
 export function HomeBrowserHeroSeo() {
   return (
-    <BrowserSeoSection aria-labelledby="home-seo-h1" sx={{ pt: { xs: 0.25, md: 0 }, pb: { xs: 0.25, md: 0 } }}>
+    <BrowserSeoSection
+      aria-labelledby="home-seo-h1"
+      sx={{
+        // Stack gap is a bit wide under the slider — pull up slightly, then breathe before Okazion.
+        mt: { xs: -0.75, md: -1 },
+        pt: 0,
+        pb: { xs: 2, md: 2.5 },
+      }}
+    >
       <SeoHeadingPanel
         titleId="home-seo-h1"
-        title={HOME_SEO_COPY.headline}
-        subtext={HOME_SEO_COPY.subtext}
+        dense
         titleComponent="h1"
-        actions={
-          <SeoTextLinkRow
-            links={[
-              { href: paths.public.realEstate, label: 'Prona' },
-              { href: paths.public.cars, label: 'Makina' },
-              { href: paths.public.jobs, label: 'Punë' },
-              { href: paths.public.marketplace, label: 'Tregu' },
-            ]}
-          />
+        title={
+          <>
+            Njoftime <Accent>falas</Accent> në Shqipëri — <Accent>prona</Accent>, <Accent>makina</Accent>,{' '}
+            <Accent>punë</Accent> dhe <Accent>tregu</Accent>
+          </>
+        }
+        subtext={
+          <>
+            <Accent>KuTaGjej</Accent> është marketplace-i lokal ku poston dhe gjen shpejt:{' '}
+            <Accent>apartamente me qira ose shitje</Accent>, <Accent>makina</Accent>, <Accent>vende pune</Accent>,{' '}
+            <Accent>biznese</Accent>, <Accent>profesionistë</Accent> dhe artikuj të rinj e të dorës së dytë.
+          </>
         }
       />
+    </BrowserSeoSection>
+  );
+}
+
+/** `/okazion` browse H1 + lead — red keyword accents. */
+export function OkazionBrowserHeroSeo() {
+  return (
+    <BrowserSeoSection aria-labelledby="okazion-seo-h1" sx={{ pb: { xs: 1, md: 1.5 } }}>
+      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 2, md: 3, lg: 4 } }}>
+        <SeoHeadingPanel
+          titleId="okazion-seo-h1"
+          dense
+          tone="okazion"
+          titleComponent="h1"
+          eyebrow={
+            <SeoEyebrow color={OKAZION_ACCENT} bgcolor={OKAZION_ACCENT_SOFT}>
+              Okazion
+            </SeoEyebrow>
+          }
+          title={
+            <>
+              <OkazionAccent>Okazion</OkazionAccent> — oferta me kohë të kufizuar në Shqipëri
+            </>
+          }
+          subtext={
+            <>
+              <OkazionAccent>Okazion</OkazionAccent> mbledh njoftime me prioritet për{' '}
+              <OkazionAccent>7 ditë</OkazionAccent>: <OkazionAccent>prona</OkazionAccent>,{' '}
+              <OkazionAccent>makina</OkazionAccent>, <OkazionAccent>punë</OkazionAccent> dhe{' '}
+              <OkazionAccent>tregu</OkazionAccent>. Ofertat shfaqen me temë të kuqe dhe timer — gjej shpejt dhe
+              kontakto shitësin, qiradhënësin ose punëdhënësin drejtpërdrejt.
+            </>
+          }
+        />
+      </Container>
     </BrowserSeoSection>
   );
 }

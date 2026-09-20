@@ -34,6 +34,7 @@ import {
 } from '@/lib/real-estate-constants';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { fetchPublicCities } from '@/lib/real-estate-locations-server';
+import { brandOgImageUrl } from '@/lib/public-vertical-listing-metadata';
 import { safeServerJson } from '@/lib/server-fetch';
 
 export type SeoVertical = 'real-estate' | 'cars' | 'jobs' | 'marketplace' | 'businesses' | 'professionals';
@@ -366,17 +367,29 @@ export const loadSeoLandingRoute = cache(async function loadSeoLandingRoute(vert
 export function seoLandingMetadata(config: SeoLandingConfig, total: number, indexable: boolean): Metadata {
   const enriched = enrichSeoLandingCopy(config, total);
   const canonical = config.path;
+  const ogImage = brandOgImageUrl();
+  const title = enriched.heading;
+  const description = enriched.description;
+  const fullTitle = `${title} | KuTaGjej`;
   return {
-    title: enriched.heading,
-    description: enriched.description,
+    title,
+    description,
     alternates: { canonical },
     robots: { index: indexable, follow: true },
     openGraph: {
-      title: `${enriched.heading} | KuTaGjej`,
-      description: enriched.description,
+      title: fullTitle,
+      description,
       url: new URL(canonical.replace(/^\//, ''), siteConfig.site.url).toString(),
       type: 'website',
       locale: 'sq_AL',
+      siteName: siteConfig.site.name,
+      images: [{ url: ogImage, alt: siteConfig.site.name, width: 512, height: 512 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fullTitle,
+      description,
+      images: [ogImage],
     },
     other: { 'listing-count': String(total) },
   };

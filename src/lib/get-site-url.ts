@@ -1,6 +1,10 @@
-/** Canonical public origin for shareable links (never localhost / vercel.app). */
-export const CANONICAL_SITE_HOST = 'kutagjej.al';
+/** Canonical public origin for shareable links (never localhost / vercel.app).
+ * Prefer `www` — Vercel currently redirects apex → www (308). Sitemap/robots must
+ * advertise a URL that returns 200 without redirect or GSC reports "Couldn't fetch".
+ */
+export const CANONICAL_SITE_HOST = 'www.kutagjej.al';
 export const CANONICAL_SITE_ORIGIN = `https://${CANONICAL_SITE_HOST}`;
+export const APEX_SITE_HOST = 'kutagjej.al';
 
 export function isLocalHostname(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -21,11 +25,11 @@ function withTrailingSlash(origin: string): string {
   return origin.endsWith('/') ? origin : `${origin}/`;
 }
 
-/** Map www / Vercel aliases onto the custom domain. */
+/** Map apex / Vercel aliases onto the live www host. */
 function toCanonicalOrigin(hostname: string): string | null {
   const host = hostname.toLowerCase();
   if (isLocalHostname(host)) return null;
-  if (host === CANONICAL_SITE_HOST || host === `www.${CANONICAL_SITE_HOST}` || isVercelAppHostname(host)) {
+  if (host === APEX_SITE_HOST || host === CANONICAL_SITE_HOST || isVercelAppHostname(host)) {
     return CANONICAL_SITE_ORIGIN;
   }
   return `https://${host}`;

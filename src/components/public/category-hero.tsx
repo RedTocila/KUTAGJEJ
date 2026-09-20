@@ -12,6 +12,11 @@ import {
   isHomeVerticalId,
   localizeSearchCategory,
   localizeVertical,
+  OKAZION_ACCENT,
+  OKAZION_ACCENT_SOFT,
+  OKAZION_RED,
+  OKAZION_RED_DARK,
+  OKAZION_RED_ON,
   PROFILES_ACCENT,
   PROFILES_ACCENT_SOFT,
   type HomeVerticalId,
@@ -22,7 +27,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { useUser } from '@/hooks/use-user';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
-import { BrowseBrowserHeroSeo } from '@/components/public/browser-seo-heroes';
+import { BrowseBrowserHeroSeo, OkazionBrowserHeroSeo } from '@/components/public/browser-seo-heroes';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
 import { isNativeApp } from '@/lib/native-app';
 import { VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
@@ -86,7 +91,8 @@ export function PublicCategoryHero({
   const seoSubtext =
     intro ||
     (isHomeVerticalId(verticalId) ? VERTICAL_SEO_COPY[verticalId].subtext : '');
-  const showBrowserSeoHero = Boolean(seoSubtext) || isHomeVerticalId(verticalId) || Boolean(heading);
+  const showBrowserSeoHero =
+    isOkazion || Boolean(seoSubtext) || isHomeVerticalId(verticalId) || Boolean(heading);
 
   React.useEffect(() => {
     setMounted(true);
@@ -195,17 +201,19 @@ export function PublicCategoryHero({
                   height: 38,
                   borderRadius: '50%',
                   flexShrink: 0,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
+                  bgcolor: isOkazion ? OKAZION_RED : 'primary.main',
+                  color: isOkazion ? OKAZION_RED_ON : 'primary.contrastText',
                   boxShadow: (theme) =>
                     theme.palette.mode === 'dark'
                       ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-                      : '0 2px 8px rgba(118, 186, 27, 0.35)',
+                      : isOkazion
+                        ? '0 2px 8px rgba(247, 47, 53, 0.35)'
+                        : '0 2px 8px rgba(118, 186, 27, 0.35)',
                   transition:
                     'background-color 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1)',
                   '&:hover': {
-                    bgcolor: 'primary.dark',
-                    color: 'primary.contrastText',
+                    bgcolor: isOkazion ? OKAZION_RED_DARK : 'primary.dark',
+                    color: isOkazion ? OKAZION_RED_ON : 'primary.contrastText',
                     transform: 'scale(1.06)',
                   },
                   '&:active': { transform: 'scale(0.94)' },
@@ -254,7 +262,11 @@ export function PublicCategoryHero({
       />
       {showBrowserSeoHero ? (
         <Box sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}>
-          <BrowseBrowserHeroSeo title={seoTitle} subtext={seoSubtext} titleId={`browse-seo-${verticalId}`} />
+          {isOkazion ? (
+            <OkazionBrowserHeroSeo />
+          ) : (
+            <BrowseBrowserHeroSeo title={seoTitle} subtext={seoSubtext} titleId={`browse-seo-${verticalId}`} />
+          )}
         </Box>
       ) : null}
     </>
@@ -348,13 +360,15 @@ export function PublicCategoryEmptyState({
                 borderRadius: 2.5,
                 display: 'grid',
                 placeItems: 'center',
-                color: isProfiles ? PROFILES_ACCENT : 'primary.main',
-                bgcolor: isProfiles
-                  ? PROFILES_ACCENT_SOFT
-                  : (theme) =>
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
-                        : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+                color: isOkazion ? OKAZION_ACCENT : isProfiles ? PROFILES_ACCENT : 'primary.main',
+                bgcolor: isOkazion
+                  ? OKAZION_ACCENT_SOFT
+                  : isProfiles
+                    ? PROFILES_ACCENT_SOFT
+                    : (theme) =>
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)'
+                          : 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
               }}
             >
               <HomeVerticalIcon verticalId={verticalId} size={32} />

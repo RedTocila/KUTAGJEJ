@@ -7,7 +7,7 @@ import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
 
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
-import { localizeHomeBrowseCategories } from '@/lib/home-categories';
+import { localizeHomeBrowseCategories, OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
 
@@ -46,6 +46,10 @@ export function HomeCategoriesStrip() {
 
         <Grid container spacing={2}>
           {verticals.map((v) => {
+            const isOkazion = v.id === 'okazion';
+            const tileColor = isOkazion ? OKAZION_ACCENT : 'primary.main';
+            const tileBg = isOkazion ? OKAZION_ACCENT_SOFT : 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)';
+            const iconColor = isOkazion ? OKAZION_ACCENT : 'var(--mui-palette-primary-main)';
             return (
             <Grid key={v.id} size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }}>
               <Stack
@@ -67,7 +71,7 @@ export function HomeCategoriesStrip() {
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   '&:hover': {
-                    borderColor: 'primary.main',
+                    borderColor: tileColor,
                     transform: 'translateY(-3px)',
                     boxShadow: (theme) =>
                       theme.palette.mode === 'dark'
@@ -88,15 +92,15 @@ export function HomeCategoriesStrip() {
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    color: 'primary.main',
-                    bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.14)',
+                    color: tileColor,
+                    bgcolor: tileBg,
                     transition: `background-color ${MOTION.fast} ${MOTION.ease}`,
                   }}
                 >
                   <HomeVerticalIcon
                     verticalId={v.id}
                     size={32}
-                    color="var(--mui-palette-primary-main)"
+                    color={iconColor}
                   />
                 </Box>
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>

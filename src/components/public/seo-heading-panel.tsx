@@ -5,9 +5,17 @@ import RouterLink from 'next/link';
 import { Box, Link as MuiLink, Stack, Typography } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { BannerSurface } from '@/components/public/banner-surface';
+import { BannerSurface, type BannerSurfaceTone } from '@/components/public/banner-surface';
 
-export function SeoEyebrow({ children = 'KuTaGjej' }: { children?: React.ReactNode }) {
+export function SeoEyebrow({
+  children = 'KuTaGjej',
+  color,
+  bgcolor,
+}: {
+  children?: React.ReactNode;
+  color?: string;
+  bgcolor?: string;
+}) {
   return (
     <Typography
       component="p"
@@ -22,8 +30,8 @@ export function SeoEyebrow({ children = 'KuTaGjej' }: { children?: React.ReactNo
         fontSize: '0.72rem',
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
-        bgcolor: 'var(--banner-eyebrow-bg, rgba(var(--mui-palette-primary-mainChannel) / 0.14))',
-        color: 'primary.main',
+        bgcolor: bgcolor ?? 'var(--banner-eyebrow-bg, rgba(var(--mui-palette-primary-mainChannel) / 0.14))',
+        color: color ?? 'primary.main',
         lineHeight: 1.2,
         border: 'none',
       }}
@@ -45,18 +53,20 @@ export function SeoHeadingPanel({
   maxWidth = '100%',
   dense = false,
   actions,
+  tone = 'brand',
 }: {
   titleId: string;
-  title: string;
-  subtext?: string;
+  title: React.ReactNode;
+  subtext?: React.ReactNode;
   titleComponent?: 'h1' | 'h2' | 'h3';
   eyebrow?: React.ReactNode;
   maxWidth?: number | string;
   dense?: boolean;
   actions?: React.ReactNode;
+  tone?: BannerSurfaceTone;
 }) {
   return (
-    <BannerSurface dense={dense} sx={{ maxWidth, width: '100%' }}>
+    <BannerSurface dense={dense} tone={tone} sx={{ maxWidth, width: '100%' }}>
       <Stack spacing={dense ? 1.15 : 1.5} sx={{ maxWidth: 720 }}>
         {eyebrow === null ? null : eyebrow === undefined ? <SeoEyebrow /> : eyebrow}
         <Typography

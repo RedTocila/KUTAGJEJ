@@ -3,7 +3,7 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { slugifyTitle } = require('./real-estate-permalink');
 const { listingPermalinkFromSlugSource } = require('./listing-permalink');
-const { activeJobCreatedAtFilter } = require('./public-listings/query-helpers');
+const { JOB_LISTING_VISIBLE_DAYS } = require('./public-listings/constants');
 
 const KIND_CONFIG = [
   {
@@ -19,7 +19,7 @@ const KIND_CONFIG = [
   {
     kind: 'job',
     table: 'job_listings',
-    select: 'id,title,permalink_slug,updated_at,created_at,city_id,industry,status',
+    select: 'id,title,permalink_slug,updated_at,created_at,bumped_at,city_id,industry,status',
   },
   {
     kind: 'marketplace',
@@ -141,9 +141,12 @@ function maxDate(docs) {
 function isActiveDoc(kind, doc) {
   if (doc?.status !== 'approved') return false;
   if (kind !== 'job') return true;
-  const cutoff = activeJobCreatedAtFilter().gte.created_at;
-  const createdAt = new Date(doc.created_at).getTime();
-  return Number.isFinite(createdAt) && createdAt >= new Date(cutoff).getTime();
+  // Keep in sync with JOB_LISTING_VISIBLE_DAYS — do not parse FilterSpec shapes.
+  const cutoffMs = Date.now() - JOB_LISTING_VISIBLE_DAYS * 24 * 60 * 60 * 1000;
+  const createdMs = new Date(doc.created_at).getTime();
+  const bumpedMs = doc.bumped_at ? new Date(doc.bumped_at).getTime() : NaN;
+  const startsMs = Number.isFinite(bumpedMs) ? Math.max(createdMs, bumpedMs) : createdMs;
+  return Number.isFinite(startsMs) && startsMs >= cutoffMs;
 }
 
 function landingLastModified(current, doc) {
@@ -155,12 +158,28 @@ function landingLastModified(current, doc) {
 async function fetchSeoDocs() {
   const sb = getSupabaseAdmin();
   const results = await Promise.all(
-    KIND_CONFIG.map(async ({ table, select, vertical }) => {
-      let query = sb.from(table).select(select).eq('status', 'approved');
-      if (vertical) query = query.eq('vertical', vertical);
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+    KIND_CONFIG.map(async ({ table, select, vertical, kind }) => {
+      try {
+        let query = sb.from(table).select(select).eq('status', 'approved');
+        if (vertical) query = query.eq('vertical', vertical);
+        const { data, error } = await query;
+        if (error) {
+          // Older DBs may lack bumped_at — retry jobs without it.
+          if (kind === 'job' && /bumped_at/i.test(String(error.message || ''))) {
+            const fallback = await sb
+              .from(table)
+              .select('id,title,permalink_slug,updated_at,created_at,city_id,industry,status')
+              .eq('status', 'approved');
+            if (fallback.error) throw fallback.error;
+            return fallback.data || [];
+          }
+          throw error;
+        }
+        return data || [];
+      } catch (err) {
+        console.error(`[seo-index] Failed loading ${table}${vertical ? ` (${vertical})` : ''}:`, err?.message || err);
+        return [];
+      }
     }),
   );
 

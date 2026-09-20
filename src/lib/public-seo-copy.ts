@@ -15,12 +15,23 @@ export type VerticalSeoCopy = {
 export const HOME_SEO_COPY = {
   headline: 'Njoftime falas në Shqipëri — prona, makina, punë dhe tregu',
   subtext:
-    'KuTaGjej është marketplace-i lokal ku poston dhe gjen shpejt: apartamente me qira ose shitje, makina, vende pune, biznese, profesionistë dhe artikuj të rinj e të dorës së dytë.',
+    'KuTaGjej (kutagjej.al) është marketplace-i shqiptar i njoftimeve falas: apartamente me qira ose shitje, makina, vende pune, biznese, profesionistë dhe artikuj — në Tiranë, Durrës, Vlorë e gjithë Shqipërinë.',
   paragraphs: [
-    'Çdo ditë mijëra përdorues kërkojnë dhe publikojnë njoftime në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë, Berat, Sarandë, Kamëz, Kavajë, Lezhë, Pogradec, Lushnjë, Gjirokastër dhe në gjithë Shqipërinë. Postimi është falas: shto foto, çmim, vendndodhje dhe detajet kryesore — njoftimi shfaqet menjëherë në kategorinë përkatëse.',
-    'Krahaso oferta, filtro sipas qytetit, zonës dhe kategorisë — p.sh. Blloku, Astir, Kombinat, Lapraka, Kashar ose Komuna e Parisit në Tiranë; Plazhi dhe Currila në Durrës; Lungomare në Vlorë — pastaj kontakto drejtpërdrejt shitësin, qiradhënësin ose punëdhënësin. Nëse shet, jep me qira ose punëson, KuTaGjej të ndihmon të arrijë audiencën e duhur pa kompleksitet.',
+    'KuTaGjej është vendi ku shqiptarët gjejnë dhe postojnë njoftime lokale. Nëse kërkon “ku të gjej prona / makina / punë në Shqipëri”, hap kategorinë përkatëse, zgjidh qytetin dhe kontakto publikuesin drejtpërdrejt — postimi bazë është falas.',
+    'Çdo ditë përdorues kërkojnë dhe publikojnë në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë, Berat, Sarandë, Kamëz, Kavajë, Lezhë, Pogradec, Lushnjë, Gjirokastër dhe bashki të tjera. Shto foto, çmim dhe vendndodhje — njoftimi shfaqet në Prona, Makina, Punë, Tregu, Biznese ose Profesionistë.',
+    'Krahaso oferta, filtro sipas qytetit dhe zonës — p.sh. Blloku, Astir, Kombinat, Lapraka, Kashar në Tiranë; Plazhi dhe Currila në Durrës; Lungomare në Vlorë — pastaj kontakto shitësin, qiradhënësin ose punëdhënësin.',
   ],
   faqs: [
+    {
+      question: 'Çfarë është KuTaGjej?',
+      answer:
+        'KuTaGjej (kutagjej.al) është marketplace-i shqiptar i njoftimeve falas për prona, makina, punë, treg, biznese dhe profesionistë në gjithë Shqipërinë.',
+    },
+    {
+      question: 'Ku gjej njoftime falas në Shqipëri?',
+      answer:
+        'Në KuTaGjej: hap kutagjej.al, zgjidh Prona, Makina, Punë, Tregu, Biznese ose Profesionistë, filtro sipas qytetit (Tiranë, Durrës, Vlorë, etj.) dhe kontakto publikuesin.',
+    },
     {
       question: 'A është falas postimi i njoftimeve në KuTaGjej?',
       answer:
@@ -44,7 +55,7 @@ export const HOME_SEO_COPY = {
     {
       question: 'Ku gjej prona me qira në Tiranë ose plazh në Durrës dhe Vlorë?',
       answer:
-        'Në Prona filtro “Tiranë” dhe zonën (Blloku, Astir, Kashar, Lapraka…). Për plazh hap Durrës (Plazhi, Currila) ose Vlorë (Lungomare, Uji i Ftohtë). Ka edhe njoftime në Sarandë, Himarë dhe Pogradec.',
+        'Në Prona hap Tiranë (/prona/tirane) dhe zonën (Blloku, Astir, Kashar, Lapraka…). Për plazh hap Durrës (/prona/durres) ose Vlorë (/prona/vlore). Ka edhe njoftime në Sarandë, Himarë dhe Pogradec.',
     },
     {
       question: 'A mund të postoj oferta pune ose shërbime profesionale?',

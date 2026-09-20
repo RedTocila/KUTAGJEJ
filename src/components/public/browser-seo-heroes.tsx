@@ -65,9 +65,10 @@ export function HomeBrowserHeroSeo() {
         }
         subtext={
           <>
-            <Accent>KuTaGjej</Accent> është marketplace-i lokal ku poston dhe gjen shpejt:{' '}
+            <Accent>KuTaGjej</Accent> (kutagjej.al) është marketplace-i shqiptar i njoftimeve falas:{' '}
             <Accent>apartamente me qira ose shitje</Accent>, <Accent>makina</Accent>, <Accent>vende pune</Accent>,{' '}
-            <Accent>biznese</Accent>, <Accent>profesionistë</Accent> dhe artikuj të rinj e të dorës së dytë.
+            <Accent>biznese</Accent>, <Accent>profesionistë</Accent> dhe artikuj — në Tiranë, Durrës, Vlorë e gjithë
+            Shqipërinë.
           </>
         }
         actions={<SeoTextLinkRow links={cityLinks} />}

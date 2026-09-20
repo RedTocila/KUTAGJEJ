@@ -5,12 +5,17 @@ import { Box, Container, Stack, Typography } from '@mui/material';
 
 import { paths } from '@/paths';
 import { HOME_SEO_COPY } from '@/lib/public-seo-copy';
+import { verticalCityHubLinks } from '@/lib/seo-internal-links';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { PublicSeoContentBlock } from '@/components/public/public-seo-content';
 import { SeoTextLinkRow } from '@/components/public/seo-heading-panel';
 
 /** Homepage SEO copy + FAQ — browser / Google only (hidden in native app). */
 export function SeoIntroSection() {
+  const cityLinks = [
+    ...verticalCityHubLinks('real-estate', { includeVerticalLabel: true }).slice(0, 4),
+    ...verticalCityHubLinks('cars', { includeVerticalLabel: true }).slice(0, 2),
+  ];
   return (
     <>
       <PublicSeoContentBlock
@@ -20,6 +25,7 @@ export function SeoIntroSection() {
         faqs={HOME_SEO_COPY.faqs}
         headingId="about-kutagjej"
         faqHeadingId="faq-kutagjej"
+        relatedLinks={cityLinks}
       />
       <HomeSeoLinkCloud />
     </>
@@ -34,7 +40,14 @@ function HomeSeoLinkCloud() {
         <Stack spacing={1.25} sx={{ alignItems: 'center' }}>
           <Typography
             component="p"
-            sx={{ m: 0, fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'primary.main' }}
+            sx={{
+              m: 0,
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'primary.main',
+            }}
           >
             Eksploro kategoritë
           </Typography>
@@ -47,6 +60,7 @@ function HomeSeoLinkCloud() {
                 { href: paths.public.marketplace, label: 'Tregu' },
                 { href: paths.public.businesses, label: 'Biznese' },
                 { href: paths.public.professionals, label: 'Profesionistë' },
+                { href: paths.public.about, label: 'Rreth nesh' },
                 { href: paths.auth.signIn, label: 'Hyr / Regjistrohu' },
               ]}
             />

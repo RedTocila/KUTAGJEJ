@@ -1,6 +1,7 @@
-import { brandLogoSrc, config } from '@/config';
+import { config } from '@/config';
 import { HOME_VERTICALS } from '@/lib/home-categories';
 import type { PublicListingsBundle } from '@/lib/public-listings-client';
+import { organizationJsonLd } from '@/lib/site-entity';
 import {
   listingBusinessPublicHref,
   listingCarPublicHref,
@@ -12,28 +13,25 @@ import {
 } from '@/paths';
 
 export function homepageStaticJsonLd(siteOrigin: string) {
+  const origin = siteOrigin.replace(/\/$/, '');
   return {
     website: {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
+      '@id': `${origin}/#website`,
       name: config.site.name,
-      alternateName: 'Ku Ta Gjej',
-      url: siteOrigin,
+      alternateName: ['Ku Ta Gjej', 'kutagjej.al'],
+      url: origin,
       description: config.site.description,
       inLanguage: 'sq-AL',
+      publisher: { '@id': `${origin}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${siteOrigin}${paths.public.realEstate}?q={search_term_string}`,
+        target: `${origin}${paths.public.realEstate}?q={search_term_string}`,
         'query-input': 'required name=search_term_string',
       },
     },
-    organization: {
-      '@context': 'https://schema.org',
-      '@type': 'Organization',
-      name: config.site.name,
-      url: siteOrigin,
-      logo: `${siteOrigin}${brandLogoSrc}`,
-    },
+    organization: organizationJsonLd(origin),
     breadcrumbs: {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
@@ -42,7 +40,7 @@ export function homepageStaticJsonLd(siteOrigin: string) {
           '@type': 'ListItem',
           position: 1,
           name: 'Ballina',
-          item: siteOrigin,
+          item: origin,
         },
       ],
     },

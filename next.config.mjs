@@ -115,6 +115,11 @@ const config = {
     return [
       // Literal `/index` → canonical `/` (Observability `/index` is the RSC route id, not this URL).
       { source: '/index', destination: '/', permanent: true },
+      // Legacy Albanian path aliases → short canonical hubs (avoids duplicate 200s in GSC).
+      { source: '/pasuri-te-paluajtshme', destination: '/prona', permanent: true },
+      { source: '/pasuri-te-paluajtshme/:path*', destination: '/prona/:path*', permanent: true },
+      { source: '/automjete', destination: '/makina', permanent: true },
+      { source: '/automjete/:path*', destination: '/makina/:path*', permanent: true },
       ...LEGACY_REDIRECT_HOSTS.flatMap(hostRedirects),
     ];
   },

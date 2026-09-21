@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { config } from '@/config';
 import { pathsPublicRealEstateListingDetail } from '@/paths';
@@ -72,7 +72,7 @@ export default async function RealEstateListingPage({ params, searchParams }: Pa
   if (canonRaw) {
     const canonNorm = normalizeListingPermalinkSegment(canonRaw);
     if (requestedNorm !== canonNorm) {
-      redirect(pathsPublicRealEstateListingDetail(canonRaw));
+      permanentRedirect(pathsPublicRealEstateListingDetail(canonRaw));
     }
   }
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { config } from '@/config';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
@@ -82,7 +82,7 @@ export default async function CarListingPage({ params, searchParams }: PageProps
   if (canonRaw) {
     const canonNorm = normalizeListingPermalinkSegment(canonRaw);
     if (requestedNorm !== canonNorm) {
-      redirect(pathsPublicVerticalListingDetail(paths.public.cars, canonRaw));
+      permanentRedirect(pathsPublicVerticalListingDetail(paths.public.cars, canonRaw));
     }
   }
 

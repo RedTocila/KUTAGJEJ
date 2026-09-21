@@ -14,6 +14,7 @@
 10. **seo-index 500**: fixed job visibility check that crashed `/api/public/listings/seo-index`
 11. **No Product JSON-LD for Merchant**: homepage ItemLists are URL-only; `/tregu` uses Offer; cars use `Car` only; `/prona` uses Apartment/Residence/etc. (not Product) so GSC Merchant listings stay quiet on classifieds
 12. **AI / GEO**: `/llms.txt`, explicit AI crawler allows in `robots.ts`, richer Organization JSON-LD (`sameAs` → Instagram/TikTok/YouTube), answer-first `/rreth-nesh` + homepage entity FAQs, city hub crawl links on hubs/home
+13. **Legacy path 301s**: `/pasuri-te-paluajtshme` → `/prona`, `/automjete` → `/makina`; listing slug mismatches use `permanentRedirect` (308)
 
 ## You must do manually (highest remaining impact)
 

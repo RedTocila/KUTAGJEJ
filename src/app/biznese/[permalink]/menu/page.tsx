@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 
 import { PublicLoadErrorView } from '@/components/public/public-load-error-view';
 import { PublicShell } from '@/components/public/public-shell';
@@ -57,7 +57,7 @@ export default async function BusinessMenuPage({ params }: PageProps): Promise<R
   if (canonRaw) {
     const canonNorm = normalizeListingPermalinkSegment(canonRaw);
     if (requestedNorm !== canonNorm) {
-      redirect(`${pathsPublicVerticalListingDetail(paths.public.businesses, canonRaw)}/menu`);
+      permanentRedirect(`${pathsPublicVerticalListingDetail(paths.public.businesses, canonRaw)}/menu`);
     }
   }
 

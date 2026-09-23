@@ -7,6 +7,7 @@ import { Box, type SxProps, type Theme } from '@mui/material';
 import { MainTabsGuestPane } from '@/components/main-tabs/main-tabs-guest-pane';
 import { MainTabsHomePreview } from '@/components/main-tabs/main-tabs-home-preview';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
+import { SearchPageView } from '@/components/public/search-page-view';
 import { UserNotificationsFab } from '@/components/user/layout/user-notifications-menu';
 import { SavedListingsView } from '@/components/user/saved-listings-view';
 import { UserMessagesView } from '@/components/user/messages/user-messages-view';
@@ -306,7 +307,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       if (clamped === index) return;
       const tab = mainTabByIndex(clamped);
       if (!tab) return;
-      if (!authed && tab.id !== 'home') {
+      if (!authed && tab.id !== 'home' && tab.id !== 'search') {
         beginPendingNavigation(paths.user.auth);
         hardNavigate(paths.user.auth);
         return;
@@ -405,7 +406,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
-    const warm = () => setVisited(new Set([0, 1, 2, 3]));
+    const warm = () => setVisited(new Set([0, 1, 2, 3, 4]));
     if (typeof win.requestIdleCallback === 'function') {
       const id = win.requestIdleCallback(warm, { timeout: 900 });
       return () => win.cancelIdleCallback?.(id);
@@ -602,11 +603,23 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               paneIndex={2}
               active={index === 2}
               layoutActive={layoutIndex === 2}
+              onPaneRef={setPaneRef}
+            >
+              {shouldMountPane(2, index, visited) ? (
+                <React.Suspense fallback={null}>
+                  <SearchPageView active={index === 2} />
+                </React.Suspense>
+              ) : null}
+            </MainTabPane>
+            <MainTabPane
+              paneIndex={3}
+              active={index === 3}
+              layoutActive={layoutIndex === 3}
               fill
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(2, index, visited) ? (
+              {shouldMountPane(3, index, visited) ? (
                 authed ? (
                   <UserMessagesView />
                 ) : (
@@ -615,9 +628,9 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               ) : null}
             </MainTabPane>
             <MainTabPane
-              paneIndex={3}
-              active={index === 3}
-              layoutActive={layoutIndex === 3}
+              paneIndex={4}
+              active={index === 4}
+              layoutActive={layoutIndex === 4}
               contentSx={{
                 px: 2,
                 pt: 3,
@@ -630,7 +643,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(3, index, visited) ? (
+              {shouldMountPane(4, index, visited) ? (
                 authed ? (
                   <React.Suspense fallback={null}>
                     <UserDashboardHome />

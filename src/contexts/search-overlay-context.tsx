@@ -4,6 +4,9 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 
 import { SearchOverlay } from '@/components/public/search-overlay';
+import { hardNavigate } from '@/lib/hard-navigate';
+import { mainTabFromPath } from '@/lib/main-tabs';
+import { beginPendingNavigation } from '@/lib/navigation-pending';
 import { paths } from '@/paths';
 
 const SEARCH_OVERLAY_HISTORY_KEY = 'kutagjejSearchOverlay';
@@ -69,6 +72,12 @@ export function SearchOverlayProvider({ children }: { children: React.ReactNode 
 
   const openSearch = React.useCallback(() => {
     if (open || isSearchPagePath(pathname)) return;
+    // Main-tab routes slide to /kerko so the pager stays in sync with the nav.
+    if (mainTabFromPath(pathname)) {
+      beginPendingNavigation(paths.public.search);
+      hardNavigate(paths.public.search);
+      return;
+    }
     pathWhenOpenedRef.current = pathname;
     setImmediateClose(false);
     pushOverlayHistory();

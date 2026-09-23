@@ -1,7 +1,7 @@
 import { paths } from '@/paths';
 import { normalizeNavPath } from '@/lib/navigation-pending';
 
-export const MAIN_TAB_IDS = ['home', 'saved', 'messages', 'profile'] as const;
+export const MAIN_TAB_IDS = ['home', 'saved', 'search', 'messages', 'profile'] as const;
 
 export type MainTabId = (typeof MAIN_TAB_IDS)[number];
 
@@ -14,8 +14,9 @@ export type MainTab = {
 export const MAIN_TABS: readonly MainTab[] = [
   { id: 'home', href: paths.home, index: 0 },
   { id: 'saved', href: paths.user.savedListings, index: 1 },
-  { id: 'messages', href: paths.user.messages, index: 2 },
-  { id: 'profile', href: paths.user.dashboard, index: 3 },
+  { id: 'search', href: paths.public.search, index: 2 },
+  { id: 'messages', href: paths.user.messages, index: 3 },
+  { id: 'profile', href: paths.user.dashboard, index: 4 },
 ] as const;
 
 const TAB_COUNT = MAIN_TABS.length;
@@ -24,8 +25,9 @@ export function mainTabFromPath(pathname: string | null | undefined): MainTab | 
   const path = normalizeNavPath(pathname || '/');
   if (path === paths.home) return MAIN_TABS[0]!;
   if (path === paths.user.savedListings) return MAIN_TABS[1]!;
-  if (path === paths.user.messages) return MAIN_TABS[2]!;
-  if (path === paths.user.dashboard) return MAIN_TABS[3]!;
+  if (path === paths.public.search || path.startsWith(`${paths.public.search}/`)) return MAIN_TABS[2]!;
+  if (path === paths.user.messages) return MAIN_TABS[3]!;
+  if (path === paths.user.dashboard) return MAIN_TABS[4]!;
   return null;
 }
 

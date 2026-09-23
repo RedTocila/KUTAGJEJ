@@ -22,7 +22,7 @@ import {
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
 import { MAIN_TAB_SLIDE_MS } from '@/lib/main-tab-pager';
-import { normalizeNavPath } from '@/lib/navigation-pending';
+import { beginPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
@@ -164,12 +164,15 @@ export function MobileBottomNav() {
   const handleSearchClick = (event: React.MouseEvent, index: number) => {
     event.preventDefault();
     moveIndicatorTo(index);
-    if (pathname === paths.public.search) {
+    if (searchOverlay?.open) {
+      searchOverlay.closeSearch({ immediate: true, replaceHistory: true });
+    }
+    if (displayPathname === paths.public.search || displayPathname.startsWith(`${paths.public.search}/`)) {
       hardRefreshToTop(event);
       return;
     }
-    if (searchOverlay?.open) return;
-    searchOverlay?.openSearch();
+    beginPendingNavigation(paths.public.search);
+    hardNavigate(paths.public.search, event);
   };
 
   const handleTabClick = (event: React.MouseEvent, item: NavItem, index: number) => {

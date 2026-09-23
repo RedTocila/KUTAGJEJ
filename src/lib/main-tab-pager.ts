@@ -1,5 +1,5 @@
 /**
- * Shared motion for the mobile Home / Saves / Messages / Profile pager.
+ * Shared motion for the mobile Home / Saves / Search / Messages / Profile pager.
  *
  * Matched to the home banner slider (`useBannerSlider` / 320ms + MOTION.ease)
  * so tab slides settle at the same visual speed. The track writes `transform`

@@ -56,8 +56,9 @@ function mainTabIndexFromPath(path: string): number | null {
   const p = normalizeNavPath(path);
   if (p === paths.home) return 0;
   if (p === paths.user.savedListings) return 1;
-  if (p === paths.user.messages) return 2;
-  if (p === paths.user.dashboard) return 3;
+  if (p === paths.public.search || p.startsWith(`${paths.public.search}/`)) return 2;
+  if (p === paths.user.messages) return 3;
+  if (p === paths.user.dashboard) return 4;
   return null;
 }
 

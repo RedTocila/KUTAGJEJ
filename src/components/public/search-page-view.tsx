@@ -201,10 +201,13 @@ function ResultCard({ item, divider }: { item: SearchItem; divider?: boolean }) 
 
 export function SearchPageView({
   variant = 'page',
+  active = true,
   onClose: _onClose,
   onNavigate,
 }: {
   variant?: 'page' | 'overlay';
+  /** When false (inactive main-tab pane), hide the fixed/portaled dock so it cannot cover other tabs. */
+  active?: boolean;
   onClose?: () => void;
   onNavigate?: () => void;
 } = {}) {
@@ -506,6 +509,7 @@ export function SearchPageView({
         }}
       />
 
+      {active ? (
       <SearchDockLayer portaled={!isOverlay}>
         <Box
           sx={{
@@ -783,6 +787,7 @@ export function SearchPageView({
           </Box>
         </Box>
       </SearchDockLayer>
+      ) : null}
 
       <Box
         sx={{

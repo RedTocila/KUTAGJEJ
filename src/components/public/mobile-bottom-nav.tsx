@@ -177,6 +177,9 @@ export function MobileBottomNav() {
       handleSearchClick(event, index);
       return;
     }
+    if (searchOverlay?.open) {
+      searchOverlay.closeSearch({ immediate: true, replaceHistory: true });
+    }
     moveIndicatorTo(index);
     if (!item.activeWhen(pathname)) return;
     if (!item.href) return;
@@ -201,9 +204,6 @@ export function MobileBottomNav() {
     hardNavigate(item.href, event);
   };
 
-  const isSearchPage = Boolean(displayPathname.startsWith(paths.public.search));
-  if (isSearchPage) return null;
-
   return (
     <Box
       component="nav"
@@ -213,7 +213,7 @@ export function MobileBottomNav() {
         left: 0,
         right: 0,
         bottom: `calc(${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
-        zIndex: theme.zIndex.appBar,
+        zIndex: theme.zIndex.modal + 12,
         display: { xs: 'flex', lg: 'none' },
         justifyContent: 'center',
         px: 2,

@@ -29,7 +29,7 @@ import { paths } from '@/paths';
 import { HeaderSearchBar } from './header-mobile-search';
 import { useMainTabs } from '@/components/main-tabs/main-tabs-shell';
 
-const TOOLBAR_MIN_HEIGHT = { xs: 72, md: 88 } as const;
+const TOOLBAR_MIN_HEIGHT = { xs: 64, md: 76 } as const;
 
 export function PublicHeader() {
   const { user } = useUser();
@@ -132,11 +132,11 @@ export function PublicHeader() {
               }}
             >
               <BrandLogo
-                height={56}
+                height={50}
                 showWordmark
                 wordmarkPresentation="brand"
                 wordmarkLayout="stacked"
-                imgSx={{ height: { xs: 52, md: 62 }, width: 'auto' }}
+                imgSx={{ height: { xs: 46, md: 54 }, width: 'auto' }}
                 wordmarkSx={{
                   fontSize: { xs: '1.05rem', md: '1.22rem' },
                   lineHeight: 1.02,

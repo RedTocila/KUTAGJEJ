@@ -5,14 +5,13 @@ import { Box, Stack, Typography } from '@mui/material';
 
 import { useSearchOverlay } from '@/contexts/search-overlay-context';
 import { useCopy } from '@/hooks/use-copy';
+import { MOBILE_SEARCH_BAR_HEIGHT_PX } from '@/lib/mobile-layout';
 import {
   ProductSearchIcon,
   productChromeSubtleBg,
   productChromeSubtleHoverBg,
   productSearchBarSx,
 } from '@/components/public/product-browse-chrome';
-
-const HEADER_SEARCH_HEIGHT = 42;
 
 /** Header search control — opens the full-page search sheet. */
 export function HeaderSearchBar({
@@ -37,7 +36,7 @@ export function HeaderSearchBar({
         minWidth: 0,
         display: allBreakpoints ? 'flex' : { xs: 'flex', md: 'none' },
         ...productSearchBarSx(false),
-        height: HEADER_SEARCH_HEIGHT,
+        height: MOBILE_SEARCH_BAR_HEIGHT_PX,
         maxWidth: allBreakpoints ? { md: 520 } : undefined,
         px: 1.5,
         appearance: 'none',

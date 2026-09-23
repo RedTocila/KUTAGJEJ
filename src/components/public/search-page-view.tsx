@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Alert,
@@ -40,11 +39,10 @@ import {
 } from '@/lib/home-categories';
 import { buildBrowseUrlQuery, type BrowseFilters } from '@/lib/listing-filters';
 import {
-  MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-  MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
-  MOBILE_SEARCH_BAR_PADDING,
-  MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX,
-  MOBILE_SEARCH_DOCK_PADDING,
+  MOBILE_CONTENT_BOTTOM_PADDING,
+  MOBILE_SEARCH_BAR_HEIGHT_PX,
+  MOBILE_SEARCH_TOP_BAR_PADDING,
+  MOBILE_SEARCH_TOP_DOCK_PADDING,
 } from '@/lib/mobile-layout';
 import {
   fetchBrowseBusinesses,
@@ -57,7 +55,6 @@ import {
 import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
-import { useHistoryBackProps } from '@/hooks/use-navigate-back';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { TransientNotification } from '@/components/core/transient-success-alert';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
@@ -204,7 +201,7 @@ function ResultCard({ item, divider }: { item: SearchItem; divider?: boolean }) 
 
 export function SearchPageView({
   variant = 'page',
-  onClose,
+  onClose: _onClose,
   onNavigate,
 }: {
   variant?: 'page' | 'overlay';
@@ -214,7 +211,6 @@ export function SearchPageView({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const historyBack = useHistoryBackProps(paths.home);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const { language } = useLanguage();
   const t = useCopy();
@@ -481,13 +477,13 @@ export function SearchPageView({
   };
 
   const searchAccent = isAi ? { color: AI_SEARCH_BLUE, soft: AI_SEARCH_BLUE_SOFT } : undefined;
-  const mobileDockPadding = categoriesHidden ? MOBILE_SEARCH_BAR_PADDING : MOBILE_SEARCH_DOCK_PADDING;
+  const mobileTopDockPadding = categoriesHidden ? MOBILE_SEARCH_TOP_BAR_PADDING : MOBILE_SEARCH_TOP_DOCK_PADDING;
 
   return (
     <Container
       maxWidth="xl"
       sx={{
-        pt: { xs: 1.5, md: 2.5 },
+        pt: { xs: 0, md: 2.5 },
         pb: { xs: 0, lg: 4 },
         px: { xs: 2, sm: 3 },
         display: 'flex',
@@ -498,19 +494,17 @@ export function SearchPageView({
         overflow: isOverlay ? 'auto' : 'visible',
       }}
     >
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>
-          {t.search.title}
-        </Typography>
-        <IconButton
-          {...(onClose ? { onClick: onClose } : { component: RouterLink, ...historyBack })}
-          aria-label={t.common.close}
-          edge="end"
-          size="small"
-        >
-          <XIcon size={22} weight="bold" />
-        </IconButton>
-      </Stack>
+      {/* Top spacer clears the fixed categories + search dock on mobile. */}
+      <Box
+        aria-hidden
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          flexShrink: 0,
+          height: mobileTopDockPadding,
+          transition: `height ${MOTION.base} ${MOTION.ease}`,
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }}
+      />
 
       <SearchDockLayer portaled={!isOverlay}>
         <Box
@@ -518,72 +512,42 @@ export function SearchPageView({
             display: 'flex',
             flexDirection: 'column',
             gap: { xs: categoriesHidden ? 0 : 1.5, lg: 2 },
-            mt: { xs: 0, lg: 2 },
+            mt: { xs: 0, lg: 0 },
             width: { xs: '100%', lg: 'auto' },
             position: { xs: 'fixed', lg: 'static' },
             left: { xs: 0, lg: 'auto' },
             right: { xs: 0, lg: 'auto' },
-            bottom: {
-              xs: 0,
-              lg: 'auto',
-            },
+            top: { xs: 0, lg: 'auto' },
+            bottom: { xs: 'auto', lg: 'auto' },
             zIndex: { xs: 4000, lg: 'auto' },
             isolation: { xs: 'isolate', lg: 'auto' },
             px: { xs: 2, sm: 3, lg: 0 },
-            pt: { xs: categoriesHidden ? 0 : 1.25, lg: 0 },
-            pb: {
-              xs: `calc(${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+            pt: {
+              xs: categoriesHidden
+                ? 'calc(8px + env(safe-area-inset-top, 0px))'
+                : 'calc(10px + env(safe-area-inset-top, 0px))',
               lg: 0,
             },
+            pb: { xs: 1.25, lg: 0 },
             alignItems: { xs: 'center', lg: 'stretch' },
             bgcolor: { xs: 'background.default', lg: 'transparent' },
             transform: {
-              xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, 100%, 0)',
+              xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, -12%, 0)',
               lg: 'none',
             },
+            opacity: { xs: entered ? 1 : 0, lg: 1 },
             transition: {
-              xs: `transform ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
+              xs: `transform ${MOTION.enter} ${MOTION.ease}, opacity ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
               lg: 'none',
             },
             willChange: { xs: 'transform', lg: 'auto' },
             '@media (prefers-reduced-motion: reduce)': {
               transform: 'none',
+              opacity: 1,
               transition: 'none',
             },
           }}
         >
-          <Box
-            sx={{
-              width: '100%',
-              display: { xs: 'grid', lg: 'block' },
-              gridTemplateRows: { xs: categoriesHidden ? '0fr' : '1fr', lg: 'none' },
-              opacity: { xs: categoriesHidden ? 0 : 1, lg: 1 },
-              pointerEvents: { xs: categoriesHidden ? 'none' : 'auto', lg: 'auto' },
-              transition: `grid-template-rows ${MOTION.base} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
-              '@media (prefers-reduced-motion: reduce)': {
-                transition: 'none',
-              },
-            }}
-          >
-            <Box
-              sx={{
-                minHeight: 0,
-                overflow: 'hidden',
-                transform: {
-                  xs: categoriesHidden ? 'translate3d(0, 16px, 0)' : 'translate3d(0, 0, 0)',
-                  lg: 'none',
-                },
-                transition: `transform ${MOTION.base} ${MOTION.ease}`,
-                '@media (prefers-reduced-motion: reduce)': {
-                  transform: 'none',
-                  transition: 'none',
-                },
-              }}
-            >
-              <HeroCategoryCircles variant="tabs" selectedIndex={selectedIndex} onSelect={handleSelectCategory} />
-            </Box>
-          </Box>
-
           <Box
             component="form"
             onSubmit={handleSubmit}
@@ -603,7 +567,7 @@ export function SearchPageView({
                 borderRadius: inputExpanded ? 2.5 : 999,
                 ...(!categoryId
                   ? {
-                      opacity: 0.48,
+                      opacity: 0.85,
                       cursor: 'not-allowed',
                       bgcolor: 'action.hover',
                     }
@@ -616,7 +580,7 @@ export function SearchPageView({
                 border: 'none',
                 overflow: 'visible',
                 height: 'auto',
-                minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                minHeight: MOBILE_SEARCH_BAR_HEIGHT_PX,
               },
             })}
           >
@@ -628,12 +592,12 @@ export function SearchPageView({
                 alignItems: inputExpanded ? 'flex-end' : 'center',
                 [theme.breakpoints.down('lg')]: {
                   ...productSearchBarSx(Boolean(categoryId && query.trim()), searchAccent),
-                  height: inputExpanded ? 'auto' : MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
-                  minHeight: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
+                  height: inputExpanded ? 'auto' : MOBILE_SEARCH_BAR_HEIGHT_PX,
+                  minHeight: MOBILE_SEARCH_BAR_HEIGHT_PX,
                   px: 1.5,
                   py: 0.5,
                   overflow: 'hidden',
-                  opacity: categoryId ? 1 : 0.55,
+                  opacity: 1,
                 },
               })}
             >
@@ -668,9 +632,15 @@ export function SearchPageView({
                         sx={{
                           alignSelf: inputExpanded ? 'flex-start' : 'center',
                           mt: inputExpanded ? 0.75 : 0,
+                          opacity: categoryId ? 1 : 0.9,
+                          color: categoryId ? 'primary.main' : 'text.secondary',
                         }}
                       >
-                        {isAi ? <SparkleIcon size={18} color={AI_SEARCH_BLUE} /> : <ProductSearchIcon />}
+                        {isAi ? (
+                          <SparkleIcon size={18} color={AI_SEARCH_BLUE} />
+                        ) : (
+                          <ProductSearchIcon color={categoryId ? undefined : 'currentColor'} />
+                        )}
                       </InputAdornment>
                     ),
                     endAdornment: query ? (
@@ -700,12 +670,19 @@ export function SearchPageView({
                     '& fieldset': { border: 'none' },
                     '&.Mui-disabled': {
                       bgcolor: 'transparent',
-                      '& textarea': { WebkitTextFillColor: 'inherit', color: 'text.disabled' },
+                      opacity: 1,
+                      '& textarea': {
+                        WebkitTextFillColor: 'inherit',
+                        color: 'text.secondary',
+                        opacity: 1,
+                      },
                     },
                   },
                   '& textarea': {
                     resize: 'none',
                     lineHeight: 1.4,
+                    fontWeight: 600,
+                    color: 'text.primary',
                     ...(!query
                       ? {
                           whiteSpace: 'nowrap',
@@ -713,6 +690,17 @@ export function SearchPageView({
                           overflow: 'hidden !important',
                         }
                       : null),
+                  },
+                  '& textarea::placeholder': {
+                    opacity: 0.92,
+                    color: 'text.secondary',
+                    fontWeight: 600,
+                    WebkitTextFillColor: 'unset',
+                  },
+                  '& .Mui-disabled textarea::placeholder': {
+                    opacity: 0.88,
+                    color: 'text.secondary',
+                    WebkitTextFillColor: 'unset',
                   },
                 }}
               />
@@ -725,8 +713,8 @@ export function SearchPageView({
                 flexShrink: 0,
                 alignSelf: inputExpanded ? 'flex-end' : 'center',
                 p: 0,
-                width: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
-                height: { xs: MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX, lg: 36 },
+                width: { xs: MOBILE_SEARCH_BAR_HEIGHT_PX, lg: 36 },
+                height: { xs: MOBILE_SEARCH_BAR_HEIGHT_PX, lg: 36 },
                 borderRadius: '50%',
                 border: { xs: 'none', lg: '1px solid' },
                 color: isAi ? '#fff' : 'primary.contrastText',
@@ -735,7 +723,7 @@ export function SearchPageView({
                   lg: isAi ? AI_SEARCH_BLUE : categoryId ? 'primary.main' : 'divider',
                 },
                 boxShadow: 'none',
-                opacity: categoryId ? 1 : 0.72,
+                opacity: categoryId ? 1 : 0.85,
                 transition: 'background-color 160ms ease, transform 160ms ease, opacity 160ms ease',
                 '&:hover': {
                   bgcolor: isAi ? AI_SEARCH_BLUE_HOVER : 'primary.dark',
@@ -744,7 +732,7 @@ export function SearchPageView({
                 '&.Mui-disabled': {
                   bgcolor: isAi ? AI_SEARCH_BLUE : 'primary.main',
                   color: isAi ? '#fff' : 'primary.contrastText',
-                  opacity: 0.72,
+                  opacity: 0.85,
                 },
               }}
             >
@@ -756,6 +744,42 @@ export function SearchPageView({
                 <MagnifyingGlassIcon size={24} weight="bold" />
               )}
             </IconButton>
+          </Box>
+
+          <Box
+            sx={{
+              width: '100%',
+              display: { xs: 'grid', lg: 'block' },
+              gridTemplateRows: { xs: categoriesHidden ? '0fr' : '1fr', lg: 'none' },
+              opacity: { xs: categoriesHidden ? 0 : 1, lg: 1 },
+              pointerEvents: { xs: categoriesHidden ? 'none' : 'auto', lg: 'auto' },
+              transition: `grid-template-rows ${MOTION.base} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}`,
+              '@media (prefers-reduced-motion: reduce)': {
+                transition: 'none',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                minHeight: 0,
+                overflow: 'hidden',
+                transform: {
+                  xs: categoriesHidden ? 'translate3d(0, -12px, 0)' : 'translate3d(0, 0, 0)',
+                  lg: 'none',
+                },
+                transition: `transform ${MOTION.base} ${MOTION.ease}`,
+                '@media (prefers-reduced-motion: reduce)': {
+                  transform: 'none',
+                  transition: 'none',
+                },
+              }}
+            >
+              <HeroCategoryCircles
+                variant="tabs"
+                selectedIndex={selectedIndex}
+                onSelect={handleSelectCategory}
+              />
+            </Box>
           </Box>
         </Box>
       </SearchDockLayer>
@@ -862,15 +886,13 @@ export function SearchPageView({
           </Stack>
         )}
       </Box>
-      {/* In-flow spacer so the last listing can scroll above the fixed search dock. */}
+      {/* In-flow spacer so the last listing can scroll above the bottom navbar. */}
       <Box
         aria-hidden
         sx={{
           display: { xs: 'block', lg: 'none' },
           flexShrink: 0,
-          height: mobileDockPadding,
-          transition: `height ${MOTION.base} ${MOTION.ease}`,
-          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+          height: MOBILE_CONTENT_BOTTOM_PADDING,
         }}
       />
     </Container>

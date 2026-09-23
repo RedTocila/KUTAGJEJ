@@ -13,20 +13,20 @@ export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT
 /** Scroll/content padding so the last item clears the nav with a visible gap. */
 export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
 
-/** Extra space under the /kerko search bar so it isn’t flush with the home indicator. */
-export const MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX = 16;
+/** Matches dashboard `HeaderSearchBar` height. */
+export const MOBILE_SEARCH_BAR_HEIGHT_PX = 42;
 
-/** Dock padding-top above category circles (`pt: 1.25`). */
+/** Dock padding-top above the search bar (`pt` + safe area handled separately). */
 export const MOBILE_SEARCH_DOCK_TOP_PADDING_PX = 10;
 
-/** Gap between category circles and the search bar (`gap: 1.5`). */
+/** Gap between the search bar and category circles (`gap: 1.5`). */
 export const MOBILE_SEARCH_DOCK_GAP_PX = 12;
 
-/** Category circles + labels stacked above the /kerko search bar (replaces the nav). */
+/** Category circles + labels stacked in the /kerko top dock. */
 export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
 
-/** Content padding so /kerko results clear the search bar when categories are hidden. */
-export const MOBILE_SEARCH_BAR_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
+/** Content padding so /kerko results clear the top search bar when categories are hidden. */
+export const MOBILE_SEARCH_TOP_BAR_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px)`;
 
-/** Content padding so /kerko results clear categories + the search bar. */
-export const MOBILE_SEARCH_DOCK_PADDING = `calc(${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_BOTTOM_PADDING_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
+/** Content padding so /kerko results clear the search bar + categories at the top. */
+export const MOBILE_SEARCH_TOP_DOCK_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px)`;

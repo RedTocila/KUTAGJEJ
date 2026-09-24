@@ -48,8 +48,8 @@ import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useCopy } from '@/hooks/use-copy';
 import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
+import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
 import type { AppMessages } from '@/lib/i18n/messages';
-
 export type AddListingPickOptions = { okazion?: boolean; premium?: boolean };
 
 /** Okazion is for sellable ads only — not directory profiles. */
@@ -375,14 +375,14 @@ export function AddListingPickerDialog({
         paper: {
           ...sheetDismiss.paperSlotProps,
           sx: {
+            ...mobileBottomSheetAboveNavSx,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
             maxHeight: '70dvh',
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             backgroundImage: 'none',
-            pb: 'env(safe-area-inset-bottom, 0px)',
-            // Above mobile bottom nav (appBar) so nav cannot be clicked while open.
+            // Above floating nav on mobile; paper bottom edge meets top of nav.
             zIndex: (theme) => theme.zIndex.modal + 1,
           },
         },

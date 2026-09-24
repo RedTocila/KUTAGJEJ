@@ -13,6 +13,14 @@ export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT
 /** Scroll/content padding so the last item clears the nav with a visible gap. */
 export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
 
+/**
+ * Bottom-sheet paper sits flush above the floating nav on mobile (nav stays visible).
+ * Safe-area is already included in the offset — don’t add another env() padding-bottom.
+ */
+export const mobileBottomSheetAboveNavSx = {
+  bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, lg: 0 },
+} as const;
+
 /** Matches dashboard `HeaderSearchBar` height. */
 export const MOBILE_SEARCH_BAR_HEIGHT_PX = 42;
 

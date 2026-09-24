@@ -24,11 +24,11 @@ import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLanguage } from '@/hooks/use-language';
 import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
+import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
 import {
   listMyBusinessListings,
   listMyProfessionalListings,
-} from '@/lib/directory-listings-client';
-import { hardNavigate } from '@/lib/hard-navigate';
+} from '@/lib/directory-listings-client';import { hardNavigate } from '@/lib/hard-navigate';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import type { ListingSharePayload } from '@/lib/listing-share';
 import {
@@ -372,11 +372,11 @@ export function ShareMyListingsDialog({
           paper: {
             ...sheetDismiss.paperSlotProps,
             sx: {
+              ...mobileBottomSheetAboveNavSx,
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
               maxHeight: '75dvh',
               backgroundImage: 'none',
-              pb: 'env(safe-area-inset-bottom, 0px)',
             },
           },
         }}

@@ -487,7 +487,7 @@ export function SearchPageView({
       maxWidth="xl"
       sx={{
         pt: { xs: 0, md: 2.5 },
-        pb: { xs: 0, lg: 4 },
+        pb: { xs: MOBILE_CONTENT_BOTTOM_PADDING, lg: 4 },
         px: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: 'column',
@@ -495,6 +495,7 @@ export function SearchPageView({
         minHeight: isOverlay ? 0 : '100dvh',
         height: isOverlay ? '100%' : 'auto',
         overflow: isOverlay ? 'auto' : 'visible',
+        boxSizing: 'border-box',
       }}
     >
       {/* Top spacer clears the fixed categories + search dock on mobile. */}
@@ -891,15 +892,6 @@ export function SearchPageView({
           </Stack>
         )}
       </Box>
-      {/* In-flow spacer so the last listing can scroll above the bottom navbar. */}
-      <Box
-        aria-hidden
-        sx={{
-          display: { xs: 'block', lg: 'none' },
-          flexShrink: 0,
-          height: MOBILE_CONTENT_BOTTOM_PADDING,
-        }}
-      />
     </Container>
   );
 }

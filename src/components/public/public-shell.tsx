@@ -16,6 +16,9 @@ import { PublicHeader } from './public-header';
  *
  * Desktop: header only when `keepDesktopHeader` (homepage). Other routes omit it.
  * Mobile: header unless `hideHeader` / `hideHeaderBelowMd`.
+ *
+ * Bottom padding lives on the outer shell (not `main`) so the footer clears the
+ * floating nav as well as page content.
  */
 export function PublicShell({
   children,
@@ -38,6 +41,9 @@ export function PublicShell({
   hideMobileNav?: boolean;
 }) {
   const hostedTabs = useMainTabsHosted();
+  const showMobileNav = !hideMobileNav && !hostedTabs;
+  /** Hosted tabs still show the floating nav from MainTabsShell — keep clearance. */
+  const clearFloatingNav = !hideMobileNav;
 
   let header: React.ReactNode = null;
   if (hideHeader || hideHeaderBelowMd) {
@@ -61,6 +67,7 @@ export function PublicShell({
         width: '100%',
         maxWidth: '100%',
         overflowX: 'clip',
+        pb: clearFloatingNav ? { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 } : 0,
       }}
     >
       <Box
@@ -70,14 +77,13 @@ export function PublicShell({
           minWidth: 0,
           maxWidth: '100%',
           overflowX: 'clip',
-          pb: hideMobileNav ? 0 : { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 },
         }}
       >
         {header}
         <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
       </Box>
       {hideFooter ? null : <PublicFooter />}
-      {hideMobileNav || hostedTabs ? null : <MobileBottomNav />}
+      {showMobileNav ? <MobileBottomNav /> : null}
     </Box>
   );
 }

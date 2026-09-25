@@ -27,6 +27,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { DIRECTORY_RATING_PRESETS, getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
+import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -577,11 +578,12 @@ export function FilterDrawerPanel({
           position: 'fixed',
           top: 0,
           left: 0,
-          bottom: 0,
+          // Sit flush above the floating bottom nav on mobile (nav stays visible).
+          bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, lg: 0 },
           zIndex: (theme) => theme.zIndex.modal + 2,
           width: { xs: '90vw', sm: 440, md: 460 },
           maxWidth: '100vw',
-          height: '100%',
+          height: { xs: 'auto', lg: '100%' },
           display: 'flex',
           flexDirection: 'column',
           bgcolor: 'background.default',
@@ -595,7 +597,6 @@ export function FilterDrawerPanel({
           overflow: 'hidden',
           overscrollBehavior: 'contain',
           pt: 'env(safe-area-inset-top, 0px)',
-          pb: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <Box

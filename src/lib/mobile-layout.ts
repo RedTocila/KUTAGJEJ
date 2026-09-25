@@ -5,7 +5,7 @@ export const MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX = 56;
 export const MOBILE_BOTTOM_NAV_FLOAT_INSET_PX = 14;
 
 /** Extra space so scroll content doesn’t sit flush against the nav. */
-export const MOBILE_BOTTOM_NAV_CONTENT_GAP_PX = 20;
+export const MOBILE_BOTTOM_NAV_CONTENT_GAP_PX = 28;
 
 /** Distance from viewport bottom to stack a bar flush above the mobile nav. */
 export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`;

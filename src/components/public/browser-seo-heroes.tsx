@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Box, Container } from '@mui/material';
 
 import { OKAZION_ACCENT, OKAZION_ACCENT_SOFT } from '@/lib/home-categories';
-import { verticalCityHubLinks } from '@/lib/seo-internal-links';
 import { BrowserSeoSection } from '@/components/public/browser-seo-section';
 import { SeoEyebrow, SeoHeadingPanel, SeoTextLinkRow } from '@/components/public/seo-heading-panel';
 
@@ -39,10 +38,6 @@ function OkazionAccent({ children }: { children: React.ReactNode }) {
  * Sits under the banner slider so the promo leads, then the SEO paragraph.
  */
 export function HomeBrowserHeroSeo() {
-  const cityLinks = [
-    ...verticalCityHubLinks('real-estate', { includeVerticalLabel: true }).slice(0, 4),
-    ...verticalCityHubLinks('cars', { includeVerticalLabel: true }).slice(0, 2),
-  ];
   return (
     <BrowserSeoSection
       aria-labelledby="home-seo-h1"
@@ -59,19 +54,17 @@ export function HomeBrowserHeroSeo() {
         titleComponent="h1"
         title={
           <>
-            Njoftime <Accent>falas</Accent> në Shqipëri — <Accent>prona</Accent>, <Accent>makina</Accent>,{' '}
-            <Accent>punë</Accent> dhe <Accent>tregu</Accent>
+            Gjej Gjithçka në Shqipëri – <Accent>Biznese</Accent>, <Accent>Shërbime</Accent>, <Accent>Punë</Accent> dhe{' '}
+            <Accent>Prona</Accent>
           </>
         }
         subtext={
           <>
-            <Accent>KuTaGjej</Accent> (kutagjej.al) është marketplace-i shqiptar i njoftimeve falas:{' '}
-            <Accent>apartamente me qira ose shitje</Accent>, <Accent>makina</Accent>, <Accent>vende pune</Accent>,{' '}
-            <Accent>biznese</Accent>, <Accent>profesionistë</Accent> dhe artikuj — në Tiranë, Durrës, Vlorë e gjithë
-            Shqipërinë.
+            <Accent>KuTaGjej.al</Accent> është platforma shqiptare ku mund të gjesh biznese, shërbime profesionale,
+            vende pune, prona për shitje dhe qira, produkte dhe oferta në të gjithë Shqipërinë. Kërko sipas
+            kategorisë, qytetit ose shërbimit dhe gjej shpejt atë që të nevojitet pranë teje.
           </>
         }
-        actions={<SeoTextLinkRow links={cityLinks} />}
       />
     </BrowserSeoSection>
   );

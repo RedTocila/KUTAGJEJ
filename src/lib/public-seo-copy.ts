@@ -13,9 +13,9 @@ export type VerticalSeoCopy = {
 };
 
 export const HOME_SEO_COPY = {
-  headline: 'Njoftime falas në Shqipëri — prona, makina, punë dhe tregu',
+  headline: 'Gjej Gjithçka në Shqipëri – Biznese, Shërbime, Punë dhe Prona',
   subtext:
-    'KuTaGjej (kutagjej.al) është marketplace-i shqiptar i njoftimeve falas: apartamente me qira ose shitje, makina, vende pune, biznese, profesionistë dhe artikuj — në Tiranë, Durrës, Vlorë e gjithë Shqipërinë.',
+    'KuTaGjej.al është platforma shqiptare ku mund të gjesh biznese, shërbime profesionale, vende pune, prona për shitje dhe qira, produkte dhe oferta në të gjithë Shqipërinë. Kërko sipas kategorisë, qytetit ose shërbimit dhe gjej shpejt atë që të nevojitet pranë teje.',
   paragraphs: [
     'KuTaGjej është vendi ku shqiptarët gjejnë dhe postojnë njoftime lokale. Nëse kërkon “ku të gjej prona / makina / punë në Shqipëri”, hap kategorinë përkatëse, zgjidh qytetin dhe kontakto publikuesin drejtpërdrejt — postimi bazë është falas.',
     'Çdo ditë përdorues kërkojnë dhe publikojnë në Tiranë, Durrës, Vlorë, Shkodër, Elbasan, Fier, Korçë, Berat, Sarandë, Kamëz, Kavajë, Lezhë, Pogradec, Lushnjë, Gjirokastër dhe bashki të tjera. Shto foto, çmim dhe vendndodhje — njoftimi shfaqet në Prona, Makina, Punë, Tregu, Biznese ose Profesionistë.',

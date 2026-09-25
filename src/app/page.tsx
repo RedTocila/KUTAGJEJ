@@ -17,9 +17,9 @@ export const dynamic = 'force-static';
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: `${config.site.name} — Njoftime falas: prona, makina, punë dhe tregu në Shqipëri`,
+  title: `${config.site.name} — Gjej Gjithçka në Shqipëri: Biznese, Shërbime, Punë dhe Prona`,
   description:
-    'KuTaGjej, platforma shqiptare e njoftimeve. Shfleto apartamente me qira e shitje, vetura të reja dhe të përdorura, oferta pune në Tiranë, Durrës e gjithë Shqipërinë, dhe tregun online — ose posto njoftim falas në sekonda.',
+    'KuTaGjej.al është platforma shqiptare ku mund të gjesh biznese, shërbime profesionale, vende pune, prona për shitje dhe qira, produkte dhe oferta në të gjithë Shqipërinë. Kërko sipas kategorisë, qytetit ose shërbimit dhe gjej shpejt atë që të nevojitet pranë teje.',
   keywords: [
     'KuTaGjej',
     'njoftime Shqipëri',
@@ -42,15 +42,15 @@ export const metadata: Metadata = {
     locale: 'sq_AL',
     url: config.site.url,
     siteName: config.site.name,
-    title: `${config.site.name} — Njoftime falas në Shqipëri`,
+    title: `${config.site.name} — Gjej Gjithçka në Shqipëri`,
     description:
-      'Posto, kërko dhe gjej në KuTaGjej — prona, makina, vende pune dhe artikuj. Falas dhe shumë i shpejtë.',
+      'Biznese, shërbime, punë, prona dhe oferta në të gjithë Shqipërinë — kërko dhe gjej shpejt në KuTaGjej.al.',
     images: [{ url: brandLogoSrc, alt: config.site.name, width: 512, height: 512 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${config.site.name} — Njoftime në një vend`,
-    description: 'Posto, kërko dhe gjej shpejt: prona, makina, punë dhe tregu — të gjitha në KuTaGjej.',
+    title: `${config.site.name} — Gjej Gjithçka në Shqipëri`,
+    description: 'Biznese, shërbime, punë dhe prona — të gjitha në KuTaGjej.al.',
     images: [brandLogoSrc],
   },
   robots: {

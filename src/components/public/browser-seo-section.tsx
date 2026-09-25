@@ -3,15 +3,14 @@
 import * as React from 'react';
 import { Box } from '@mui/material';
 
-import { isNativeApp } from '@/lib/native-app';
-
 /**
- * Renders SEO / marketing copy for browsers and crawlers.
- * Hidden inside the Capacitor app shell (keeps the app chrome unchanged).
+ * Renders SEO / marketing copy for crawlers in SSR HTML.
+ * Hidden in the live UI (web + Capacitor) so the product chrome stays clean
+ * for users and App Store screenshots.
  *
- * SSR always includes children so Googlebot indexes the HTML. Native hide is:
- * 1) CSS via `html[data-native-app]` (instant), then
- * 2) unmount after hydration when `isNativeApp()` is true.
+ * SSR always includes children so Googlebot indexes the HTML. Client hide is:
+ * 1) CSS `[data-browser-seo] { display: none }` (instant), then
+ * 2) unmount after hydration.
  */
 export function BrowserSeoSection({
   children,
@@ -26,7 +25,8 @@ export function BrowserSeoSection({
   const [hidden, setHidden] = React.useState(false);
 
   React.useEffect(() => {
-    if (isNativeApp()) setHidden(true);
+    // Always unmount after hydration (native app or browser).
+    setHidden(true);
   }, []);
 
   if (hidden) return null;

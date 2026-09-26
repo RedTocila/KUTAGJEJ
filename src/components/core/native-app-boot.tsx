@@ -4,13 +4,26 @@ import * as React from 'react';
 
 import { isNativeApp, registerNativePush } from '@/lib/native-app';
 
+function markNativeDocument(): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.nativeApp = '1';
+}
+
 /**
  * Boots native-only behaviors when the site runs inside the Capacitor shell.
  * Harmless on mobile/desktop browsers.
  */
 export function NativeAppBoot(): null {
+  // Mark ASAP so CSS can hide browser SEO / footer before paint settles.
+  React.useLayoutEffect(() => {
+    if (!isNativeApp()) return;
+    markNativeDocument();
+  }, []);
+
   React.useEffect(() => {
     if (!isNativeApp()) return;
+
+    markNativeDocument();
 
     let cancelled = false;
     const cleanups: Array<() => void> = [];
@@ -71,8 +84,6 @@ export function NativeAppBoot(): null {
         }
       }
     })();
-
-    document.documentElement.dataset.nativeApp = '1';
 
     return () => {
       cancelled = true;

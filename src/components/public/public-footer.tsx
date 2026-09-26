@@ -73,6 +73,7 @@ export function PublicFooter() {
   return (
     <Box
       component="footer"
+      data-native-hide=""
       sx={{
         mt: { xs: 5, md: 10 },
         pt: { xs: 3.5, md: 6 },

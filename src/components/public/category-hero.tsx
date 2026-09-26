@@ -261,7 +261,10 @@ export function PublicCategoryHero({
         }}
       />
       {showBrowserSeoHero ? (
-        <Box sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}>
+        <Box
+          data-browser-seo=""
+          sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}
+        >
           {isOkazion ? (
             <OkazionBrowserHeroSeo />
           ) : (

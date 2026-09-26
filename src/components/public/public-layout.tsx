@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { Box } from '@mui/material';
+
+import { isNativeApp } from '@/lib/native-app';
+
 import { PublicHeader } from './header';
 import { PublicFooter } from './footer';
 
@@ -11,11 +14,19 @@ interface PublicLayoutProps {
   showFooter?: boolean;
 }
 
-export function PublicLayout({ 
-  children, 
-  showHeader = true, 
-  showFooter = true 
+export function PublicLayout({
+  children,
+  showHeader = true,
+  showFooter = true,
 }: PublicLayoutProps) {
+  const [nativeApp, setNativeApp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isNativeApp()) setNativeApp(true);
+  }, []);
+
+  const renderFooter = showFooter && !nativeApp;
+
   return (
     <Box
       sx={{
@@ -29,7 +40,7 @@ export function PublicLayout({
       <Box component="main" sx={{ flex: 1 }}>
         {children}
       </Box>
-      {showFooter && <PublicFooter />}
+      {renderFooter ? <PublicFooter /> : null}
     </Box>
   );
 }

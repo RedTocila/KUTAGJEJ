@@ -5,6 +5,7 @@ import { Box } from '@mui/material';
 
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { isNativeApp } from '@/lib/native-app';
 
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { PublicFooter } from './public-footer';
@@ -44,6 +45,13 @@ export function PublicShell({
   const showMobileNav = !hideMobileNav && !hostedTabs;
   /** Hosted tabs still show the floating nav from MainTabsShell — keep clearance. */
   const clearFloatingNav = !hideMobileNav;
+  const [nativeApp, setNativeApp] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isNativeApp()) setNativeApp(true);
+  }, []);
+
+  const showFooter = !hideFooter && !nativeApp;
 
   let header: React.ReactNode = null;
   if (hideHeader || hideHeaderBelowMd) {
@@ -82,7 +90,7 @@ export function PublicShell({
         {header}
         <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
       </Box>
-      {hideFooter ? null : <PublicFooter />}
+      {showFooter ? <PublicFooter /> : null}
       {showMobileNav ? <MobileBottomNav /> : null}
     </Box>
   );

@@ -34,6 +34,7 @@ export function PublicFooter() {
   return (
     <Box
       component="footer"
+      data-native-hide=""
       sx={{
         bgcolor: 'rgba(15, 23, 42, 0.95)',
         borderTop: '1px solid rgba(255,255,255,0.1)',

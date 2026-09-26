@@ -280,7 +280,8 @@ html.dark .kutagjej-splash__progress-fill {
   }
 }
 
-/* Capacitor app shell: hide browser-only SEO blocks without changing app chrome */
-html[data-native-app] [data-browser-seo] {
+/* Capacitor app shell: hide browser-only SEO + footer (web keeps them) */
+html[data-native-app] [data-browser-seo],
+html[data-native-app] [data-native-hide] {
   display: none !important;
 }

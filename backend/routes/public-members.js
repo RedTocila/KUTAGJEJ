@@ -34,8 +34,12 @@ const { getPublicCitiesList } = require('../lib/real-estate-cities-public');
 
 const router = express.Router();
 
-/** Profile grids should list every publicly active listing (not a browse-page page size). */
-const LISTINGS_PER_VERTICAL = 1000;
+/**
+ * Cap per vertical on the public profile page.
+ * 100 is enough for the UI grid; fetching 1000×6 + separate counts made cold
+ * loads exceed the Next.js detail timeout (~8–11s) and show "Profili nuk u ngarkua".
+ */
+const LISTINGS_PER_VERTICAL = 100;
 const MEMBER_SEARCH_FIELDS = [
   'first_name',
   'last_name',
@@ -286,18 +290,39 @@ async function countApproved(table, posterId, extraSpec = {}) {
   return count ?? 0;
 }
 
+/** Prefer row length when under the cap; only hit COUNT when the page may be truncated. */
+async function totalForFetched(docs, table, posterId, extraSpec = {}) {
+  const rows = docs || [];
+  if (rows.length < LISTINGS_PER_VERTICAL) return rows.length;
+  return countApproved(table, posterId, extraSpec);
+}
+
 async function loadMemberListings(posterId, { marketplaceOnly = false } = {}) {
   const jobSpec = activeJobCreatedAtFilter();
   const emptyVertical = Promise.resolve([]);
-  const zeroCount = Promise.resolve(0);
+
+  const [realEstateDocs, carDocs, jobDocsRaw, marketplaceDocs, businessDocs, professionalDocs] =
+    await Promise.all([
+      marketplaceOnly ? emptyVertical : fetchApproved('real_estate_listings', posterId, LISTINGS_PER_VERTICAL),
+      marketplaceOnly ? emptyVertical : fetchApproved('car_listings', posterId, LISTINGS_PER_VERTICAL),
+      marketplaceOnly ? emptyVertical : fetchApproved('job_listings', posterId, LISTINGS_PER_VERTICAL, jobSpec),
+      fetchApproved('marketplace_listings', posterId, LISTINGS_PER_VERTICAL),
+      marketplaceOnly
+        ? emptyVertical
+        : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
+            eq: { vertical: 'businesses' },
+          }),
+      marketplaceOnly
+        ? emptyVertical
+        : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
+            eq: { vertical: 'professionals' },
+          }),
+    ]);
+
+  // Defense in depth: never surface expired jobs on public profiles (same rule as browse/detail).
+  const jobDocs = (jobDocsRaw || []).filter(isJobListingActive);
 
   const [
-    realEstateDocs,
-    carDocs,
-    jobDocsRaw,
-    marketplaceDocs,
-    businessDocs,
-    professionalDocs,
     realEstateTotal,
     carsTotal,
     jobsTotalRaw,
@@ -305,34 +330,20 @@ async function loadMemberListings(posterId, { marketplaceOnly = false } = {}) {
     businessesTotal,
     professionalsTotal,
   ] = await Promise.all([
-    marketplaceOnly ? emptyVertical : fetchApproved('real_estate_listings', posterId, LISTINGS_PER_VERTICAL),
-    marketplaceOnly ? emptyVertical : fetchApproved('car_listings', posterId, LISTINGS_PER_VERTICAL),
-    marketplaceOnly ? emptyVertical : fetchApproved('job_listings', posterId, LISTINGS_PER_VERTICAL, jobSpec),
-    fetchApproved('marketplace_listings', posterId, LISTINGS_PER_VERTICAL),
+    marketplaceOnly ? 0 : totalForFetched(realEstateDocs, 'real_estate_listings', posterId),
+    marketplaceOnly ? 0 : totalForFetched(carDocs, 'car_listings', posterId),
+    marketplaceOnly ? 0 : totalForFetched(jobDocsRaw, 'job_listings', posterId, jobSpec),
+    totalForFetched(marketplaceDocs, 'marketplace_listings', posterId),
     marketplaceOnly
-      ? emptyVertical
-      : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
-          eq: { vertical: 'businesses' },
-        }),
+      ? 0
+      : totalForFetched(businessDocs, 'directory_listings', posterId, { eq: { vertical: 'businesses' } }),
     marketplaceOnly
-      ? emptyVertical
-      : fetchApproved('directory_listings', posterId, LISTINGS_PER_VERTICAL, {
+      ? 0
+      : totalForFetched(professionalDocs, 'directory_listings', posterId, {
           eq: { vertical: 'professionals' },
         }),
-    marketplaceOnly ? zeroCount : countApproved('real_estate_listings', posterId),
-    marketplaceOnly ? zeroCount : countApproved('car_listings', posterId),
-    marketplaceOnly ? zeroCount : countApproved('job_listings', posterId, jobSpec),
-    countApproved('marketplace_listings', posterId),
-    marketplaceOnly
-      ? zeroCount
-      : countApproved('directory_listings', posterId, { eq: { vertical: 'businesses' } }),
-    marketplaceOnly
-      ? zeroCount
-      : countApproved('directory_listings', posterId, { eq: { vertical: 'professionals' } }),
   ]);
 
-  // Defense in depth: never surface expired jobs on public profiles (same rule as browse/detail).
-  const jobDocs = (jobDocsRaw || []).filter(isJobListingActive);
   const jobsTotal =
     jobDocs.length < (jobDocsRaw || []).length
       ? Math.max(0, jobsTotalRaw - ((jobDocsRaw || []).length - jobDocs.length))
@@ -352,18 +363,23 @@ async function loadMemberListings(posterId, { marketplaceOnly = false } = {}) {
     professionalReviewStatsByListingIds(professionalDocs.map((d) => d.id)),
   ]);
 
-  const [realEstate, cars, jobs, marketplace, businesses, professionals] = await Promise.all([
-    attachPublicMetrics(realEstateDocs.map((d) => formatRealEstate(d, cityById))),
-    attachPublicMetrics(carDocs.map((d) => formatCar(d, cityById))),
-    attachPublicMetrics(jobDocs.map((d) => formatJob(d, cityById))),
-    attachPublicMetrics(marketplaceDocs.map((d) => formatMarketplace(d, cityById))),
-    attachPublicMetrics(
-      businessDocs.map((d) => formatDirectory(d, cityById, businessReviewStats)),
-    ),
-    attachPublicMetrics(
-      professionalDocs.map((d) => formatDirectory(d, cityById, professionalReviewStats)),
-    ),
-  ]);
+  // One metrics query for every listing instead of six sequential round-trips.
+  const formatted = [
+    ...realEstateDocs.map((d) => formatRealEstate(d, cityById)),
+    ...carDocs.map((d) => formatCar(d, cityById)),
+    ...jobDocs.map((d) => formatJob(d, cityById)),
+    ...marketplaceDocs.map((d) => formatMarketplace(d, cityById)),
+    ...businessDocs.map((d) => formatDirectory(d, cityById, businessReviewStats)),
+    ...professionalDocs.map((d) => formatDirectory(d, cityById, professionalReviewStats)),
+  ];
+  const withMetrics = await attachPublicMetrics(formatted);
+
+  const realEstate = withMetrics.splice(0, realEstateDocs.length);
+  const cars = withMetrics.splice(0, carDocs.length);
+  const jobs = withMetrics.splice(0, jobDocs.length);
+  const marketplace = withMetrics.splice(0, marketplaceDocs.length);
+  const businesses = withMetrics.splice(0, businessDocs.length);
+  const professionals = withMetrics.splice(0, professionalDocs.length);
 
   const totals = {
     realEstate: realEstateTotal,

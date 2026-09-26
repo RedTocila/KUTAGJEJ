@@ -280,11 +280,7 @@ html.dark .kutagjej-splash__progress-fill {
   }
 }
 
-/*
- * Hide browser-only SEO marketing blocks from the UI (homepage interludes,
- * browse heroes, FAQ panels, listing asides). HTML still ships for crawlers;
- * BrowserSeoSection unmounts after hydration. Same treatment as native app.
- */
-[data-browser-seo] {
+/* Capacitor app shell: hide browser-only SEO blocks without changing app chrome */
+html[data-native-app] [data-browser-seo] {
   display: none !important;
 }

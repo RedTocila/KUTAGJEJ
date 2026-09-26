@@ -29,6 +29,7 @@ import { useUser } from '@/hooks/use-user';
 import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { BrowseBrowserHeroSeo, OkazionBrowserHeroSeo } from '@/components/public/browser-seo-heroes';
 import { AddListingPickerDialog } from '@/components/user/add-listing-picker-dialog';
+import { isNativeApp } from '@/lib/native-app';
 import { VERTICAL_SEO_COPY } from '@/lib/public-seo-copy';
 
 import { HomeVerticalIcon } from './home-vertical-icon';
@@ -79,6 +80,7 @@ export function PublicCategoryHero({
   const elevated = useScrollTrigger({ disableHysteresis: true, threshold: 8 });
   const chromeHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const [mounted, setMounted] = React.useState(false);
+  const [nativeApp, setNativeApp] = React.useState(false);
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const barRef = React.useRef<HTMLDivElement>(null);
   const [barHeight, setBarHeight] = React.useState(0);
@@ -94,6 +96,7 @@ export function PublicCategoryHero({
 
   React.useEffect(() => {
     setMounted(true);
+    setNativeApp(isNativeApp());
   }, []);
 
   React.useEffect(() => {
@@ -165,7 +168,7 @@ export function PublicCategoryHero({
             </Box>
             <Stack spacing={0.35} sx={{ flex: 1, minWidth: 0, pt: 0.15 }}>
               <Typography
-                component="h1"
+                component={nativeApp || !showBrowserSeoHero ? 'h1' : 'p'}
                 sx={{
                   fontWeight: 700,
                   fontSize: { xs: '1.4rem', md: '1.75rem' },
@@ -258,10 +261,7 @@ export function PublicCategoryHero({
         }}
       />
       {showBrowserSeoHero ? (
-        <Box
-          data-browser-seo=""
-          sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}
-        >
+        <Box sx={{ bgcolor: 'background.default', pt: { xs: 1.25, md: 0 }, pb: { xs: 0.5, md: 1 } }}>
           {isOkazion ? (
             <OkazionBrowserHeroSeo />
           ) : (

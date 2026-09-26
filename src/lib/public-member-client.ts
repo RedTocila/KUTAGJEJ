@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 import type { HomepageMixedListing } from '@/lib/homepage-latest-listings';
 import { isJobListingActive } from '@/lib/job-listing-expiry';
 import type {
@@ -9,6 +11,9 @@ import type {
   PublicRealEstateListingSeller,
 } from '@/lib/public-listings-client';
 import { loadPublicEntity, safeServerJson, type PublicEntityLoadResult } from '@/lib/server-fetch';
+
+/** Member profiles load many listing verticals; allow cold Express/Supabase starts. */
+const MEMBER_PROFILE_TIMEOUT_MS = 20_000;
 
 export interface PublicMemberListingsBundle {
   realEstate: PublicRealEstateListing[];
@@ -352,14 +357,20 @@ function mapMemberProfilePayload(payload: unknown): PublicMemberProfile | null {
   };
 }
 
-export async function loadPublicMemberProfile(id: string): Promise<PublicEntityLoadResult<PublicMemberProfile>> {
-  // Profile details can change immediately after the owner saves social links.
-  // Avoid serving a stale server-rendered response when navigating back to the
-  // public profile.
-  return loadPublicEntity(`/public/members/${encodeURIComponent(id)}`, mapMemberProfilePayload, {
+/**
+ * Deduped per request so `generateMetadata` + the page share one API call.
+ * `no-store` keeps owner edits (social links, etc.) fresh after save.
+ */
+export const loadPublicMemberProfile = cache(async function loadPublicMemberProfile(
+  id: string
+): Promise<PublicEntityLoadResult<PublicMemberProfile>> {
+  const raw = typeof id === 'string' ? id.trim() : '';
+  if (!raw) return { data: null, unavailable: false };
+  return loadPublicEntity(`/public/members/${encodeURIComponent(raw)}`, mapMemberProfilePayload, {
     cache: 'no-store',
+    timeoutMs: MEMBER_PROFILE_TIMEOUT_MS,
   });
-}
+});
 
 export async function fetchPublicMemberProfile(id: string): Promise<PublicMemberProfile | null> {
   return (await loadPublicMemberProfile(id)).data;

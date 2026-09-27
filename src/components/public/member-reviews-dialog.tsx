@@ -23,7 +23,7 @@ import { useUser } from '@/hooks/use-user';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { formatRatingDisplay } from '@/lib/format-rating';
 import { listMemberReviews, type MemberReview } from '@/lib/member-reviews-client';
-import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
+import { mobileBottomSheetUnderNavSx } from '@/lib/mobile-layout';
 const LEAVE_REVIEW_Z_INDEX = 1500;
 
 function reviewerInitials(name: string): string {
@@ -114,10 +114,9 @@ export function MemberReviewsDialog({
         paper: {
           ...sheetDismiss.paperSlotProps,
           sx: {
-            ...mobileBottomSheetAboveNavSx,
+            ...mobileBottomSheetUnderNavSx('70dvh'),
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            maxHeight: '70dvh',
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             backgroundImage: 'none',

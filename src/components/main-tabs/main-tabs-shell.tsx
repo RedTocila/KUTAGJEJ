@@ -336,21 +336,21 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!hosted || !displayTab) return;
     return subscribeTabRefresh(displayTab.id, () => {
-      window.scrollTo(0, 0);
-      paneRefs.current[displayTab.index]?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      paneRefs.current[displayTab.index]?.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }, [displayTab, hosted]);
 
   React.useEffect(() => {
     if (!pagerActive) return;
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     const pane = paneRefs.current[index];
     if (pane) pane.scrollTop = 0;
   }, [index, pagerActive]);
 
   React.useEffect(() => {
     if (!hosted || !threadOpen) return;
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {

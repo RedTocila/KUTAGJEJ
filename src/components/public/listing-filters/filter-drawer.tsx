@@ -27,7 +27,7 @@ import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
 import { DIRECTORY_RATING_PRESETS, getFilterFieldConfig, type BrowseFilters } from '@/lib/listing-filters';
-import { MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { MOBILE_SHEET_UNDER_NAV_PADDING } from '@/lib/mobile-layout';
 import type { RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -578,12 +578,12 @@ export function FilterDrawerPanel({
           position: 'fixed',
           top: 0,
           left: 0,
-          // Sit flush above the floating bottom nav on mobile (nav stays visible).
-          bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, lg: 0 },
+          // Full height; the floating bottom nav stays on top and the footer pads above it.
+          bottom: 0,
           zIndex: (theme) => theme.zIndex.modal + 2,
           width: { xs: '90vw', sm: 440, md: 460 },
           maxWidth: '100vw',
-          height: { xs: 'auto', lg: '100%' },
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
           bgcolor: 'background.default',
@@ -663,7 +663,8 @@ export function FilterDrawerPanel({
         <Box
           sx={{
             px: 2.5,
-            py: 2,
+            pt: 2,
+            pb: { xs: MOBILE_SHEET_UNDER_NAV_PADDING, lg: 2 },
             flexShrink: 0,
             bgcolor: 'background.default',
             backgroundImage: 'none',

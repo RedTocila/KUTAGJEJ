@@ -7,6 +7,7 @@ import { Badge, alpha, Box, Divider, Drawer, Stack, Typography } from '@mui/mate
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
+import { MOBILE_SHEET_UNDER_NAV_PADDING } from '@/lib/mobile-layout';
 import { BrandLogo } from '@/components/brand/brand-logo';
 
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
@@ -90,7 +91,15 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
         </Box>
       </Stack>
       <Divider />
-      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px', overflowY: 'auto' }}>
+      <Box
+        component="nav"
+        sx={{
+          flex: '1 1 auto',
+          p: '12px',
+          pb: { xs: MOBILE_SHEET_UNDER_NAV_PADDING, lg: '12px' },
+          overflowY: 'auto',
+        }}
+      >
         <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
           {navItems.map((item) => (
             <UserMobileNavRow

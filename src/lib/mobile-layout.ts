@@ -13,13 +13,20 @@ export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT
 /** Scroll/content padding so the last item clears the nav with a visible gap. */
 export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
 
+/** Bottom padding for sheets/drawers that run behind the floating nav, so the last row clears it. */
+export const MOBILE_SHEET_UNDER_NAV_PADDING = `calc(${MOBILE_BOTTOM_NAV_OFFSET} + 8px)`;
+
 /**
- * Bottom-sheet paper sits flush above the floating nav on mobile (nav stays visible).
- * Safe-area is already included in the offset — don’t add another env() padding-bottom.
+ * Bottom-sheet paper runs to the viewport bottom behind the floating nav (nav stays on top).
+ * `maxHeight` is the visible sheet height above the nav; the nav band is added on mobile.
  */
-export const mobileBottomSheetAboveNavSx = {
-  bottom: { xs: MOBILE_BOTTOM_NAV_OFFSET, lg: 0 },
-} as const;
+export function mobileBottomSheetUnderNavSx(maxHeight: string) {
+  return {
+    bottom: 0,
+    pb: { xs: MOBILE_SHEET_UNDER_NAV_PADDING, lg: 'env(safe-area-inset-bottom, 0px)' },
+    maxHeight: { xs: `calc(${maxHeight} + ${MOBILE_BOTTOM_NAV_OFFSET})`, lg: maxHeight },
+  } as const;
+}
 
 /** Matches dashboard `HeaderSearchBar` height. */
 export const MOBILE_SEARCH_BAR_HEIGHT_PX = 42;

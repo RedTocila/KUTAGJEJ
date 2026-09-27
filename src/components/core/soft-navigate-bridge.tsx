@@ -8,6 +8,7 @@ import {
   registerAppRouterNavigation,
   unregisterAppRouterNavigation,
 } from '@/lib/hard-navigate';
+import { setCommittedNavPath } from '@/lib/nav-transition';
 import { rememberFirstPageIfNeeded } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
@@ -77,7 +78,7 @@ function readScrollPosition(entryKey: string): ScrollPosition | null {
 
 function scrollWindowToTop() {
   if (typeof window === 'undefined') return;
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 }
 
 function restoreScrollPosition(entryKey: string): () => void {
@@ -93,13 +94,15 @@ function restoreScrollPosition(entryKey: string): () => void {
     window.scrollTo({
       left: position.left,
       top: Math.min(position.top, maxTop),
-      behavior: 'auto',
+      behavior: 'instant',
     });
-    if (position.top > maxTop && attempts < maxAttempts) {
-      frame = window.requestAnimationFrame(restore);
-    }
+    return position.top > maxTop && attempts < maxAttempts;
   };
-  frame = window.requestAnimationFrame(restore);
+  const retry = () => {
+    if (restore()) frame = window.requestAnimationFrame(retry);
+  };
+  // First pass runs in the commit so the back view-transition snapshot is already scrolled.
+  if (restore()) frame = window.requestAnimationFrame(retry);
 
   return () => window.cancelAnimationFrame(frame);
 }
@@ -212,6 +215,7 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
       }
     }
     previousPathnameRef.current = pathname;
+    setCommittedNavPath(pathname);
     clearPendingNavigationIfMatches(pathname);
 
     return () => {

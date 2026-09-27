@@ -14,6 +14,7 @@ import { MuiDialog } from './dialog';
 import { MuiDrawer } from './drawer';
 import { MuiIconButton } from './icon-button';
 import { MuiLink } from './link';
+import { MuiMenu, MuiPopover } from './popover';
 import { MuiRating } from './rating';
 import { MuiMenuItem, MuiSelect } from './select';
 import { MuiStack } from './stack';
@@ -37,7 +38,9 @@ export const components = {
   MuiFab,
   MuiIconButton,
   MuiLink,
+  MuiMenu,
   MuiMenuItem,
+  MuiPopover,
   MuiRating,
   MuiSelect,
   MuiStack,

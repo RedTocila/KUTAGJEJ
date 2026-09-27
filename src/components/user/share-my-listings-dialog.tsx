@@ -24,7 +24,7 @@ import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useLanguage } from '@/hooks/use-language';
 import { jobListingCoverImageUrl } from '@/lib/job-listing-cover';
-import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
+import { mobileBottomSheetUnderNavSx } from '@/lib/mobile-layout';
 import {
   listMyBusinessListings,
   listMyProfessionalListings,
@@ -372,10 +372,9 @@ export function ShareMyListingsDialog({
           paper: {
             ...sheetDismiss.paperSlotProps,
             sx: {
-              ...mobileBottomSheetAboveNavSx,
+              ...mobileBottomSheetUnderNavSx('75dvh'),
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
-              maxHeight: '75dvh',
               backgroundImage: 'none',
             },
           },

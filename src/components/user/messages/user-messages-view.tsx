@@ -2065,7 +2065,7 @@ export function UserMessagesView() {
       scroller.scrollTop = scroller.scrollHeight;
       return;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
   }, []);
 
   const pinThreadToBottom = React.useCallback(() => {

@@ -34,7 +34,7 @@ export function hardNavigate(href: string, event?: { preventDefault(): void }): 
     if ('scrollRestoration' in history) {
       history.scrollRestoration = 'manual';
     }
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     return;
   }
 
@@ -51,7 +51,7 @@ export function hardRefreshToTop(event?: { preventDefault(): void }): void {
   if ('scrollRestoration' in history) {
     history.scrollRestoration = 'manual';
   }
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   void runActiveTabRefresh();
 
   // Public homepage is ISR-cached (`/` / Observability `/index`). Re-running RSC on

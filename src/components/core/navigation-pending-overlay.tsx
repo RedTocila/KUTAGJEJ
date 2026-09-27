@@ -7,6 +7,8 @@ import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
 import { paths } from '@/paths';
 import { mainTabFromPath } from '@/lib/main-tabs';
+import { PENDING_OVERLAY_ATTR } from '@/lib/nav-transition';
+import { MOTION, MOTION_NAV_FADE_MS, NAV_PUSH_MS } from '@/styles/motion';
 import { HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
@@ -203,15 +205,19 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
   }, [pendingPath]);
 
   if (!pendingPath || shouldSkipOverlay(pendingPath, pathname ?? '')) return null;
+  // Hide in the same commit as the route so the settle view transition captures the real page.
+  if (pathname && normalizeNavPath(pathname) === pendingPath) return null;
 
   const isAppShell = pendingPath.startsWith('/dashboard') || pendingPath.startsWith('/user/dashboard');
   const coverPicker = isPostListingPath(pendingPath);
+  const pushIn = !mainTabFromPath(pendingPath);
 
   return (
     <Box
       role="status"
       aria-live="polite"
       aria-busy
+      {...{ [PENDING_OVERLAY_ATTR]: '' }}
       sx={{
         position: 'fixed',
         inset: 0,
@@ -224,6 +230,13 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
         pl: {
           lg: isAppShell ? 'var(--SideNav-width, 0px)' : 0,
         },
+        animation: {
+          xs: pushIn
+            ? `kgPendingPushIn ${NAV_PUSH_MS}ms ${MOTION.easeIos} both`
+            : `kgPendingFadeIn ${MOTION_NAV_FADE_MS}ms ${MOTION.ease} both`,
+          lg: `kgPendingFadeIn ${MOTION_NAV_FADE_MS}ms ${MOTION.ease} both`,
+        },
+        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
       }}
     >
       <PendingRouteSkeleton path={pendingPath} />

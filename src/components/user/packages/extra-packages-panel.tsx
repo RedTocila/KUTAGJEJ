@@ -880,14 +880,14 @@ export function ExtraPackagesPanel() {
         lastY = y;
         if (attempts < 50) {
           attempts += 1;
-          timers.push(window.setTimeout(() => scrollToConvert('auto'), 120));
+          timers.push(window.setTimeout(() => scrollToConvert('instant'), 120));
         }
       }
     };
 
     // Instant first jumps beat the browser's early hash scroll; a late smooth pass finishes it.
-    timers.push(window.setTimeout(() => scrollToConvert('auto'), 40));
-    timers.push(window.setTimeout(() => scrollToConvert('auto'), 250));
+    timers.push(window.setTimeout(() => scrollToConvert('instant'), 40));
+    timers.push(window.setTimeout(() => scrollToConvert('instant'), 250));
     timers.push(window.setTimeout(() => scrollToConvert('smooth'), 700));
 
     return () => {

@@ -46,6 +46,7 @@ import {
 } from '@/lib/home-categories';
 import { knownCreateDefaultsFromStorage } from '@/lib/listing-form-defaults';
 import { listingFormHasUserProgress } from '@/lib/listing-form-draft';
+import { MOBILE_SHEET_UNDER_NAV_PADDING } from '@/lib/mobile-layout';
 import {
   POST_LISTING_AI_BAR_ID,
   POST_LISTING_AI_INPUT_ID,
@@ -458,7 +459,9 @@ export function PostListingAiAssist({
               backgroundImage: 'none',
               // Sit on the visual viewport (keyboard), not the layout viewport.
               bottom: `${viewport.insetBottom}px`,
-              pb: keyboardOpen ? 0 : 'env(safe-area-inset-bottom, 0px)',
+              pb: keyboardOpen
+                ? 0
+                : { xs: MOBILE_SHEET_UNDER_NAV_PADDING, lg: 'env(safe-area-inset-bottom, 0px)' },
               transition: drawerOpen ? `bottom ${MOTION.fast} linear, max-height ${MOTION.fast} linear` : undefined,
               // MUI Slide's transform makes iOS pin this layer to the visual
               // viewport and double-offset it above the keyboard.

@@ -12,6 +12,12 @@
   --motion-enter: 240ms;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Route transitions — keep in sync with NAV_PUSH_MS / MOTION_NAV_FADE_MS */
+  --kg-nav-push: 380ms;
+  --kg-nav-fade: 220ms;
 }
 
 *:focus-visible {
@@ -28,6 +34,9 @@ html {
   overflow-x: clip;
   overflow-y: scroll;
   overscroll-behavior-x: none;
+  /* Anchor jumps + "back to top" glide. Route changes and scroll-lock restores pass
+     `behavior: 'instant'`; `data-scroll-behavior` lets Next do the same for its own scrolls. */
+  scroll-behavior: smooth;
 }
 
 body {
@@ -230,7 +239,207 @@ html.dark .kutagjej-splash__progress-fill {
   animation-duration: 150ms !important;
 }
 
+/*
+ * Route transitions (View Transitions API).
+ * `html[data-kg-nav]` is set per navigation in `src/lib/nav-transition.ts`.
+ * Mobile: iOS navigation-stack push / pop. Desktop: soft fade + rise.
+ */
+[data-kg-bottom-nav] {
+  view-transition-name: kg-bottom-nav;
+}
+
+html[data-kg-nav]::view-transition-old(root),
+html[data-kg-nav]::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+/* 1px probe that starts the transition — never visible */
+::view-transition-group(*.kg-route),
+::view-transition-new(*.kg-route) {
+  animation: none;
+}
+
+::view-transition-old(*.kg-route) {
+  display: none;
+}
+
+/* Tab bar stays put while pages move underneath it */
+html[data-kg-nav]::view-transition-group(kg-bottom-nav),
+html[data-kg-nav]::view-transition-new(kg-bottom-nav) {
+  animation: none;
+}
+
+html[data-kg-nav]::view-transition-old(kg-bottom-nav) {
+  animation: none;
+  opacity: 0;
+}
+
+/* Settle: destination skeleton / tab switch → real page */
+html[data-kg-nav='settle']::view-transition-old(root) {
+  animation: none;
+}
+
+html[data-kg-nav='settle']::view-transition-new(root),
+html[data-kg-nav='settle']::view-transition-new(kg-bottom-nav):only-child {
+  animation: kgNavFadeIn var(--kg-nav-fade) var(--motion-ease) both;
+}
+
+html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
+  opacity: 1;
+  animation: kgNavFadeOut 160ms var(--motion-ease-exit) both;
+}
+
+@media (max-width: 1199.95px) {
+  html[data-kg-nav='forward']::view-transition-old(root) {
+    animation: kgNavPushOld var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+
+  /* Tab bar paints above the page snapshots, so a leaving / arriving bar under the
+     sliding page is clipped at that page's edge (72% = 100% - parallax offset). */
+  html[data-kg-nav='forward']::view-transition-old(kg-bottom-nav):only-child {
+    opacity: 1;
+    animation: kgNavPushOldUnder var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+
+  html[data-kg-nav='back']::view-transition-new(kg-bottom-nav):only-child {
+    animation: kgNavPopNewUnder var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+  html[data-kg-nav='forward']::view-transition-new(root),
+  html[data-kg-nav='forward']::view-transition-new(kg-bottom-nav):only-child {
+    animation: kgNavPushNew var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+
+  html[data-kg-nav='forward']::view-transition-new(root) {
+    box-shadow: -16px 0 36px rgba(0, 0, 0, 0.14);
+  }
+
+  html[data-kg-nav='back']::view-transition-old(root),
+  html[data-kg-nav='back']::view-transition-old(kg-bottom-nav):only-child {
+    opacity: 1;
+    z-index: 1;
+    animation: kgNavPopOld var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+
+  html[data-kg-nav='back']::view-transition-old(root) {
+    box-shadow: -16px 0 36px rgba(0, 0, 0, 0.14);
+  }
+
+  html[data-kg-nav='back']::view-transition-new(root) {
+    animation: kgNavPopNew var(--kg-nav-push) var(--motion-ease-ios) both;
+  }
+}
+
+@media (min-width: 1200px) {
+  html[data-kg-nav='forward']::view-transition-old(root),
+  html[data-kg-nav='back']::view-transition-old(root) {
+    animation: kgNavFadeOut 140ms var(--motion-ease-exit) both;
+  }
+
+  html[data-kg-nav='forward']::view-transition-new(root) {
+    animation: kgNavRiseIn 280ms var(--motion-ease) both;
+  }
+
+  html[data-kg-nav='back']::view-transition-new(root) {
+    animation: kgNavFadeIn var(--kg-nav-fade) var(--motion-ease) both;
+  }
+}
+
+@keyframes kgNavPushNew {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes kgNavPushOld {
+  to {
+    transform: translate3d(-28%, 0, 0);
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes kgNavPopOld {
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes kgNavPopNew {
+  from {
+    transform: translate3d(-28%, 0, 0);
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes kgNavPushOldUnder {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    transform: translate3d(-28%, 0, 0);
+    clip-path: inset(0 72% 0 0);
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes kgNavPopNewUnder {
+  from {
+    transform: translate3d(-28%, 0, 0);
+    clip-path: inset(0 72% 0 0);
+    filter: brightness(0.9);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes kgNavFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes kgNavFadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes kgNavRiseIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+/* Destination skeleton (NavigationPendingOverlay) entering on click */
+@keyframes kgPendingPushIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+    box-shadow: -16px 0 36px rgba(0, 0, 0, 0.14);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    box-shadow: none;
+  }
+}
+
+@keyframes kgPendingFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
   .kutagjej-splash {
     transition: none;
   }

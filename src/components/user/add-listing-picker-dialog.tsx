@@ -49,7 +49,7 @@ import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
-import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
+import { mobileBottomSheetUnderNavSx } from '@/lib/mobile-layout';
 import type { AppMessages } from '@/lib/i18n/messages';
 export type AddListingPickOptions = { okazion?: boolean; premium?: boolean };
 
@@ -377,14 +377,12 @@ export function AddListingPickerDialog({
         paper: {
           ...sheetDismiss.paperSlotProps,
           sx: {
-            ...mobileBottomSheetAboveNavSx,
+            ...mobileBottomSheetUnderNavSx('70dvh'),
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
-            maxHeight: '70dvh',
             overflowY: 'auto',
             overscrollBehavior: 'contain',
             backgroundImage: 'none',
-            // Above floating nav on mobile; paper bottom edge meets top of nav.
             zIndex: (theme) => theme.zIndex.modal + 1,
           },
         },

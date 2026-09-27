@@ -61,7 +61,7 @@ function releaseLock() {
   body.style.right = savedBody.right;
   body.style.width = savedBody.width;
   savedBody = null;
-  window.scrollTo(0, savedScrollY);
+  window.scrollTo({ top: savedScrollY, left: 0, behavior: 'instant' });
 }
 
 const SCROLL_LOCK_ALLOW_SELECTOR = [

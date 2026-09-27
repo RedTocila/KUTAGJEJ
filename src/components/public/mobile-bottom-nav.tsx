@@ -211,6 +211,7 @@ export function MobileBottomNav() {
     <Box
       component="nav"
       aria-label={t.chrome.bottomNavAria}
+      data-kg-bottom-nav=""
       sx={(theme) => ({
         position: 'fixed',
         left: 0,

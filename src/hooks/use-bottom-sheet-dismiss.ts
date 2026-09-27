@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { sheetDragHandleSx, useSwipeToDismiss } from '@/hooks/use-swipe-to-dismiss';
-import { MOTION_DIALOG_MS } from '@/styles/motion';
+import { MOTION_SHEET_MS } from '@/styles/motion';
 
 /**
  * Swipe-down dismiss for MUI bottom sheets (handle + pull when scrolled to top).
@@ -28,7 +28,7 @@ export function useBottomSheetDismiss(onClose: () => void, open: boolean) {
     ...dismiss,
     handleSx: sheetDragHandleSx(true),
     drawerProps: {
-      transitionDuration: instantExit ? (0 as const) : MOTION_DIALOG_MS,
+      transitionDuration: instantExit ? (0 as const) : MOTION_SHEET_MS,
     },
     paperSlotProps: {
       ref: dismiss.paperRef,

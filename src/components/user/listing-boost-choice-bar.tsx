@@ -27,6 +27,7 @@ import {
 } from '@/components/user/premium-boost-upsell';
 import { formatEurWithLifetime } from '@/components/user/packages/package-ui';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import {
@@ -114,6 +115,7 @@ export function ListingBoostChoiceBar({
 }) {
   const t = useCopy();
   const { user } = useUser();
+  const nativeApp = useIsNativeApp();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -134,6 +136,9 @@ export function ListingBoostChoiceBar({
   }, []);
 
   const closeDialog = () => setDialog(null);
+
+  // No paid promotion in the App Store build (Guideline 3.1.1).
+  if (nativeApp) return null;
 
   const handlePremium = async () => {
     if (disabled || submitting || busy) return;

@@ -35,6 +35,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { paths } from '@/paths';
 import { useLanguage } from '@/hooks/use-language';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { authClient } from '@/lib/auth/client';
 import { fetchCategoryQuotas } from '@/lib/listing-category-quota-client';
@@ -295,6 +296,7 @@ function QuotaStat({
 
 export function UserDashboardHome() {
   const { user, checkSession } = useUser();
+  const nativeApp = useIsNativeApp();
   const { language } = useLanguage();
   const t = getUserDashboardCopy(language);
 
@@ -515,6 +517,7 @@ export function UserDashboardHome() {
           <Box
             component={RouterLink}
             href={paths.user.credits}
+            data-native-hide=""
             sx={{
               flexShrink: 0,
               textDecoration: 'none',
@@ -588,14 +591,16 @@ export function UserDashboardHome() {
         <Grid size={{ xs: 6, md: 3 }}>
           <ActionTile href={paths.user.myRealEstateListings} label={t.myListings} icon={ListBulletsIcon} />
         </Grid>
-        <Grid size={{ xs: 6, md: 3 }}>
-          <ActionTile
-            href={paths.user.credits}
-            label={t.buyCredits}
-            icon={BoostCoinIcon as PhosphorIcon}
-            tone="amber"
-          />
-        </Grid>
+        {nativeApp ? null : (
+          <Grid size={{ xs: 6, md: 3 }}>
+            <ActionTile
+              href={paths.user.credits}
+              label={t.buyCredits}
+              icon={BoostCoinIcon as PhosphorIcon}
+              tone="amber"
+            />
+          </Grid>
+        )}
       </Grid>
 
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
@@ -618,6 +623,7 @@ export function UserDashboardHome() {
             <Button
               component={RouterLink}
               href={`${paths.user.packagesExtra}#convert`}
+              data-native-hide=""
               size="small"
               startIcon={<ArrowsLeftRightIcon size={15} weight="bold" />}
               aria-label={t.convertTooltip}
@@ -717,24 +723,26 @@ export function UserDashboardHome() {
       {canPublish ? <ReferralSummaryCard /> : null}
       {!canPublish ? <DailyStreakCard /> : null}
 
-      <PortalLinkGroup>
-        <PortalLinkCard
-          grouped
-          href={paths.user.packages}
-          title={t.packagesTitle}
-          icon={PackageIcon}
-          badge={subscriptionLoading ? undefined : activePlanLabel}
-          badgeColor={activePlanBadgeColor}
-        />
-        {canPublish ? (
+      {nativeApp ? null : (
+        <PortalLinkGroup>
           <PortalLinkCard
             grouped
-            href={paths.user.payments}
-            title={t.paymentsTitle}
-            icon={ReceiptIcon}
+            href={paths.user.packages}
+            title={t.packagesTitle}
+            icon={PackageIcon}
+            badge={subscriptionLoading ? undefined : activePlanLabel}
+            badgeColor={activePlanBadgeColor}
           />
-        ) : null}
-      </PortalLinkGroup>
+          {canPublish ? (
+            <PortalLinkCard
+              grouped
+              href={paths.user.payments}
+              title={t.paymentsTitle}
+              icon={ReceiptIcon}
+            />
+          ) : null}
+        </PortalLinkGroup>
+      )}
 
       <PortalLinkGroup>
         <PortalLinkCard

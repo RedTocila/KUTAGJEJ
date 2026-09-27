@@ -556,6 +556,7 @@ export function ListingOwnerMetrics({
               }
             >
               <span
+                data-native-hide=""
                 onClick={() => {
                   if (anyBusy) return;
                   if (premiumBlockedNotice) setError(premiumBlockedNotice);
@@ -592,6 +593,7 @@ export function ListingOwnerMetrics({
                 }
               >
                 <span
+                  data-native-hide=""
                   onClick={() => {
                     if (anyBusy) return;
                     if (okazionBlockedNotice) setError(okazionBlockedNotice);

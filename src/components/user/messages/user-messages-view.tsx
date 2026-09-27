@@ -26,8 +26,11 @@ import { CheckCircle as CheckCircleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { Checks as ChecksIcon } from '@phosphor-icons/react/dist/ssr/Checks';
 import { CheckSquare as CheckSquareIcon } from '@phosphor-icons/react/dist/ssr/CheckSquare';
 import { Circle as CircleIcon } from '@phosphor-icons/react/dist/ssr/Circle';
+import { DotsThreeVertical as DotsThreeVerticalIcon } from '@phosphor-icons/react/dist/ssr/DotsThreeVertical';
+import { Flag as FlagIcon } from '@phosphor-icons/react/dist/ssr/Flag';
 import { Paperclip as PaperclipIcon } from '@phosphor-icons/react/dist/ssr/Paperclip';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
+import { Prohibit as ProhibitIcon } from '@phosphor-icons/react/dist/ssr/Prohibit';
 import { PushPin as PushPinIcon } from '@phosphor-icons/react/dist/ssr/PushPin';
 import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { X as XIcon } from '@phosphor-icons/react/dist/ssr/X';
@@ -77,6 +80,13 @@ import {
   parseListingInquiryMessage,
   type ListingInquiryCardData,
 } from '@/lib/listing-inquiry-message';
+import {
+  blockUserRequest,
+  fetchBlockedUserIds,
+  unblockUserRequest,
+  USER_REPORT_REASONS,
+  type ReportPayload,
+} from '@/lib/moderation-client';
 import { prefetchStorageImages, storageImageUrl } from '@/lib/storage-image';
 import { uploadListingImages } from '@/lib/uploads-client';
 import { isBusinessPortalAccount } from '@/lib/user-portal-account-label';
@@ -93,6 +103,7 @@ import {
   ProductDialogContent,
   ProductDialogTitle,
 } from '@/components/core/product-dialog';
+import { ReportContentDialog } from '@/components/core/report-content-dialog';
 import { TransientNotification } from '@/components/core/transient-success-alert';
 import {
   ProductBackButton,
@@ -977,7 +988,7 @@ function MessageBubble({
   }, []);
 
   const startLongPress = (clientX: number, clientY: number) => {
-    if (!mine || selectionMode) return;
+    if (selectionMode) return;
     clearLongPress();
     touchOrigin.current = { x: clientX, y: clientY };
     longPressTimer.current = window.setTimeout(() => {
@@ -1140,7 +1151,7 @@ function MessageBubble({
             }
           }}
           onContextMenu={(e) => {
-            if (!mine) return;
+            if (!mine && selectionMode) return;
             e.preventDefault();
             if (selectionMode) {
               onToggleSelect?.(message.id);
@@ -1149,7 +1160,7 @@ function MessageBubble({
             }
           }}
           onTouchStart={(e) => {
-            if (!mine || selectionMode) return;
+            if (selectionMode) return;
             const touch = e.touches[0];
             if (touch) startLongPress(touch.clientX, touch.clientY);
           }}
@@ -1764,6 +1775,17 @@ export function UserMessagesView() {
   const [pendingDeleteIds, setPendingDeleteIds] = React.useState<string[] | null>(null);
   const [deletingChats, setDeletingChats] = React.useState(false);
   const [pinningChat, setPinningChat] = React.useState(false);
+  const [threadMenuAnchor, setThreadMenuAnchor] = React.useState<HTMLElement | null>(null);
+  const [blockedUserIds, setBlockedUserIds] = React.useState<Set<string>>(() => new Set());
+  const [pendingBlock, setPendingBlock] = React.useState<{ userId: string; name: string; unblock: boolean } | null>(
+    null
+  );
+  const [blockingUser, setBlockingUser] = React.useState(false);
+  const [reportTarget, setReportTarget] = React.useState<{
+    payload: ReportPayload;
+    title: string;
+    subtitle: string;
+  } | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const messagesScrollRef = React.useRef<HTMLDivElement | null>(null);
   const messagesContentRef = React.useRef<HTMLDivElement | null>(null);
@@ -2255,6 +2277,76 @@ export function UserMessagesView() {
       setCachedConversations(next);
       return next;
     });
+  };
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetchBlockedUserIds().then((res) => {
+      if (!cancelled && res.blockedUserIds) setBlockedUserIds(new Set(res.blockedUserIds));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openReportUser = (conv: ConversationSummary | null) => {
+    setThreadMenuAnchor(null);
+    closeActionMenu();
+    if (!conv) return;
+    setReportTarget({
+      payload: { targetType: 'user', conversationId: conv.id, reportedUserId: conv.otherParticipantId },
+      title: 'Raporto përdoruesin',
+      subtitle: conv.otherParticipantName?.trim() || t.messages.userFallback,
+    });
+  };
+
+  const openReportMessage = (message: ConversationMessage) => {
+    closeMessageActions();
+    setReportTarget({
+      payload: { targetType: 'message', conversationId: message.conversationId, messageId: message.id },
+      title: 'Raporto mesazhin',
+      subtitle: 'Pse po e raportoni këtë mesazh?',
+    });
+  };
+
+  const requestBlockToggle = (conv: ConversationSummary | null) => {
+    setThreadMenuAnchor(null);
+    closeActionMenu();
+    if (!conv?.otherParticipantId) return;
+    setPendingBlock({
+      userId: conv.otherParticipantId,
+      name: conv.otherParticipantName?.trim() || t.messages.userFallback,
+      unblock: blockedUserIds.has(conv.otherParticipantId),
+    });
+  };
+
+  const confirmBlockToggle = async () => {
+    if (!pendingBlock || blockingUser) return;
+    setBlockingUser(true);
+    const res = pendingBlock.unblock
+      ? await unblockUserRequest(pendingBlock.userId)
+      : await blockUserRequest(pendingBlock.userId);
+    setBlockingUser(false);
+    if (res.error) {
+      setError(res.error);
+      setPendingBlock(null);
+      return;
+    }
+    const { userId, unblock } = pendingBlock;
+    setBlockedUserIds((prev) => {
+      const next = new Set(prev);
+      if (unblock) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+    setPendingBlock(null);
+    if (!unblock) {
+      const ids = conversationsRef.current.filter((c) => c.otherParticipantId === userId).map((c) => c.id);
+      if (activeConversationRef.current?.otherParticipantId === userId && activeConversationRef.current.id) {
+        ids.push(activeConversationRef.current.id);
+      }
+      removeConversationsLocally([...new Set(ids)]);
+    }
   };
 
   const requestDeleteIds = (ids: string[]) => {
@@ -3066,6 +3158,16 @@ export function UserMessagesView() {
                       ) : null}
                     </Stack>
                   ) : null}
+                  {activeConversation?.otherParticipantId ? (
+                    <IconButton
+                      type="button"
+                      onClick={(e) => setThreadMenuAnchor(e.currentTarget)}
+                      aria-label="Më shumë veprime"
+                      sx={{ color: 'text.secondary', width: 40, height: 40, flexShrink: 0 }}
+                    >
+                      <DotsThreeVerticalIcon size={22} weight="bold" />
+                    </IconButton>
+                  ) : null}
                 </Stack>
               )}
               <Box
@@ -3194,6 +3296,18 @@ export function UserMessagesView() {
           </ListItemIcon>
           <ListItemText primary={t.messages.select} />
         </MenuItem>
+        <MenuItem onClick={() => openReportUser(actionConversation)}>
+          <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+            <FlagIcon size={18} weight="regular" />
+          </ListItemIcon>
+          <ListItemText primary="Raporto përdoruesin" />
+        </MenuItem>
+        <MenuItem onClick={() => requestBlockToggle(actionConversation)}>
+          <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+            <ProhibitIcon size={18} weight="regular" />
+          </ListItemIcon>
+          <ListItemText primary="Blloko përdoruesin" />
+        </MenuItem>
         <MenuItem
           onClick={() => {
             if (actionConversationId) requestDeleteIds([actionConversationId]);
@@ -3272,28 +3386,142 @@ export function UserMessagesView() {
           },
         }}
       >
-        <MenuItem
-          onClick={() => {
-            if (actionMessage) requestDeleteMessage(actionMessage.id);
-          }}
-          sx={{ color: 'error.main' }}
-        >
+        {actionMessage && !actionMessage.isMine ? (
+          <MenuItem onClick={() => openReportMessage(actionMessage)} sx={{ color: 'error.main' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: 'error.main' }}>
+              <FlagIcon size={18} weight="regular" />
+            </ListItemIcon>
+            <ListItemText primary="Raporto mesazhin" />
+          </MenuItem>
+        ) : null}
+        {actionMessage && !actionMessage.isMine ? (
+          <MenuItem
+            onClick={() => {
+              closeMessageActions();
+              requestBlockToggle(activeConversation);
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+              <ProhibitIcon size={18} weight="regular" />
+            </ListItemIcon>
+            <ListItemText primary="Blloko përdoruesin" />
+          </MenuItem>
+        ) : null}
+        {actionMessage?.isMine ? (
+          <MenuItem
+            onClick={() => {
+              if (actionMessage) requestDeleteMessage(actionMessage.id);
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <ListItemIcon sx={{ minWidth: 36, color: 'error.main' }}>
+              <TrashIcon size={18} weight="regular" />
+            </ListItemIcon>
+            <ListItemText primary={t.messages.deleteMessage} />
+          </MenuItem>
+        ) : null}
+        {actionMessage?.isMine ? (
+          <MenuItem
+            onClick={() => {
+              if (actionMessage) enterMessageSelectionMode(actionMessage.id);
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+              <CheckSquareIcon size={18} weight="regular" />
+            </ListItemIcon>
+            <ListItemText primary={t.messages.selectMessages} />
+          </MenuItem>
+        ) : null}
+      </Menu>
+
+      <Menu
+        open={Boolean(threadMenuAnchor)}
+        anchorEl={threadMenuAnchor}
+        onClose={() => setThreadMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 220,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+            },
+          },
+          list: { dense: true },
+        }}
+      >
+        <MenuItem onClick={() => openReportUser(activeConversation)} sx={{ color: 'error.main' }}>
           <ListItemIcon sx={{ minWidth: 36, color: 'error.main' }}>
-            <TrashIcon size={18} weight="regular" />
+            <FlagIcon size={18} weight="regular" />
           </ListItemIcon>
-          <ListItemText primary={t.messages.deleteMessage} />
+          <ListItemText primary="Raporto përdoruesin" />
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (actionMessage) enterMessageSelectionMode(actionMessage.id);
-          }}
-        >
+        <MenuItem onClick={() => requestBlockToggle(activeConversation)}>
           <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
-            <CheckSquareIcon size={18} weight="regular" />
+            <ProhibitIcon size={18} weight="regular" />
           </ListItemIcon>
-          <ListItemText primary={t.messages.selectMessages} />
+          <ListItemText
+            primary={
+              activeConversation?.otherParticipantId && blockedUserIds.has(activeConversation.otherParticipantId)
+                ? 'Zhblloko përdoruesin'
+                : 'Blloko përdoruesin'
+            }
+          />
         </MenuItem>
       </Menu>
+
+      <ProductDialog
+        open={Boolean(pendingBlock)}
+        onClose={blockingUser ? undefined : () => setPendingBlock(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <ProductDialogTitle onClose={blockingUser ? undefined : () => setPendingBlock(null)}>
+          {pendingBlock?.unblock ? `Zhblloko ${pendingBlock.name}?` : `Blloko ${pendingBlock?.name ?? ''}?`}
+        </ProductDialogTitle>
+        <ProductDialogContent>
+          <DialogContentText sx={{ m: 0, color: 'text.secondary' }}>
+            {pendingBlock?.unblock
+              ? 'Do të mund t’i shkruani dhe të merrni mesazhe nga ky përdorues përsëri.'
+              : 'Ky përdorues nuk do të mund t’ju dërgojë mesazhe dhe bisedat me të do të fshihen nga kutia juaj. Mund ta zhbllokoni më vonë.'}
+          </DialogContentText>
+        </ProductDialogContent>
+        <ProductDialogActions>
+          <Button
+            onClick={() => setPendingBlock(null)}
+            disabled={blockingUser}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {t.common.cancel}
+          </Button>
+          <Button
+            color={pendingBlock?.unblock ? 'primary' : 'error'}
+            variant="contained"
+            disabled={blockingUser}
+            onClick={() => void confirmBlockToggle()}
+            sx={{ textTransform: 'none', fontWeight: 700 }}
+          >
+            {blockingUser ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : pendingBlock?.unblock ? (
+              'Zhblloko'
+            ) : (
+              'Blloko'
+            )}
+          </Button>
+        </ProductDialogActions>
+      </ProductDialog>
+
+      <ReportContentDialog
+        open={Boolean(reportTarget)}
+        onClose={() => setReportTarget(null)}
+        title={reportTarget?.title ?? ''}
+        subtitle={reportTarget?.subtitle}
+        payload={reportTarget?.payload ?? null}
+        reasons={USER_REPORT_REASONS}
+      />
 
       <ProductDialog
         open={Boolean(pendingDeleteMessageIds?.length)}

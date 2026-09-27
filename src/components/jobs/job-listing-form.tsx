@@ -25,6 +25,7 @@ import { createJobListing, updateJobListing, type JobMineListing } from '@/lib/l
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
 import { uploadListingImages } from '@/lib/uploads-client';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
 import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
 import { useUser } from '@/hooks/use-user';
@@ -280,8 +281,9 @@ export function JobListingForm({
   const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
-  const wantsOkazion = searchParams.get('okazion') === '1';
-  const wantsPremium = searchParams.get('premium') === '1';
+  const nativeApp = useIsNativeApp();
+  const wantsOkazion = !nativeApp && searchParams.get('okazion') === '1';
+  const wantsPremium = !nativeApp && searchParams.get('premium') === '1';
 
   const [form, setForm] = React.useState<JobFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();

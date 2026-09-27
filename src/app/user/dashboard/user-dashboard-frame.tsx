@@ -1,19 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, GlobalStyles, Stack } from '@mui/material';
 
 import { paths } from '@/paths';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
 import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MobileBottomNav } from '@/components/public/mobile-bottom-nav';
 import { AddListingPickerProvider, useOptionalAddListingPicker } from '@/components/user/add-listing-picker-context';
 import { UserDashboardBackLink, UserDashboardCloseButton } from '@/components/user/layout/user-dashboard-back-link';
 import { UserMainNav } from '@/components/user/layout/user-main-nav';
+import { NATIVE_BLOCKED_USER_ROUTES } from '@/components/user/layout/user-nav-config';
 import { UserSideNav } from '@/components/user/layout/user-side-nav';
 import {
   OwnerEditHeaderActionsProvider,
@@ -83,7 +85,11 @@ function MessageThreadSearchParams({
 
 export function UserDashboardFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const hostedTabs = useMainTabsHosted();
+  const nativeApp = useIsNativeApp();
+  // App Store build sells nothing (Guideline 3.1.1): purchase screens bounce to the dashboard.
+  const nativePurchaseBlocked = nativeApp && NATIVE_BLOCKED_USER_ROUTES.some((route) => pathMatches(pathname, route));
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);
   const isPackagesHub = pathname === paths.user.packages;
@@ -100,6 +106,10 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   React.useEffect(() => {
     setThreadUiOpen(null);
   }, [urlThreadOpen, isMessages]);
+
+  React.useEffect(() => {
+    if (nativePurchaseBlocked) router.replace(paths.user.dashboard);
+  }, [nativePurchaseBlocked, router]);
 
   const messageThreadOpen = threadUiOpen ?? urlThreadOpen;
   const showMobileBottomNav = !messageThreadOpen;
@@ -127,7 +137,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
               isPackagesHub={isPackagesHub}
               showFrameClose={showFrameClose}
             >
-              {children}
+              {nativePurchaseBlocked ? null : children}
             </UserDashboardFrameInner>
           </MessagesThreadChromeProvider>
           </PostListingFrameActionsProvider>

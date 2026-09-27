@@ -46,6 +46,7 @@ import { paths } from '@/paths';
 import type { ListingCategory, ListingCategoryKey } from '@/types/listing-category';
 import { useBottomSheetDismiss } from '@/hooks/use-bottom-sheet-dismiss';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { mobileBottomSheetAboveNavSx } from '@/lib/mobile-layout';
@@ -181,6 +182,7 @@ export function AddListingPickerDialog({
   category?: ListingCategoryKey | null;
 }) {
   const t = useCopy();
+  const nativeApp = useIsNativeApp();
   const router = useRouter();
   const { user } = useUser();
   const unlimitedDirectory = hasUnlimitedDirectoryListings(user?.email);
@@ -529,7 +531,7 @@ export function AddListingPickerDialog({
                   </Box>
                 </Box>
 
-                {OKAZION_CATEGORY_KEYS.has(category) ? (
+                {!nativeApp && OKAZION_CATEGORY_KEYS.has(category) ? (
                   <>
                     <Box
                       sx={{
@@ -590,7 +592,7 @@ export function AddListingPickerDialog({
                   </>
                 ) : null}
 
-                {PREMIUM_CATEGORY_KEYS.has(category) ? (
+                {!nativeApp && PREMIUM_CATEGORY_KEYS.has(category) ? (
                   <>
                     <Box
                       sx={{
@@ -751,6 +753,8 @@ export function AddListingPickerDialog({
                   </Box>
                 </Box>
 
+                {nativeApp ? null : (
+                  <>
                 <Box
                   sx={{
                     height: '1px',
@@ -852,6 +856,8 @@ export function AddListingPickerDialog({
                     <PickerRowLabel title={t.picker.postAsPremium} hint={t.picker.premiumHint} titleColor="warning.main" />
                   </Box>
                 </Box>
+                  </>
+                )}
               </>
             )}
 

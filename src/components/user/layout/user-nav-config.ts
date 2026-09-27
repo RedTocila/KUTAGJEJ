@@ -136,13 +136,27 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
   }
 }
 
+/** Purchase screens — never shown inside the App Store build. */
+const NATIVE_HIDDEN_NAV_KEYS = new Set(['credits', 'payments']);
+
+/** Purchase routes the native app redirects away from. */
+export const NATIVE_BLOCKED_USER_ROUTES = [
+  paths.user.credits,
+  paths.user.checkout,
+  paths.user.packages,
+  paths.user.payments,
+] as const;
+
 /** Filtered portal nav items with titles from `t.nav.*`. */
 export function getLocalizedUserPortalNavItems(
   user: User | null | undefined,
   t: AppMessages,
+  opts?: { nativeApp?: boolean },
 ): NavItemConfig[] {
-  return getUserPortalNavItemsForUser(user).map((item) => {
-    const title = localizedNavTitle(item.key, t);
-    return title != null ? { ...item, title } : item;
-  });
+  return getUserPortalNavItemsForUser(user)
+    .filter((item) => !(opts?.nativeApp && NATIVE_HIDDEN_NAV_KEYS.has(item.key)))
+    .map((item) => {
+      const title = localizedNavTitle(item.key, t);
+      return title != null ? { ...item, title } : item;
+    });
 }

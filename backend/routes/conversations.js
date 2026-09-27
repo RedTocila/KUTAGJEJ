@@ -24,6 +24,7 @@ const { sanitizeImageUrls } = require('../lib/image-upload');
 const { isOurStorageUrl } = require('../lib/storage-uploads');
 const { isReservationMessageBody } = require('../lib/business-reservation-message');
 const { phoneOnlyContactForPosterId } = require('../lib/directory-listing-limits');
+const { BLOCKED_MESSAGE, isBlockedBetween, loadBlockedUserIds } = require('../lib/user-blocks');
 
 const router = express.Router();
 
@@ -494,6 +495,10 @@ router.post('/', auth, requirePortalUser, async (req, res) => {
       });
     }
 
+    if (await isBlockedBetween(userRef.id, listing.posterId)) {
+      return res.status(403).json({ message: BLOCKED_MESSAGE });
+    }
+
     const sb = getSupabaseAdmin();
     let row = await findExistingConversationBetween(userRef.id, listing.posterId);
     let created = false;
@@ -606,6 +611,10 @@ router.post('/with-member/:memberId', auth, requirePortalUser, async (req, res) 
       return res.status(400).json({ message: 'Nuk mund të dërgoni mesazh te profili juaj.' });
     }
 
+    if (await isBlockedBetween(userRef.id, memberId)) {
+      return res.status(403).json({ message: BLOCKED_MESSAGE });
+    }
+
     const listingKind = normalizeConversationListingKind(req.body?.listingKind ?? req.body?.listing_kind);
     const listingId = String(req.body?.listingId ?? req.body?.listing_id ?? '').trim();
     const hasListingContext = Boolean(listingKind && listingId);
@@ -714,11 +723,14 @@ router.get('/unread-count', auth, requirePortalUser, async (req, res) => {
     if (hiddenIds.length) {
       q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
     }
-    const { data, error } = await q;
+    const [{ data, error }, blockedIds] = await Promise.all([q, loadBlockedUserIds(userRef.id)]);
     if (error) throw error;
+    const blocked = new Set(blockedIds);
 
     let unreadCount = 0;
     for (const row of data || []) {
+      const counterpart = String(row.poster_id) === String(userRef.id) ? row.inquirer_id : row.poster_id;
+      if (blocked.has(String(counterpart))) continue;
       if (String(row.poster_id) === String(userRef.id)) {
         unreadCount += Math.max(0, row.poster_unread_count || 0);
       } else if (String(row.inquirer_id) === String(userRef.id)) {
@@ -752,10 +764,14 @@ router.get('/', auth, requirePortalUser, async (req, res) => {
     if (hiddenIds.length) {
       q = q.not('id', 'in', `(${hiddenIds.join(',')})`);
     }
-    const { data, error } = await q.range(from, to);
+    const [{ data, error }, blockedIds] = await Promise.all([q.range(from, to), loadBlockedUserIds(userRef.id)]);
     if (error) throw error;
 
-    const rows = data || [];
+    const blocked = new Set(blockedIds);
+    const rows = (data || []).filter((row) => {
+      const counterpart = String(row.poster_id) === String(userRef.id) ? row.inquirer_id : row.poster_id;
+      return !blocked.has(String(counterpart));
+    });
     const conversationIds = rows.map((row) => String(row.id));
     const [mapped, stateMap] = await Promise.all([
       attachParticipantModels(rows),
@@ -963,6 +979,11 @@ router.post('/:id/messages', auth, requirePortalUser, async (req, res) => {
     const [conv] = await attachParticipantModels([raw]);
     if (!userParticipatesInConversation(conv, userRef)) {
       return res.status(404).json({ message: 'Biseda nuk u gjet.' });
+    }
+
+    const counterpartId = String(raw.poster_id) === String(userRef.id) ? raw.inquirer_id : raw.poster_id;
+    if (await isBlockedBetween(userRef.id, counterpartId)) {
+      return res.status(403).json({ message: BLOCKED_MESSAGE });
     }
 
     const { data: msg, error: msgErr } = await sb

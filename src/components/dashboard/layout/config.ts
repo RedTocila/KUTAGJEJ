@@ -35,6 +35,13 @@ export const navSections = [
         platformAdminOnly: true,
       },
       {
+        key: 'content-reports',
+        title: 'Raportimet',
+        href: paths.dashboard.contentReports,
+        icon: 'flag',
+        platformAdminOnly: true,
+      },
+      {
         key: 'home-banners',
         title: 'Bannerat',
         href: paths.dashboard.homeBanners,

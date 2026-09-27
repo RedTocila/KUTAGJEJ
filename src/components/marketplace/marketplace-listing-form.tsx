@@ -38,6 +38,7 @@ import {
 } from '@/lib/marketplace-constants';
 import { CURRENCY_OPTIONS } from '@/lib/real-estate-constants';
 import { listRealEstateLocationsPublic, type RealEstateCityDto } from '@/lib/real-estate-locations-client';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { createMarketplaceListing, updateMarketplaceListing, type MarketplaceMineListing } from '@/lib/listings-client';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
@@ -166,8 +167,9 @@ export function MarketplaceListingForm({
   const { applyTo: applyKnown, rememberLocation } = useCreateListingDefaults({ enabled: !isEdit, withZone: true });
   const router = useRouter();
   const searchParams = useSearchParams();
-  const wantsOkazion = searchParams.get('okazion') === '1';
-  const wantsPremium = searchParams.get('premium') === '1';
+  const nativeApp = useIsNativeApp();
+  const wantsOkazion = !nativeApp && searchParams.get('okazion') === '1';
+  const wantsPremium = !nativeApp && searchParams.get('premium') === '1';
 
   const [form, setForm] = React.useState<MarketplaceFormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();

@@ -17,6 +17,7 @@ import { MarketplaceCard } from '@/components/public/listing-cards/marketplace-c
 import { RealEstateCard } from '@/components/public/listing-cards/real-estate-card';
 import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { ListingDetailBrowserSeo } from '@/components/public/listing-detail-browser-seo';
+import { ListingReportButton } from '@/components/public/listing-report-button';
 import type { HomeVerticalId } from '@/lib/home-categories';
 
 export type SimilarListingsKind = HomepageLatestVerticalId;
@@ -58,6 +59,7 @@ export function similarListingsSlot(
 ): React.ReactNode {
   return (
     <>
+      <ListingReportButton listingKind={kind} listingId={excludeId} />
       {seo ? (
         <ListingDetailBrowserSeo
           vertical={kind as HomeVerticalId}

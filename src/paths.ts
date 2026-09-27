@@ -107,6 +107,8 @@ export const paths = {
     referralTracking: '/dashboard/referral-tracking',
     /** Listing moderation queue (platform admin). */
     listingModeration: '/dashboard/njoftimet',
+    /** User reports on listings / chats / members (platform admin). */
+    contentReports: '/dashboard/raportimet',
     /** Homepage hero carousel banners (platform admin). */
     homeBanners: '/dashboard/bannerat',
   },

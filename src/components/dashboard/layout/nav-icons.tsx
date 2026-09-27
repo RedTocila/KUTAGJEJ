@@ -21,6 +21,7 @@ import { Scroll as ScrollIcon } from '@phosphor-icons/react/dist/ssr/Scroll';
 import { SquaresFour as SquaresFourIcon } from '@phosphor-icons/react/dist/ssr/SquaresFour';
 import { Handshake as HandshakeIcon } from '@phosphor-icons/react/dist/ssr/Handshake';
 import { MapPin as MapPinIcon } from '@phosphor-icons/react/dist/ssr/MapPin';
+import { Flag as FlagIcon } from '@phosphor-icons/react/dist/ssr/Flag';
 import { Megaphone as MegaphoneIcon } from '@phosphor-icons/react/dist/ssr/Megaphone';
 import { CreditCard as CreditCardIcon } from '@phosphor-icons/react/dist/ssr/CreditCard';
 import { Image as ImageIcon } from '@phosphor-icons/react/dist/ssr/Image';
@@ -60,6 +61,7 @@ export const navIcons = {
   'squares-four': SquaresFourIcon,
   'map-pin': MapPinIcon,
   megaphone: MegaphoneIcon,
+  flag: FlagIcon,
   scroll: ScrollIcon,
   handshake: HandshakeIcon,
   'credit-card': CreditCardIcon,

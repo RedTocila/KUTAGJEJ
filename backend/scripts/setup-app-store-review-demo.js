@@ -4,6 +4,11 @@
  * Create / reset Apple App Review demo account (login + a few approved listings).
  *
  *   node scripts/setup-app-store-review-demo.js
+ *
+ * Extra accounts (e.g. a second user to chat with / block in the review video):
+ *   REVIEW_EMAIL=appreview2@kutagjej.al REVIEW_PASSWORD=... REVIEW_FIRST_NAME=Demo \
+ *   REVIEW_LAST_NAME=Seller REVIEW_PHONE="+355 69 000 0002" REVIEW_TITLE_PREFIX="Demo Seller" \
+ *   node scripts/setup-app-store-review-demo.js
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
@@ -12,9 +17,12 @@ const { getSupabaseAdmin, isSupabaseConfigured } = require('../lib/supabase');
 const { getProfileByEmail, insertProfile } = require('../lib/profiles');
 const { ensureCoreRoles } = require('../lib/core-roles');
 
-const EMAIL = 'appreview@kutagjej.al';
-const PASSWORD = 'ReviewKuTaGjej2026!';
-const PHONE = '+355 69 000 0001';
+const EMAIL = process.env.REVIEW_EMAIL || 'appreview@kutagjej.al';
+const PASSWORD = process.env.REVIEW_PASSWORD || 'ReviewKuTaGjej2026!';
+const PHONE = process.env.REVIEW_PHONE || '+355 69 000 0001';
+const FIRST_NAME = process.env.REVIEW_FIRST_NAME || 'App';
+const LAST_NAME = process.env.REVIEW_LAST_NAME || 'Reviewer';
+const TITLE_PREFIX = process.env.REVIEW_TITLE_PREFIX || 'App Review';
 
 const IMG = {
   apt: [
@@ -54,8 +62,8 @@ async function ensureUser(sb) {
     await sb
       .from('profiles')
       .update({
-        first_name: 'App',
-        last_name: 'Reviewer',
+        first_name: FIRST_NAME,
+        last_name: LAST_NAME,
         phone: PHONE,
         is_active: true,
         updated_at: new Date().toISOString(),
@@ -72,15 +80,15 @@ async function ensureUser(sb) {
       email_confirm: true,
       user_metadata: {
         account_type: 'individual',
-        first_name: 'App',
-        last_name: 'Reviewer',
+        first_name: FIRST_NAME,
+        last_name: LAST_NAME,
       },
     });
     profile = await insertProfile({
       id: authUser.id,
       email: EMAIL,
-      first_name: 'App',
-      last_name: 'Reviewer',
+      first_name: FIRST_NAME,
+      last_name: LAST_NAME,
       phone: PHONE,
       account_type: 'individual',
       role: 'Individual',
@@ -97,8 +105,8 @@ async function ensureUser(sb) {
     email_confirm: true,
     user_metadata: {
       account_type: 'individual',
-      first_name: 'App',
-      last_name: 'Reviewer',
+      first_name: FIRST_NAME,
+      last_name: LAST_NAME,
     },
   });
   if (error) throw error;
@@ -106,8 +114,8 @@ async function ensureUser(sb) {
   profile = await insertProfile({
     id: data.user.id,
     email: EMAIL,
-    first_name: 'App',
-    last_name: 'Reviewer',
+    first_name: FIRST_NAME,
+    last_name: LAST_NAME,
     phone: PHONE,
     account_type: 'individual',
     role: 'Individual',
@@ -146,7 +154,7 @@ async function seedListings(sb, posterId, city) {
     const { error } = await sb.from('real_estate_listings').insert({
       poster_id: posterId,
       property_category: 'apartment',
-      title: 'App Review — Apartament demo Tiranë',
+      title: `${TITLE_PREFIX} — Apartament demo Tiranë`,
       description:
         'Demo listing for Apple App Review. Safe to browse; not a real offer.',
       transaction_type: 'sale',
@@ -211,7 +219,7 @@ async function seedListings(sb, posterId, city) {
     const { error } = await sb.from('marketplace_listings').insert({
       poster_id: posterId,
       transaction_type: 'shes',
-      title: 'App Review — iPhone demo',
+      title: `${TITLE_PREFIX} — iPhone demo`,
       description: 'Demo marketplace listing for Apple App Review.',
       category: 'elektronike',
       condition: 'si-i-ri',

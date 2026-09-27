@@ -47,3 +47,86 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+/// Hosts the Capacitor web view and adds the native pull-to-refresh (the same control Safari uses).
+/// Set as the custom class of the root view controller in Main.storyboard.
+class BridgeViewController: CAPBridgeViewController {
+    private let pullToRefresh = UIRefreshControl()
+    private var loadingObservation: NSKeyValueObservation?
+    private var refreshTimeout: DispatchWorkItem?
+
+    /// Off while a sheet / dialog / overlay locks the page, or the page isn't scrolled to the top,
+    /// so pulling down inside a bottom sheet dismisses the sheet instead of reloading.
+    /// Pages can opt out with a `data-no-pull-refresh` attribute.
+    private static let canRefreshScript = """
+    (function () {
+      try {
+        var d = document, b = d.body, h = d.documentElement;
+        if (!b) return true;
+        if (b.style.position === 'fixed' || b.style.overflow === 'hidden' || h.style.overflow === 'hidden') return false;
+        if (d.querySelector('.MuiModal-root:not(.MuiModal-hidden), [aria-modal="true"], [data-no-pull-refresh]')) return false;
+        return (window.scrollY || 0) <= 1;
+      } catch (e) {
+        return true;
+      }
+    })();
+    """
+
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        guard let webView = webView else { return }
+
+        pullToRefresh.addTarget(self, action: #selector(handlePullToRefresh), for: .valueChanged)
+        webView.scrollView.bounces = true
+        webView.scrollView.alwaysBounceVertical = true
+        webView.scrollView.refreshControl = pullToRefresh
+        webView.scrollView.panGestureRecognizer.addTarget(self, action: #selector(handleScrollPan(_:)))
+
+        loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
+            guard !webView.isLoading else { return }
+            DispatchQueue.main.async { self?.finishRefreshing() }
+        }
+    }
+
+    @objc private func handleScrollPan(_ gesture: UIPanGestureRecognizer) {
+        guard gesture.state == .began, let webView = webView, !pullToRefresh.isRefreshing else { return }
+        webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
+            guard let self = self, let webView = self.webView else { return }
+            let allowed = (result as? Bool) ?? true
+            if allowed {
+                if webView.scrollView.refreshControl == nil {
+                    webView.scrollView.refreshControl = self.pullToRefresh
+                }
+            } else if !self.pullToRefresh.isRefreshing {
+                webView.scrollView.refreshControl = nil
+            }
+        }
+    }
+
+    @objc private func handlePullToRefresh() {
+        guard let webView = webView else {
+            pullToRefresh.endRefreshing()
+            return
+        }
+        webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
+            guard let self = self, let webView = self.webView else { return }
+            guard (result as? Bool) ?? true else {
+                self.pullToRefresh.endRefreshing()
+                return
+            }
+            let timeout = DispatchWorkItem { [weak self] in self?.finishRefreshing() }
+            self.refreshTimeout?.cancel()
+            self.refreshTimeout = timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
+            webView.reload()
+        }
+    }
+
+    private func finishRefreshing() {
+        refreshTimeout?.cancel()
+        refreshTimeout = nil
+        if pullToRefresh.isRefreshing {
+            pullToRefresh.endRefreshing()
+        }
+    }
+}

@@ -136,15 +136,17 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
   }
 }
 
-/** Purchase screens — never shown inside the App Store build. */
-const NATIVE_HIDDEN_NAV_KEYS = new Set(['credits', 'payments']);
+/** Purchase / Boost Coin screens — never shown inside the App Store build. */
+const NATIVE_HIDDEN_NAV_KEYS = new Set(['credits', 'payments', 'referral', 'ai-usage']);
 
-/** Purchase routes the native app redirects away from. */
+/** Purchase / Boost Coin routes the native app redirects away from. */
 export const NATIVE_BLOCKED_USER_ROUTES = [
   paths.user.credits,
   paths.user.checkout,
   paths.user.packages,
   paths.user.payments,
+  paths.user.referral,
+  paths.user.aiUsage,
 ] as const;
 
 /** Filtered portal nav items with titles from `t.nav.*`. */

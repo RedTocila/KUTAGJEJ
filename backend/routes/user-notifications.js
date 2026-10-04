@@ -11,6 +11,7 @@ const {
   upsertPreferences,
   PREF_KEYS,
 } = require('../lib/user-notifications');
+const { registerPushToken, removePushToken } = require('../lib/push-notifications');
 
 /** Legacy lead prefs / notification types — no longer exposed in the product. */
 const RETIRED_LEAD_PREF_KEYS = new Set(['listing_saved', 'listing_shared', 'listing_hot_lead']);
@@ -108,6 +109,33 @@ router.patch('/preferences', auth, requirePortalUser, async (req, res) => {
     res.json({ preferences });
   } catch (err) {
     console.error('PATCH /user-notifications/preferences:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** POST /api/user-notifications/push-token — native app device token for push alerts */
+router.post('/push-token', auth, requirePortalUser, async (req, res) => {
+  try {
+    const result = await registerPushToken({
+      userId: portalUserId(req.user),
+      token: req.body?.token,
+      platform: req.body?.platform,
+    });
+    if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /user-notifications/push-token:', err?.message || err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/** DELETE /api/user-notifications/push-token — stop push to this device (logout) */
+router.delete('/push-token', auth, requirePortalUser, async (req, res) => {
+  try {
+    await removePushToken(req.body?.token || req.query?.token, portalUserId(req.user));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /user-notifications/push-token:', err?.message || err);
     res.status(500).json({ message: 'Server error' });
   }
 });

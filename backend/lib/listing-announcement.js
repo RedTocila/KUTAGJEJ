@@ -22,8 +22,9 @@ const ANNOUNCE_VERTICALS = new Set(['businesses', 'professionals']);
  * Create or update a directory listing announcement (businesses / professionals).
  * - First publish or reAnnounce=true: charge 10 BC and bump listing to top (bumped_at).
  * - Edit existing without reAnnounce: free content update, no bump.
+ * - `free` (native app): same bump, no BC debit.
  */
-async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, bannerUrl, reAnnounce }) {
+async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, bannerUrl, reAnnounce, free = false }) {
   if (!userId || !isUuid(String(userId))) {
     return { ok: false, status: 401, message: 'Auth required' };
   }
@@ -66,12 +67,13 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
 
   const hadAnnouncement = Boolean(String(listing.announcement_title || '').trim());
   const shouldCharge = !hadAnnouncement || Boolean(reAnnounce);
+  const shouldDebit = shouldCharge && !free;
 
   let boostCredits = null;
   let previousBalance = null;
   const now = new Date().toISOString();
 
-  if (shouldCharge) {
+  if (shouldDebit) {
     const { data: profile, error: profileErr } = await sb
       .from('profiles')
       .select('id, boost_credits')
@@ -203,7 +205,7 @@ async function upsertBusinessAnnouncement({ userId, listingId, title, subtitle, 
   return {
     ok: true,
     charged: shouldCharge,
-    cost: shouldCharge ? ANNOUNCE_COST : 0,
+    cost: shouldDebit ? ANNOUNCE_COST : 0,
     boostCredits,
     refreshedAt: shouldCharge ? now : null,
     announcement: {

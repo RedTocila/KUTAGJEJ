@@ -494,3 +494,9 @@ html[data-native-app] [data-browser-seo],
 html[data-native-app] [data-native-hide] {
   display: none !important;
 }
+
+/* App shell has no Okazion / Premium: listing prices use the platform green */
+html[data-native-app] {
+  --kt-price-okazion: var(--mui-palette-primary-main);
+  --kt-price-premium: var(--mui-palette-primary-main);
+}

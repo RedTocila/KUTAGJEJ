@@ -25,6 +25,7 @@ export function ListingPremiumBadge({
     <Box
       component="span"
       role="img"
+      data-native-hide=""
       aria-label={ariaLabel}
       title={ariaLabel}
       sx={{

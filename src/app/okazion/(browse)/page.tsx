@@ -12,6 +12,7 @@ import {
 import { fetchBrowseOkazion } from '@/lib/public-listings-client';
 import { OKAZION_SEO_COPY } from '@/lib/public-seo-copy';
 import { brandOgImageUrl } from '@/lib/public-vertical-listing-metadata';
+import { NativeAppRedirect } from '@/components/core/native-app-redirect';
 import { BrowseInfiniteGrid } from '@/components/public/browse-infinite-grid';
 import { CategoryBrowseLayout } from '@/components/public/category-browse-layout';
 
@@ -81,6 +82,7 @@ export default async function OkazionBrowsePage({ searchParams }: PageProps) {
       cities={[]}
       ssrOk={ok}
     >
+      <NativeAppRedirect to={paths.home} />
       <BrowseInfiniteGrid verticalId="okazion" filters={filters} initialListings={listings} initialPage={currentPage} />
     </CategoryBrowseLayout>
   );

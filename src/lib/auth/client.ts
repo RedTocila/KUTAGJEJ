@@ -14,6 +14,7 @@ import {
   writeAuthItem,
   writeRememberedEmail,
 } from '@/lib/auth/storage';
+import { unlinkNativePushToken } from '@/lib/native-push-client';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { prepareAvatarForUpload } from '@/lib/uploads-client';
 
@@ -225,6 +226,7 @@ class AuthClient {
       target = getPostSignOutPath(u, window.location.pathname);
     }
 
+    unlinkNativePushToken();
     persistAccessToken(null, null);
     clearAuthSession();
     Cookies.remove(AUTH_TOKEN_KEY);

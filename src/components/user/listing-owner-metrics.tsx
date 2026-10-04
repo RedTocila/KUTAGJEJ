@@ -28,6 +28,7 @@ import {
 } from '@/lib/listing-refresh-cost';
 import { applyOkazionFromPlan, applyPremiumFromPlan } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import {
   ProductDialog,
@@ -325,6 +326,7 @@ export function ListingOwnerMetrics({
 }) {
   const t = useCopy();
   const { checkSession } = useUser();
+  const nativeApp = useIsNativeApp();
   const [busy, setBusy] = React.useState(false);
   const [premiumBusy, setPremiumBusy] = React.useState(false);
   const [okazionBusy, setOkazionBusy] = React.useState(false);
@@ -374,9 +376,9 @@ export function ListingOwnerMetrics({
     }),
     [okazionSupported, okazionOn, isOkazion, premiumOn, isPremium]
   );
-  const bumpButtonLabel = refreshCostButtonLabel(refreshTierFlags);
-  const bumpButtonAriaLabel = bumpButtonAriaLabelSq(refreshTierFlags);
-  const refreshTooltip = refreshCostTooltipSq(refreshTierFlags);
+  const bumpButtonLabel = nativeApp ? null : refreshCostButtonLabel(refreshTierFlags);
+  const bumpButtonAriaLabel = nativeApp ? 'Ngrije në krye' : bumpButtonAriaLabelSq(refreshTierFlags);
+  const refreshTooltip = nativeApp ? 'Vendose njoftimin në krye të listës' : refreshCostTooltipSq(refreshTierFlags);
   const showAnnounce = Boolean(listingId && canRefresh && (kind === 'businesses' || kind === 'professionals'));
 
   const handleRefresh = async () => {
@@ -629,7 +631,9 @@ export function ListingOwnerMetrics({
                 title={
                   announcement?.title
                     ? 'Ndrysho shpalljen'
-                    : `Shto shpallje · ${ANNOUNCE_COST_BC} Boost Coins · njoftimi shkon në krye`
+                    : nativeApp
+                      ? 'Shto shpallje · njoftimi shkon në krye'
+                      : `Shto shpallje · ${ANNOUNCE_COST_BC} Boost Coins · njoftimi shkon në krye`
                 }
               >
                 <span>

@@ -28,6 +28,9 @@ const config = {
       style: 'DARK',
       backgroundColor: '#5f9816',
     },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
   android: {
     allowMixedContent: false,

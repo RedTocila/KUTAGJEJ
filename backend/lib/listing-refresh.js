@@ -74,10 +74,10 @@ async function getRefreshWindowHours(sb, userId) {
 /**
  * Spend boost credits to bump a listing within its tier (free / Premium / Okazion)
  * by setting bumped_at to now — public "newest" sort uses bumped_at per tier.
- * Cost: 1 BC free, 5 BC active Premium, 10 BC active Okazion.
+ * Cost: 1 BC free, 5 BC active Premium, 10 BC active Okazion (0 when `free`, e.g. native app).
  * Does not rewrite created_at (publish date / job expiry) or engagement metrics.
  */
-async function refreshListingWithBoost({ userId, kind, listingId }) {
+async function refreshListingWithBoost({ userId, kind, listingId, free = false }) {
   if (!userId || !isUuid(String(userId))) {
     return { ok: false, status: 401, message: 'Auth required' };
   }
@@ -159,7 +159,7 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   }
 
   const expiredJob = kind === 'job' && !isJobListingActive(listing);
-  const refreshCost = expiredJob ? REFRESH_COST_FREE : refreshCostForListing(listing);
+  const refreshCost = free ? 0 : expiredJob ? REFRESH_COST_FREE : refreshCostForListing(listing);
   const balance = Number(profile.boost_credits) || 0;
   if (balance < refreshCost) {
     return {
@@ -170,20 +170,24 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
   }
 
   const now = new Date().toISOString();
-  const { data: spent, error: spendErr } = await sb
-    .from('profiles')
-    .update({ boost_credits: balance - refreshCost, updated_at: now })
-    .eq('id', userId)
-    .gte('boost_credits', refreshCost)
-    .select('boost_credits')
-    .maybeSingle();
-  if (spendErr) throw spendErr;
-  if (!spent) {
-    return {
-      ok: false,
-      status: 400,
-      message: insufficientRefreshCreditsMessage(refreshCost),
-    };
+  let spent = { boost_credits: balance };
+  if (refreshCost > 0) {
+    const { data, error: spendErr } = await sb
+      .from('profiles')
+      .update({ boost_credits: balance - refreshCost, updated_at: now })
+      .eq('id', userId)
+      .gte('boost_credits', refreshCost)
+      .select('boost_credits')
+      .maybeSingle();
+    if (spendErr) throw spendErr;
+    if (!data) {
+      return {
+        ok: false,
+        status: 400,
+        message: insufficientRefreshCreditsMessage(refreshCost),
+      };
+    }
+    spent = data;
   }
 
   // Bump public “newest” sort only via bumped_at. Leave created_at (publish /
@@ -194,7 +198,9 @@ async function refreshListingWithBoost({ userId, kind, listingId }) {
     await applyListingBump(sb, table, listingId, expiredJob ? { premium_until: null, okazion_until: null } : {}, now);
   } catch (bumpErr) {
     // Best-effort refund if bump fails after debit.
-    await sb.from('profiles').update({ boost_credits: balance, updated_at: new Date().toISOString() }).eq('id', userId);
+    if (refreshCost > 0) {
+      await sb.from('profiles').update({ boost_credits: balance, updated_at: new Date().toISOString() }).eq('id', userId);
+    }
     throw bumpErr;
   }
 

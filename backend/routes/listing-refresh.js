@@ -4,6 +4,7 @@ const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const { refreshListingWithBoost } = require('../lib/listing-refresh');
+const { isNativeAppRequest } = require('../lib/native-app-request');
 const {
   getAutoRefreshSnapshot,
   setListingAutoRefresh,
@@ -33,6 +34,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       userId: req.user.id,
       kind,
       listingId,
+      free: isNativeAppRequest(req),
     });
     if (!result.ok) {
       return res.status(result.status || 400).json({ message: result.message });

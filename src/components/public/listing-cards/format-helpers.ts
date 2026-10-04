@@ -7,8 +7,8 @@ import { DEFAULT_LANGUAGE, languageHtmlLang, type AppLanguage } from '@/lib/lang
 
 /** Price/salary color: Okazion red, else Premium amber, else platform green. */
 export function listingPriceAccentColor(flags: { isPremium?: boolean | null; isOkazion?: boolean | null }): string {
-  if (flags.isOkazion) return OKAZION_ACCENT;
-  if (flags.isPremium) return 'var(--mui-palette-warning-main)';
+  if (flags.isOkazion) return `var(--kt-price-okazion, ${OKAZION_ACCENT})`;
+  if (flags.isPremium) return 'var(--kt-price-premium, var(--mui-palette-warning-main))';
   return 'var(--mui-palette-primary-main)';
 }
 

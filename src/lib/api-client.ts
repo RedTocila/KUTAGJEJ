@@ -7,6 +7,7 @@ import {
   readAuthItem,
   writeAuthItem,
 } from '@/lib/auth/storage';
+import { nativeAppHeaders } from '@/lib/native-app';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export { AUTH_REFRESH_KEY, AUTH_TOKEN_KEY };
@@ -82,7 +83,7 @@ export async function getAccessToken(): Promise<string | null> {
 
 export function authHeaders(extra?: Record<string, string>): HeadersInit {
   const token = readStoredToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extra };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...nativeAppHeaders(), ...extra };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
@@ -90,7 +91,7 @@ export function authHeaders(extra?: Record<string, string>): HeadersInit {
 /** Same as authHeaders but awaits a refreshed access token when possible. */
 export async function authHeadersAsync(extra?: Record<string, string>): Promise<HeadersInit> {
   const token = await getAccessToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extra };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...nativeAppHeaders(), ...extra };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }

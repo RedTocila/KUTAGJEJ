@@ -28,6 +28,13 @@ export function getNativePlatform(): 'ios' | 'android' | 'web' {
   return 'web';
 }
 
+/** Lets the API skip Boost Coin charges for app users (the store build sells nothing). */
+export function nativeAppHeaders(): Record<string, string> {
+  if (!isNativeApp()) return {};
+  const platform = getNativePlatform();
+  return { 'X-KuTaGjej-App': platform === 'web' ? '1' : platform };
+}
+
 async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
   const res = await fetch(dataUrl);
   const blob = await res.blob();

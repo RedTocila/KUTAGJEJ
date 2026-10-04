@@ -3,6 +3,14 @@
 import * as React from 'react';
 
 import { isNativeApp, registerNativePush } from '@/lib/native-app';
+import { rememberNativePushToken, syncNativePushToken } from '@/lib/native-push-client';
+import { useUser } from '@/hooks/use-user';
+
+/** Same-origin path from a push payload; anything else falls back to home. */
+function pushHref(data: unknown): string {
+  const href = data && typeof data === 'object' ? (data as { href?: unknown }).href : null;
+  return typeof href === 'string' && href.startsWith('/') && !href.startsWith('//') ? href : '/';
+}
 
 function markNativeDocument(): void {
   if (typeof document === 'undefined') return;
@@ -14,6 +22,15 @@ function markNativeDocument(): void {
  * Harmless on mobile/desktop browsers.
  */
 export function NativeAppBoot(): null {
+  const { user } = useUser();
+  const userId = user?.id ?? null;
+  const [pushToken, setPushToken] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!userId || !pushToken) return;
+    void syncNativePushToken();
+  }, [userId, pushToken]);
+
   // Mark ASAP so CSS can hide browser SEO / footer before paint settles.
   React.useLayoutEffect(() => {
     if (!isNativeApp()) return;
@@ -76,11 +93,26 @@ export function NativeAppBoot(): null {
         // optional
       }
 
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        const tapped = await PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
+          const next = pushHref(notification?.data);
+          if (window.location.pathname + window.location.search !== next) {
+            window.location.assign(next);
+          }
+        });
+        cleanups.push(() => {
+          void tapped.remove();
+        });
+      } catch {
+        // optional
+      }
+
       if (!cancelled) {
         const token = await registerNativePush();
-        if (token) {
-          // Token persistence / FCM wiring comes after Firebase project setup.
-          console.info('[native] push token received');
+        if (token && !cancelled) {
+          rememberNativePushToken(token);
+          setPushToken(token);
         }
       }
     })();

@@ -305,6 +305,7 @@ export function HeroCategoryCircles({
           return (
             <Stack
               key={v.id}
+              data-native-hide={v.id === 'okazion' ? '' : undefined}
               spacing={{ xs: 0.15, md: 0 }}
               onClick={() => onSelect?.(i)}
               sx={itemSx(mode)}
@@ -317,6 +318,7 @@ export function HeroCategoryCircles({
         return (
           <Stack
             key={v.id}
+            data-native-hide={v.id === 'okazion' ? '' : undefined}
             component="a"
             href={v.href}
             spacing={{ xs: 0.15, md: 0 }}

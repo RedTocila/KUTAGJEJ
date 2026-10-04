@@ -20,6 +20,7 @@ const {
 const { getAiUsagePrices } = require('../lib/ai-usage-prices');
 const { roundBc } = require('../lib/boost-credits');
 const { createAiImportBatch } = require('../lib/ai-import-batch');
+const { isNativeAppRequest } = require('../lib/native-app-request');
 
 const router = express.Router();
 
@@ -130,7 +131,7 @@ router.post('/import-listings', authMiddleware, requirePortalUser, async (req, r
       userId: req.user.id,
       kind: chargePlan.kind,
       units: chargePlan.units,
-      cost: chargePlan.cost,
+      cost: isNativeAppRequest(req) ? 0 : chargePlan.cost,
       sourceLabel: firstUrlLabel(urls) || (text ? text.slice(0, 120) : images.length ? 'images' : null),
     });
     if (!charged.ok) {
@@ -215,7 +216,7 @@ router.post('/import-menu', authMiddleware, requirePortalUser, async (req, res) 
       userId: req.user.id,
       kind: 'ai_menu',
       units,
-      cost: roundBc(prices.aiMenuPerImage * units),
+      cost: isNativeAppRequest(req) ? 0 : roundBc(prices.aiMenuPerImage * units),
       sourceLabel: 'menu',
     });
     if (!charged.ok) {

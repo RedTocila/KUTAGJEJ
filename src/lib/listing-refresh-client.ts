@@ -3,10 +3,11 @@
 import { getAccessToken } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/api-config';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
+import { nativeAppHeaders } from '@/lib/native-app';
 
 async function authJsonHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...nativeAppHeaders() };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }

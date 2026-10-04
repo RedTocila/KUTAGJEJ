@@ -8,6 +8,7 @@ const {
   upsertBusinessAnnouncement,
   clearBusinessAnnouncement,
 } = require('../lib/listing-announcement');
+const { isNativeAppRequest } = require('../lib/native-app-request');
 
 const router = express.Router();
 
@@ -23,6 +24,7 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       subtitle: req.body?.subtitle,
       bannerUrl: req.body?.bannerUrl,
       reAnnounce,
+      free: isNativeAppRequest(req),
     });
     if (!result.ok) {
       return res.status(result.status || 400).json({ message: result.message });
@@ -35,7 +37,9 @@ router.post('/', authMiddleware, requirePortalUser, async (req, res) => {
       refreshedAt: result.refreshedAt,
       announcement: result.announcement,
       message: result.charged
-        ? `Shpallja u publikua · -${ANNOUNCE_COST} Boost Coins. Njoftimi është në krye të listës.`
+        ? result.cost > 0
+          ? `Shpallja u publikua · -${ANNOUNCE_COST} Boost Coins. Njoftimi është në krye të listës.`
+          : 'Shpallja u publikua. Njoftimi është në krye të listës.'
         : 'Shpallja u përditësua.',
     });
   } catch (err) {

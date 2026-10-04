@@ -100,6 +100,7 @@ function OkazionCountdownChip({
       label={label}
       size="small"
       className="listing-countdown-pulse-container"
+      data-native-hide=""
       aria-live={live ? 'polite' : undefined}
       aria-hidden={!live}
       suppressHydrationWarning

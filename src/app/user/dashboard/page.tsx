@@ -605,7 +605,7 @@ export function UserDashboardHome() {
 
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
 
-      {canPublish ? (
+      {canPublish && !nativeApp ? (
         <Box sx={{ ...portalCardSx, p: { xs: 2, sm: 2.5 } }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1.25 }}>
             <Stack spacing={0.35} sx={{ minWidth: 0 }}>
@@ -720,8 +720,8 @@ export function UserDashboardHome() {
         </Box>
       ) : null}
 
-      {canPublish ? <ReferralSummaryCard /> : null}
-      {!canPublish ? <DailyStreakCard /> : null}
+      {canPublish && !nativeApp ? <ReferralSummaryCard /> : null}
+      {!canPublish && !nativeApp ? <DailyStreakCard /> : null}
 
       {nativeApp ? null : (
         <PortalLinkGroup>
@@ -753,7 +753,7 @@ export function UserDashboardHome() {
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
         />
-        {canPublish ? (
+        {canPublish && !nativeApp ? (
           <PortalLinkCard
             grouped
             href={paths.user.aiUsage}

@@ -107,24 +107,26 @@ export function HomepageOkazionSection({
   if (!loading && liveListings.length === 0) return null;
 
   return (
-    <ListingsSection
-      verticalId="okazion"
-      total={total}
-      isEmpty={!loading && liveListings.length === 0}
-      titleKey="okazionListings"
-      useMuiVerticalIcon
-      hideSubcategoryPills
-      compactTop
-    >
-      {loading && liveListings.length === 0 ? (
-        <CarouselSkeleton />
-      ) : (
-        <ListingsCarousel>
-          {liveListings.map((listing) => (
-            <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
-          ))}
-        </ListingsCarousel>
-      )}
-    </ListingsSection>
+    <Box data-native-hide="">
+      <ListingsSection
+        verticalId="okazion"
+        total={total}
+        isEmpty={!loading && liveListings.length === 0}
+        titleKey="okazionListings"
+        useMuiVerticalIcon
+        hideSubcategoryPills
+        compactTop
+      >
+        {loading && liveListings.length === 0 ? (
+          <CarouselSkeleton />
+        ) : (
+          <ListingsCarousel>
+            {liveListings.map((listing) => (
+              <OkazionCard key={`${listing.kind}:${listing.id}`} listing={listing} />
+            ))}
+          </ListingsCarousel>
+        )}
+      </ListingsSection>
+    </Box>
   );
 }

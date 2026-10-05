@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk } from 'next/font/google';
 
-import { config } from '@/config';
+import { brandLogoSrc, config } from '@/config';
 import { DEFAULT_COLOR_SCHEME } from '@/lib/color-scheme';
 import { SplashScreen } from '@/components/core/splash-screen';
 import { ThemeColorBootScript } from '@/components/core/theme-color-boot-script';
@@ -48,11 +48,11 @@ export const metadata = {
     : undefined,
   icons: {
     icon: [
-      { url: '/app-icon.png', type: 'image/png', sizes: '1024x1024' },
+      { url: brandLogoSrc, type: 'image/png', sizes: '1024x1024' },
       { url: '/favicon.ico', sizes: '48x48' },
     ],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-    shortcut: '/app-icon.png',
+    shortcut: brandLogoSrc,
   },
 } satisfies Metadata;
 

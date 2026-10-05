@@ -27,6 +27,7 @@ const copy = {
     notificationsTitle: 'Njoftimet',
     termsTitle: 'Kushtet e përdorimit',
     privacyTitle: 'Politika e privatësisë',
+    deleteAccountTitle: 'Fshi llogarinë',
     signOut: 'Dil nga llogaria',
   },
   en: {
@@ -55,6 +56,7 @@ const copy = {
     notificationsTitle: 'Notifications',
     termsTitle: 'Terms of use',
     privacyTitle: 'Privacy policy',
+    deleteAccountTitle: 'Delete account',
     signOut: 'Sign out',
   },
 } as const;

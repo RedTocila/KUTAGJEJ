@@ -29,6 +29,7 @@ import { ShieldCheck as ShieldCheckIcon } from '@phosphor-icons/react/dist/ssr/S
 import { SignOut as SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
 import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/SealPercent';
+import { Trash as TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { UserGear as UserGearIcon } from '@phosphor-icons/react/dist/ssr/UserGear';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
@@ -782,6 +783,14 @@ export function UserDashboardHome() {
           title={t.privacyTitle}
           icon={ShieldCheckIcon}
         />
+        {canPublish ? (
+          <PortalLinkCard
+            grouped
+            href={paths.user.deleteAccount}
+            title={t.deleteAccountTitle}
+            icon={TrashIcon}
+          />
+        ) : null}
       </PortalLinkGroup>
 
       <Button

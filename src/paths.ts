@@ -28,6 +28,8 @@ export const paths = {
     resetPassword: '/user/auth/reset-password',
     dashboard: '/user/dashboard',
     profile: '/user/dashboard/profili',
+    /** Permanent account deletion (App Store 5.1.1(v): must be easy to find). */
+    deleteAccount: '/user/dashboard/fshi-llogarine',
     /** AI generation rates + Boost Coin spend history. */
     aiUsage: '/user/dashboard/perdorimi-ai',
     /** AI link → listing draft importer. */

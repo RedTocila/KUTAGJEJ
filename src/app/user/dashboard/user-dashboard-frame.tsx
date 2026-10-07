@@ -88,7 +88,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const hostedTabs = useMainTabsHosted();
   const nativeApp = useIsNativeApp();
-  // App Store build sells nothing (Guideline 3.1.1): purchase screens bounce to the dashboard.
+  // Native app: block POK checkout / web-only hubs; packages + credits use Apple IAP.
   const nativePurchaseBlocked = nativeApp && NATIVE_BLOCKED_USER_ROUTES.some((route) => pathMatches(pathname, route));
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);

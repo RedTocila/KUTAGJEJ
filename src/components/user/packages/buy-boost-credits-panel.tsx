@@ -12,12 +12,17 @@ import { alpha } from '@mui/material/styles';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
+import { isIapAvailable, purchaseCreditsPackage } from '@/lib/revenuecat-client';
 import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
 import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, formatBc } from './package-ui';
+
+/** Coin packs that exist as App Store consumables in v1. */
+const NATIVE_CREDIT_IDS = new Set(['Starter', 'Growth', 'Pro']);
 
 /** Always-visible catalog when the API has no active rows yet. */
 const FALLBACK_CREDIT_PACKAGES: CreditPackage[] = [
@@ -57,11 +62,15 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   const router = useRouter();
   const t = useCopy();
   const { user } = useUser();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
   const lifetimePercent = useLifetimePackageDiscount();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [usingFallback, setUsingFallback] = React.useState(false);
+  const [iapBusy, setIapBusy] = React.useState(false);
+  const [iapMessage, setIapMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -81,6 +90,27 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   }, []);
 
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
+  const visiblePackages = useAppleIap
+    ? packages.filter((pkg) => NATIVE_CREDIT_IDS.has(pkg.id))
+    : packages;
+
+  const buyCredits = async (packageId: string) => {
+    if (!useAppleIap) {
+      router.push(checkoutCreditsHref(packageId));
+      return;
+    }
+    setIapBusy(true);
+    setIapMessage(null);
+    const result = await purchaseCreditsPackage(packageId, { userId: user?.id });
+    setIapBusy(false);
+    if (result.ok) {
+      setIapMessage('Boost Coins u shtuan në llogari.');
+      // Soft refresh — UserProvider may pick up credits on next navigation.
+      window.setTimeout(() => window.location.reload(), 600);
+      return;
+    }
+    if (!result.cancelled) setIapMessage(result.message);
+  };
 
   return (
     <Stack spacing={2.5} sx={{ pb: { xs: 12, md: 2 } }}>
@@ -122,12 +152,22 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         </Alert>
       ) : null}
 
+      {iapMessage ? (
+        <Alert
+          severity={iapMessage.includes('shtuan') ? 'success' : 'warning'}
+          onClose={() => setIapMessage(null)}
+          sx={{ borderRadius: 2 }}
+        >
+          {iapMessage}
+        </Alert>
+      ) : null}
+
       {loading ? (
         <PackageRowsSkeleton count={6} />
       ) : (
         <Stack spacing={1.75}>
-          <ReferralDiscountNote percent={lifetimePercent} />
-          {packages.map((pkg) => {
+          {!useAppleIap ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
+          {visiblePackages.map((pkg) => {
             const bonus = Number(pkg.bonusCredits) || 0;
             const badge = pkg.badgeSq || (bonus > 0 ? `+${formatBc(bonus)} BC` : null);
             return (
@@ -139,8 +179,8 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 subtitle={packageSubtitle(pkg)}
                 badge={badge}
                 compactPrice
-                price={<PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />}
-                onClick={() => router.push(checkoutCreditsHref(pkg.id))}
+                price={<PackageEurPrice listPrice={pkg.priceEur} percent={useAppleIap ? 0 : lifetimePercent} />}
+                onClick={iapBusy ? undefined : () => void buyCredits(pkg.id)}
               />
             );
           })}

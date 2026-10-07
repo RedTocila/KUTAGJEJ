@@ -54,7 +54,6 @@ import {
   resolveContactPhone,
 } from '@/lib/listing-form-defaults';
 import { hasUnlimitedDirectoryListings } from '@/lib/directory-listing-limits';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useCreateListingDefaults } from '@/hooks/use-create-listing-defaults';
 import { useListingFormDraft } from '@/hooks/use-listing-form-draft';
 import { usePublishListingFormSnapshot } from '@/components/user/listing-form-snapshot-context';
@@ -111,8 +110,7 @@ export function ProfessionalListingForm({
   const { user, checkSession } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nativeApp = useIsNativeApp();
-  const wantsPremium = !nativeApp && searchParams.get('premium') === '1';
+  const wantsPremium = searchParams.get('premium') === '1';
   const premiumPayRef = React.useRef<PremiumPayMode>('buy-card');
   const premiumPackageIdRef = React.useRef(PREMIUM_PACKAGE_ID);
   const boostKindRef = React.useRef<'premium' | null>(null);

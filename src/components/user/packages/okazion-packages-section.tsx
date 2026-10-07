@@ -38,8 +38,10 @@ import {
   listOkazionVouchers,
 } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
+import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import {
@@ -160,12 +162,18 @@ export function OkazionPackagesSection() {
   const searchParams = useSearchParams();
   const t = useCopy();
   const { user, checkSession } = useUser();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
   const [packages, setPackages] = React.useState<OkazionPackage[]>(FALLBACK_OKAZION_PACKAGES);
   const [vouchers, setVouchers] = React.useState<OkazionVoucher[]>([]);
   const [quantity, setQuantity] = React.useState(1);
+
+  React.useEffect(() => {
+    if (useAppleIap && quantity !== 1) setQuantity(1);
+  }, [useAppleIap, quantity]);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -248,7 +256,24 @@ export function OkazionPackagesSection() {
   };
 
   const onBuyCard = (pkg: OkazionPackage) => {
-    router.push(checkoutOkazionHref(pkg.id, quantity));
+    if (!useAppleIap) {
+      router.push(checkoutOkazionHref(pkg.id, quantity));
+      return;
+    }
+    void (async () => {
+      setBusyId(pkg.id);
+      setError(null);
+      setSuccess(null);
+      const result = await purchaseOkazionPackage(pkg.id, { userId: user?.id });
+      setBusyId(null);
+      if (result.ok) {
+        setSuccess(quantity > 1 ? 'Okazion u blë (1 njësi via App Store).' : 'Okazion u blë.');
+        await checkSession();
+        await reloadVouchers();
+        return;
+      }
+      if (!result.cancelled) setError(result.message);
+    })();
   };
 
   const onBuyBc = async (pkg: OkazionPackage): Promise<boolean> => {
@@ -334,6 +359,7 @@ export function OkazionPackagesSection() {
           ) : undefined
         }
         meta={
+          useAppleIap ? undefined : (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
               Sasia (stoko për më vonë)
@@ -395,6 +421,7 @@ export function OkazionPackagesSection() {
               </Button>
             </Stack>
           </Stack>
+          )
         }
         actions={
           <>
@@ -406,7 +433,11 @@ export function OkazionPackagesSection() {
               onClick={() => onBuyCard(pkg)}
               sx={dualPayButtonSx('error')}
             >
-              <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
+              <PackageEurPrice
+                listPrice={useAppleIap ? Number(pkg.priceEur) : totalEur}
+                percent={useAppleIap ? 0 : lifetimePercent}
+                onAccent
+              />
             </Button>
             <Button
               size="small"

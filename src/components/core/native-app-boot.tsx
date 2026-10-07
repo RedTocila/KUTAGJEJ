@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import { isNativeApp, registerNativePush } from '@/lib/native-app';
 import { rememberNativePushToken, syncNativePushToken } from '@/lib/native-push-client';
+import { ensureRevenueCat } from '@/lib/revenuecat-client';
 import { useUser } from '@/hooks/use-user';
 
 /** Same-origin path from a push payload; anything else falls back to home. */
@@ -30,6 +31,14 @@ export function NativeAppBoot(): null {
     if (!userId || !pushToken) return;
     void syncNativePushToken();
   }, [userId, pushToken]);
+
+  // Identify the App Store customer as our profile id so webhooks can grant entitlements.
+  React.useEffect(() => {
+    if (!isNativeApp()) return;
+    void ensureRevenueCat(userId).catch((err) => {
+      console.warn('[native] RevenueCat configure failed', err);
+    });
+  }, [userId]);
 
   // Mark ASAP so CSS can hide browser SEO / footer before paint settles.
   React.useLayoutEffect(() => {

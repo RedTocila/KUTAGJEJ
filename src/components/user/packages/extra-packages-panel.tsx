@@ -48,8 +48,10 @@ import {
   listPremiumVouchers,
 } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
+import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ListRowsSkeleton, PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
@@ -231,6 +233,8 @@ function PremiumListingSection() {
   const searchParams = useSearchParams();
   const t = useCopy();
   const { user, checkSession } = useUser();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
@@ -316,7 +320,25 @@ function PremiumListingSection() {
   };
 
   const onBuyCard = (pkg: PremiumPackage) => {
-    router.push(checkoutPremiumHref(pkg.id));
+    if (!useAppleIap) {
+      router.push(checkoutPremiumHref(pkg.id));
+      return;
+    }
+    void (async () => {
+      setBusyId(pkg.id);
+      setError(null);
+      setSuccess(null);
+      const result = await purchasePremiumPackage(pkg.id, { userId: user?.id });
+      setBusyId(null);
+      if (result.ok) {
+        setSuccess('Premium u blë. Zgjidh njoftimin për ta aplikuar.');
+        await checkSession();
+        const vouchers = await reloadVouchers();
+        if (vouchers[0]) openAssign(vouchers[0]);
+        return;
+      }
+      if (!result.cancelled) setError(result.message);
+    })();
   };
 
   const onBuyBc = async (pkg: PremiumPackage): Promise<boolean> => {
@@ -416,7 +438,11 @@ function PremiumListingSection() {
                     onClick={() => onBuyCard(pkg)}
                     sx={dualPayButtonSx('warning')}
                   >
-                    <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
+                    <PackageEurPrice
+                      listPrice={pkg.priceEur}
+                      percent={useAppleIap ? 0 : lifetimePercent}
+                      onAccent
+                    />
                   </Button>
                   <Button
                     size="small"

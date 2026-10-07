@@ -518,7 +518,6 @@ export function UserDashboardHome() {
           <Box
             component={RouterLink}
             href={paths.user.credits}
-            data-native-hide=""
             sx={{
               flexShrink: 0,
               textDecoration: 'none',
@@ -592,21 +591,19 @@ export function UserDashboardHome() {
         <Grid size={{ xs: 6, md: 3 }}>
           <ActionTile href={paths.user.myRealEstateListings} label={t.myListings} icon={ListBulletsIcon} />
         </Grid>
-        {nativeApp ? null : (
-          <Grid size={{ xs: 6, md: 3 }}>
-            <ActionTile
-              href={paths.user.credits}
-              label={t.buyCredits}
-              icon={BoostCoinIcon as PhosphorIcon}
-              tone="amber"
-            />
-          </Grid>
-        )}
+        <Grid size={{ xs: 6, md: 3 }}>
+          <ActionTile
+            href={paths.user.credits}
+            label={t.buyCredits}
+            icon={BoostCoinIcon as PhosphorIcon}
+            tone="amber"
+          />
+        </Grid>
       </Grid>
 
       <AddListingPickerDialog open={addListingOpen} onClose={() => setAddListingOpen(false)} />
 
-      {canPublish && !nativeApp ? (
+      {canPublish ? (
         <Box sx={{ ...portalCardSx, p: { xs: 2, sm: 2.5 } }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1.25 }}>
             <Stack spacing={0.35} sx={{ minWidth: 0 }}>
@@ -624,7 +621,6 @@ export function UserDashboardHome() {
             <Button
               component={RouterLink}
               href={`${paths.user.packagesExtra}#convert`}
-              data-native-hide=""
               size="small"
               startIcon={<ArrowsLeftRightIcon size={15} weight="bold" />}
               aria-label={t.convertTooltip}
@@ -722,28 +718,26 @@ export function UserDashboardHome() {
       ) : null}
 
       {canPublish && !nativeApp ? <ReferralSummaryCard /> : null}
-      {!canPublish && !nativeApp ? <DailyStreakCard /> : null}
+      {!canPublish ? <DailyStreakCard /> : null}
 
-      {nativeApp ? null : (
-        <PortalLinkGroup>
+      <PortalLinkGroup>
+        <PortalLinkCard
+          grouped
+          href={paths.user.packages}
+          title={t.packagesTitle}
+          icon={PackageIcon}
+          badge={subscriptionLoading ? undefined : activePlanLabel}
+          badgeColor={activePlanBadgeColor}
+        />
+        {canPublish && !nativeApp ? (
           <PortalLinkCard
             grouped
-            href={paths.user.packages}
-            title={t.packagesTitle}
-            icon={PackageIcon}
-            badge={subscriptionLoading ? undefined : activePlanLabel}
-            badgeColor={activePlanBadgeColor}
+            href={paths.user.payments}
+            title={t.paymentsTitle}
+            icon={ReceiptIcon}
           />
-          {canPublish ? (
-            <PortalLinkCard
-              grouped
-              href={paths.user.payments}
-              title={t.paymentsTitle}
-              icon={ReceiptIcon}
-            />
-          ) : null}
-        </PortalLinkGroup>
-      )}
+        ) : null}
+      </PortalLinkGroup>
 
       <PortalLinkGroup>
         <PortalLinkCard

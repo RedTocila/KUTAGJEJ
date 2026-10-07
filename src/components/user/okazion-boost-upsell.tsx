@@ -32,6 +32,8 @@ import {
   fetchOkazionPlanQuota,
   listOkazionVouchers,
 } from '@/lib/payments-client';
+import { isNativeApp } from '@/lib/native-app';
+import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
 import { BcPurchaseDialog } from '@/components/user/packages/bc-purchase-dialog';
@@ -294,6 +296,29 @@ export async function activateOkazionAfterCreate(params: {
   if (mode === 'off') return { ok: true };
 
   if (mode === 'buy-card') {
+    if (isNativeApp() && isIapAvailable()) {
+      const purchase = await purchaseOkazionPackage(OKAZION_PACKAGE_ID);
+      if (!purchase.ok) {
+        return {
+          ok: false,
+          message: purchase.cancelled ? 'Blerja u anulua.' : purchase.message,
+        };
+      }
+      const vouchers = await listOkazionVouchers(true);
+      const unused = (vouchers.vouchers ?? []).find((v) => v.status === 'unused');
+      if (!unused) {
+        return { ok: false, message: 'Pagesa u krye, por voucher-i Okazion vonoi. Provo nga Paketat.' };
+      }
+      const res = await applyOkazionVoucher({
+        voucherId: unused.id,
+        kind,
+        listingId,
+      });
+      if (res.error || !res.okazionUntil) {
+        return { ok: false, message: res.error || 'Aplikimi i Okazion dështoi.' };
+      }
+      return { ok: true, okazionUntil: res.okazionUntil, message: res.message };
+    }
     const q = new URLSearchParams({
       kind: 'okazion',
       packageId: OKAZION_PACKAGE_ID,

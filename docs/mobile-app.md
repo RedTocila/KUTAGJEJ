@@ -61,6 +61,38 @@ If `pod` is missing after a reboot, run `source scripts/ios-env.sh` again (adds 
 9. Decide **web-only payments** vs Apple **IAP** before iOS submission
 10. Deploy website changes (account deletion + `.well-known` + Capacitor JS) to production before store review
 
-## Payments warning
+## Apple IAP (RevenueCat)
 
-Selling credits inside the iOS app often requires Apple IAP. Prefer web checkout until that is decided.
+Native iOS sells packages / coins / Premium / Okazion via StoreKit + RevenueCat. The website keeps POK checkout.
+
+### Env
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_REVENUECAT_IOS_API_KEY` | Vercel / `.env.local` | Public Apple SDK key |
+| `REVENUECAT_WEBHOOK_SECRET` | Backend / Vercel API | Authorization header for webhooks |
+
+### RevenueCat webhook
+
+- URL: `https://www.kutagjej.al/api/webhooks/revenuecat`
+- Authorization: same string as `REVENUECAT_WEBHOOK_SECRET`
+- App User ID in the app = Supabase profile UUID (`ensureRevenueCat(userId)`)
+
+### Product IDs (must match ASC + `backend/lib/revenuecat-products.js`)
+
+- Plans: `al.kutagjej.plan.{starter\|grow\|elite}.1m`
+- Coins: `al.kutagjej.coins.{starter\|growth\|pro}`
+- Premium: `al.kutagjej.premium.{15\|30}`
+- Okazion: `al.kutagjej.okazion.5`
+
+### After code changes
+
+```bash
+cd mobile && npx cap sync ios
+```
+
+In Xcode → App target → **Signing & Capabilities** → ensure **In-App Purchase** is present.
+
+### DB
+
+Apply migration `iap_processed_events` (idempotency for webhook grants). Never re-run `init.sql` on production.

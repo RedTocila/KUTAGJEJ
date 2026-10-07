@@ -53,7 +53,6 @@ import {
 } from '@/components/user/premium-boost-upsell';
 import { ListingImagePicker } from '@/components/common/listing-image-picker';
 import type { RealEstatePropertySlug } from '@/lib/real-estate-constants';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { createRealEstateListing, updateRealEstateListing, type RealEstateListingPayload } from '@/lib/listings-client';
 import { uploadListingImages } from '@/lib/uploads-client';
@@ -296,9 +295,8 @@ export function RealEstateListingForm(props: RealEstateListingFormProps) {
   });
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nativeApp = useIsNativeApp();
-  const wantsOkazion = !nativeApp && searchParams.get('okazion') === '1';
-  const wantsPremium = !nativeApp && searchParams.get('premium') === '1';
+  const wantsOkazion = searchParams.get('okazion') === '1';
+  const wantsPremium = searchParams.get('premium') === '1';
   const [form, setForm] = React.useState<FormState>(() => {
     const base = initialListing ? formFromListing(initialListing) : emptyForm();
     const next = applyEmptyKnownDefaults(base, knownCreateDefaultsFromStorage(), {

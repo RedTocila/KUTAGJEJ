@@ -17,8 +17,10 @@ import type { AppMessages } from '@/lib/i18n/messages';
 import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
+import { isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
   ProductDialog,
@@ -287,6 +289,8 @@ export function MainPackagesPanel() {
   const router = useRouter();
   const t = useCopy();
   const { user } = useUser();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
@@ -298,7 +302,14 @@ export function MainPackagesPanel() {
   const [cancelError, setCancelError] = React.useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = React.useState<string | null>(null);
   const [pickedMonths, setPickedMonths] = React.useState<MainPackageBillingMonths>(1);
+  const [iapBusy, setIapBusy] = React.useState(false);
+  const [iapMessage, setIapMessage] = React.useState<string | null>(null);
   const lifetimePercent = useLifetimePackageDiscount();
+
+  // App Store only has 1-month plan products in v1.
+  React.useEffect(() => {
+    if (useAppleIap && pickedMonths !== 1) setPickedMonths(1);
+  }, [useAppleIap, pickedMonths]);
 
   const activeContractId = activeSubscription?.contractId ?? null;
   const activePlanCode = activeSubscription?.planCode ? String(activeSubscription.planCode).toLowerCase() : null;
@@ -319,6 +330,23 @@ export function MainPackagesPanel() {
     const active = (subsRes.subscriptions ?? []).find((s) => s.status === 'active' && Number(s.priceEur) > 0) ?? null;
     setActiveSubscription(active);
   }, [subscriberKindFilter]);
+
+  const buyPlan = React.useCallback(
+    async (planCode: string) => {
+      if (!useAppleIap) return;
+      setIapBusy(true);
+      setIapMessage(null);
+      const result = await purchasePlanByCode(planCode, { userId: user?.id });
+      setIapBusy(false);
+      if (result.ok) {
+        setIapMessage('Plani u aktivizua.');
+        await reload();
+        return;
+      }
+      if (!result.cancelled) setIapMessage(result.message);
+    },
+    [useAppleIap, user?.id, reload],
+  );
 
   React.useEffect(() => {
     if (!user) return;
@@ -416,6 +444,16 @@ export function MainPackagesPanel() {
         sx={{ borderRadius: 2 }}
       />
 
+      {iapMessage ? (
+        <Alert
+          severity={iapMessage.includes('aktivizua') ? 'success' : 'warning'}
+          onClose={() => setIapMessage(null)}
+          sx={{ borderRadius: 2 }}
+        >
+          {iapMessage}
+        </Alert>
+      ) : null}
+
       {!loading && !error && plans.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>
           {t.packages.noActivePlan}
@@ -424,14 +462,20 @@ export function MainPackagesPanel() {
 
       {!loading && !error && plans.length > 0 ? (
         <Stack spacing={1.75}>
-          <ReferralDiscountNote percent={lifetimePercent} />
-          <BillingPeriodPillBar
-            value={selectedMonths}
-            onChange={setPickedMonths}
-            available={availableBillingMonths}
-            plans={plans}
-            t={t}
-          />
+          {!useAppleIap ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
+          {!useAppleIap ? (
+            <BillingPeriodPillBar
+              value={selectedMonths}
+              onChange={setPickedMonths}
+              available={availableBillingMonths}
+              plans={plans}
+              t={t}
+            />
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+              Abonimet në aplikacion faturhohen çdo muaj përmes Apple.
+            </Typography>
+          )}
           {plans.flatMap((plan) => {
             const paidOptions = plan.priceOptions.filter((o) => o.price > 0);
             const isFree = plan.planCode === 'free' || plan.priceOptions.every((o) => o.price === 0);
@@ -459,7 +503,7 @@ export function MainPackagesPanel() {
                 icon={PlanIcon}
                 title={plan.title}
                 badge={titleBadge(t, isCurrent)}
-                price={<PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />}
+                price={<PackageEurPrice listPrice={opt.price} percent={useAppleIap ? 0 : lifetimePercent} />}
                 priceSuffix={priceSuffixForMonths(t, opt.months)}
                 priceHint={equivalentMonthlyHint(t, opt.months, opt.price)}
                 priceBadge={save}
@@ -467,10 +511,43 @@ export function MainPackagesPanel() {
                 selected={isCurrent}
                 details={details}
                 footer={isCurrent ? cancelFooter : undefined}
-                onClick={isCurrent ? undefined : () => router.push(checkoutSubscriptionHref(plan.id, opt.months))}
+                onClick={
+                  isCurrent || iapBusy
+                    ? undefined
+                    : () => {
+                        if (useAppleIap) {
+                          void buyPlan(planCode);
+                          return;
+                        }
+                        router.push(checkoutSubscriptionHref(plan.id, opt.months));
+                      }
+                }
               />,
             ];
           })}
+          {useAppleIap ? (
+            <Button
+              variant="text"
+              disabled={iapBusy}
+              onClick={() => {
+                void (async () => {
+                  setIapBusy(true);
+                  setIapMessage(null);
+                  const result = await restorePurchases({ userId: user?.id });
+                  setIapBusy(false);
+                  if (result.ok) {
+                    setIapMessage('Blerjet u rikthyen. Rifreskojmë planet…');
+                    await reload();
+                  } else {
+                    setIapMessage(result.message);
+                  }
+                })();
+              }}
+              sx={{ ...productButtonSx, alignSelf: 'center' }}
+            >
+              Rikthe blerjet
+            </Button>
+          ) : null}
         </Stack>
       ) : null}
 

@@ -44,6 +44,7 @@ import {
   listOkazionVouchers,
   listPremiumPackages,
 } from '@/lib/payments-client';
+import { isIapAvailable } from '@/lib/revenuecat-client';
 import { productButtonSx } from '@/styles/product-sx';
 import type { PremiumPackage } from '@/types/payment';
 
@@ -116,6 +117,7 @@ export function ListingBoostChoiceBar({
   const t = useCopy();
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -136,9 +138,6 @@ export function ListingBoostChoiceBar({
   }, []);
 
   const closeDialog = () => setDialog(null);
-
-  // No paid promotion in the App Store build (Guideline 3.1.1).
-  if (nativeApp) return null;
 
   const handlePremium = async () => {
     if (disabled || submitting || busy) return;
@@ -256,7 +255,9 @@ export function ListingBoostChoiceBar({
                         closeDialog();
                         onPostPremium('buy-card', pkg.id);
                       }}
-                      startIcon={<CreditCardIcon size={16} weight="bold" />}
+                      startIcon={
+                        useAppleIap ? undefined : <CreditCardIcon size={16} weight="bold" />
+                      }
                       sx={{
                         ...productButtonSx,
                         flex: 1,
@@ -266,7 +267,9 @@ export function ListingBoostChoiceBar({
                         '&:hover': { bgcolor: PREMIUM_AMBER_DARK, boxShadow: 'none' },
                       }}
                     >
-                      {formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
+                      {useAppleIap
+                        ? `${pkg.priceEur.toFixed(0)} € · App Store`
+                        : formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                     </Button>
                     <Button
                       type="button"
@@ -337,7 +340,7 @@ export function ListingBoostChoiceBar({
                   closeDialog();
                   onPostOkazion('buy-card');
                 }}
-                startIcon={<CreditCardIcon size={16} weight="bold" />}
+                startIcon={useAppleIap ? undefined : <CreditCardIcon size={16} weight="bold" />}
                 sx={{
                   ...productButtonSx,
                   flex: 1,
@@ -347,7 +350,9 @@ export function ListingBoostChoiceBar({
                   '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
                 }}
               >
-                {formatEurWithLifetime(OKAZION_PRICE_EUR, lifetimePercent)}
+                {useAppleIap
+                  ? `${OKAZION_PRICE_EUR.toFixed(0)} € · App Store`
+                  : formatEurWithLifetime(OKAZION_PRICE_EUR, lifetimePercent)}
               </Button>
               <Button
                 type="button"

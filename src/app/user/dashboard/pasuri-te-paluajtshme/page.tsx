@@ -27,7 +27,6 @@ import {
   PREMIUM_AMBER,
   PREMIUM_AMBER_SOFT,
 } from '@/components/user/premium-boost-upsell';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { aiDraftToInitialListing } from '@/lib/ai-draft-to-listing';
 import {
   consumeAiListingDraft,
@@ -202,9 +201,8 @@ export default function UserPostListingPage() {
   const [categoryQuotas, setCategoryQuotas] = React.useState<CategoryQuotaSnapshot | null>(null);
   const [quotasReady, setQuotasReady] = React.useState(false);
   const wantsAi = searchParams.get('ai') === '1';
-  const nativeApp = useIsNativeApp();
-  const wantsOkazion = !nativeApp && searchParams.get('okazion') === '1';
-  const wantsPremium = !nativeApp && searchParams.get('premium') === '1';
+  const wantsOkazion = searchParams.get('okazion') === '1';
+  const wantsPremium = searchParams.get('premium') === '1';
   const aiDraftId = searchParams.get('draftId');
   const aiReturnHref = paths.user.aiImport;
   const [aiInitial, setAiInitial] = React.useState<Record<string, unknown> | null>(null);

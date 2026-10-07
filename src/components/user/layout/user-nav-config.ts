@@ -136,14 +136,15 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
   }
 }
 
-/** Purchase / Boost Coin screens — never shown inside the App Store build. */
-const NATIVE_HIDDEN_NAV_KEYS = new Set(['credits', 'payments', 'referral', 'ai-usage']);
+/**
+ * Native App Store build: packages + credits use Apple IAP.
+ * Hide only POK-only / web-promo surfaces (payments history hub, referral, AI usage).
+ */
+const NATIVE_HIDDEN_NAV_KEYS = new Set(['payments', 'referral', 'ai-usage']);
 
-/** Purchase / Boost Coin routes the native app redirects away from. */
+/** Routes the native app still redirects away from (POK checkout / web-only). */
 export const NATIVE_BLOCKED_USER_ROUTES = [
-  paths.user.credits,
   paths.user.checkout,
-  paths.user.packages,
   paths.user.payments,
   paths.user.referral,
   paths.user.aiUsage,

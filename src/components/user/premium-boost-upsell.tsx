@@ -14,7 +14,10 @@ import {
   applyPremiumVoucher,
   buyPremiumWithCredits,
   fetchPremiumPlanQuota,
+  listPremiumVouchers,
 } from '@/lib/payments-client';
+import { isNativeApp } from '@/lib/native-app';
+import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { california } from '@/styles/theme/colors';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
@@ -197,6 +200,29 @@ export async function activatePremiumAfterCreate(params: {
   const packageId = String(params.packageId || PREMIUM_PACKAGE_ID).trim() || PREMIUM_PACKAGE_ID;
 
   if (mode === 'buy-card') {
+    if (isNativeApp() && isIapAvailable()) {
+      const purchase = await purchasePremiumPackage(packageId);
+      if (!purchase.ok) {
+        return {
+          ok: false,
+          message: purchase.cancelled ? 'Blerja u anulua.' : purchase.message,
+        };
+      }
+      const vouchers = await listPremiumVouchers(true);
+      const unused = (vouchers.vouchers ?? []).find((v) => v.status === 'unused');
+      if (!unused) {
+        return { ok: false, message: 'Pagesa u krye, por voucher-i Premium vonoi. Provo nga Paketat.' };
+      }
+      const res = await applyPremiumVoucher({
+        voucherId: unused.id,
+        kind,
+        listingId,
+      });
+      if (res.error || !res.premiumUntil) {
+        return { ok: false, message: res.error || 'Aplikimi i Premium dështoi.' };
+      }
+      return { ok: true, premiumUntil: res.premiumUntil, message: res.message };
+    }
     const q = new URLSearchParams({
       kind: 'premium',
       packageId,

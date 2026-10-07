@@ -228,6 +228,8 @@ app.use('/api/admin/credit-packages', require('./routes/admin-credit-packages'))
 app.use('/api/admin/ai-prices', require('./routes/admin-ai-prices'));
 app.use('/api/admin/addon-packages', require('./routes/admin-addon-packages'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/webhooks/revenuecat', require('./routes/webhooks-revenuecat'));
+app.use('/api/iap', require('./routes/iap'));
 app.use('/api/admin/referral-program', require('./routes/admin-referral-program'));
 app.use('/api/admin/home-banners', require('./routes/admin-home-banners'));
 app.use('/api/referral-program', require('./routes/referral-program'));

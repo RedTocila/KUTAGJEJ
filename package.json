@@ -37,6 +37,7 @@
     "@mui/utils": "9.0.1",
     "@nebula-ltd/pok-payments-js": "^2.0.1",
     "@phosphor-icons/react": "2.1.10",
+    "@revenuecat/purchases-capacitor": "^11.3.2",
     "@supabase/supabase-js": "^2.111.0",
     "date-fns": "^4.1.0",
     "html-to-image": "^1.11.13",

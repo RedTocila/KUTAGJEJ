@@ -136,28 +136,15 @@ function localizedNavTitle(key: string, t: AppMessages): string | null {
   }
 }
 
-/**
- * Native App Store build: packages + credits use Apple IAP.
- * Hide only POK-only / web-promo surfaces (payments history hub, referral, AI usage).
- */
-const NATIVE_HIDDEN_NAV_KEYS = new Set(['payments', 'referral', 'ai-usage']);
-
-/** Routes the native app still redirects away from (POK checkout / web-only). */
-export const NATIVE_BLOCKED_USER_ROUTES = [
-  paths.user.checkout,
-  paths.user.payments,
-  paths.user.referral,
-  paths.user.aiUsage,
-] as const;
+/** Native app still blocks POK card checkout. Packages sell through Apple IAP. */
+export const NATIVE_BLOCKED_USER_ROUTES = [paths.user.checkout] as const;
 
 /** Filtered portal nav items with titles from `t.nav.*`. */
 export function getLocalizedUserPortalNavItems(
   user: User | null | undefined,
   t: AppMessages,
-  opts?: { nativeApp?: boolean },
 ): NavItemConfig[] {
   return getUserPortalNavItemsForUser(user)
-    .filter((item) => !(opts?.nativeApp && NATIVE_HIDDEN_NAV_KEYS.has(item.key)))
     .map((item) => {
       const title = localizedNavTitle(item.key, t);
       return title != null ? { ...item, title } : item;

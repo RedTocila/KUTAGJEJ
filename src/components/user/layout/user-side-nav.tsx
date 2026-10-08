@@ -19,7 +19,6 @@ import { authClient } from '@/lib/auth/client';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
@@ -46,7 +45,6 @@ export function UserSideNav() {
   const { user } = useUser();
   const t = useCopy();
   const unreadMessages = useUnreadMessagesCount();
-  const nativeApp = useIsNativeApp();
   const { canUse: canUseNotifications, unread: unreadNotifications } = useUserNotificationsInbox();
   const [mounted, setMounted] = React.useState(false);
 
@@ -59,8 +57,8 @@ export function UserSideNav() {
     if (!mounted) {
       return getLocalizedUserPortalNavItems(null, t);
     }
-    return getLocalizedUserPortalNavItems(user ?? null, t, { nativeApp });
-  }, [mounted, user, t, nativeApp]);
+    return getLocalizedUserPortalNavItems(user ?? null, t);
+  }, [mounted, user, t]);
 
   return (
     <Box

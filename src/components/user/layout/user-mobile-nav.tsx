@@ -13,7 +13,6 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { getLocalizedUserPortalNavItems } from './user-nav-config';
 import { userPortalNavIcons } from './user-portal-nav-icons';
 import { useCopy } from '@/hooks/use-copy';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useDisplayPathname } from '@/hooks/use-navigation-pending';
 import { useUnreadMessagesCount } from '@/hooks/use-unread-messages-count';
 import { useUser } from '@/hooks/use-user';
@@ -29,10 +28,9 @@ export function UserMobileNav({ open, onClose }: UserMobileNavProps) {
   const { user } = useUser();
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
-  const nativeApp = useIsNativeApp();
   const navItems = React.useMemo(
-    () => getLocalizedUserPortalNavItems(user ?? null, t, { nativeApp }),
-    [user, t, nativeApp]
+    () => getLocalizedUserPortalNavItems(user ?? null, t),
+    [user, t]
   );
 
   return (

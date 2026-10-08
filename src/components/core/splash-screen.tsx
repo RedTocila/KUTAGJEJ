@@ -50,8 +50,8 @@ export function SplashScreen(): React.JSX.Element | null {
           className="kutagjej-splash__logo"
           src={brandLogoSrc}
           alt=""
-          width={140}
-          height={140}
+          width={148}
+          height={148}
           decoding="async"
           fetchPriority="high"
         />
@@ -62,12 +62,9 @@ export function SplashScreen(): React.JSX.Element | null {
               <span className="kutagjej-splash__wordmark-brand">{wordmarkSegments[1]}</span>
             </>
           ) : (
-            <span className="kutagjej-splash__wordmark-brand">{config.site.name}</span>
+            config.site.name
           )}
         </p>
-        <div className="kutagjej-splash__progress" aria-hidden>
-          <span className="kutagjej-splash__progress-fill" />
-        </div>
       </div>
     </div>
   );

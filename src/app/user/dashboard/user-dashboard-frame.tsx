@@ -88,7 +88,7 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const hostedTabs = useMainTabsHosted();
   const nativeApp = useIsNativeApp();
-  // Native app: block POK checkout / web-only hubs; packages + credits use Apple IAP.
+  // Native app: block POK card checkout. Packages, history, and AI stay available.
   const nativePurchaseBlocked = nativeApp && NATIVE_BLOCKED_USER_ROUTES.some((route) => pathMatches(pathname, route));
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);

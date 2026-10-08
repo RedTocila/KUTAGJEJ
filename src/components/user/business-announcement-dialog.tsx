@@ -23,7 +23,6 @@ import {
   type BusinessAnnouncement,
 } from '@/lib/listing-announcement-client';
 import { uploadListingImages } from '@/lib/uploads-client';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import {
@@ -55,7 +54,6 @@ export function BusinessAnnouncementDialog({
   onSaved,
 }: BusinessAnnouncementDialogProps) {
   const { checkSession } = useUser();
-  const nativeApp = useIsNativeApp();
   const hasExisting = Boolean(initial?.title?.trim());
 
   const [title, setTitle] = React.useState('');
@@ -319,16 +317,12 @@ export function BusinessAnnouncementDialog({
               label={
                 <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8125rem' }}>
-                    {nativeApp ? 'Rishpall dhe vendose në krye' : `Rishpall dhe vendose në krye · ${ANNOUNCE_COST_BC}`}
+                    {`Rishpall dhe vendose në krye · ${ANNOUNCE_COST_BC}`}
                   </Typography>
-                  {nativeApp ? null : <BoostCoinIcon size={14} />}
+                  <BoostCoinIcon size={14} />
                 </Stack>
               }
             />
-          ) : nativeApp ? (
-            <Alert severity="info" sx={{ borderRadius: 2 }}>
-              Publikimi e vendos njoftimin në krye të listës.
-            </Alert>
           ) : (
             <Alert severity="info" icon={<BoostCoinIcon size={18} />} sx={{ borderRadius: 2 }}>
               Publikimi kushton {ANNOUNCE_COST_BC} Boost Coins dhe e vendos njoftimin në krye të listës.
@@ -355,13 +349,13 @@ export function BusinessAnnouncementDialog({
           startIcon={
             saving ? (
               <CircularProgress size={14} color="inherit" />
-            ) : willCharge && !nativeApp ? (
+            ) : willCharge ? (
               <BoostCoinIcon size={16} />
             ) : undefined
           }
           sx={{ ...productButtonSx, px: 2.5 }}
         >
-          {willCharge ? (nativeApp ? 'Shpall' : `Shpall · ${ANNOUNCE_COST_BC} BC`) : 'Ruaj'}
+          {willCharge ? `Shpall · ${ANNOUNCE_COST_BC} BC` : 'Ruaj'}
         </Button>
       </ProductDialogActions>
     </ProductDialog>

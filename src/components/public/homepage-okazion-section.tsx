@@ -107,7 +107,7 @@ export function HomepageOkazionSection({
   if (!loading && liveListings.length === 0) return null;
 
   return (
-    <Box data-native-hide="">
+    <Box>
       <ListingsSection
         verticalId="okazion"
         total={total}

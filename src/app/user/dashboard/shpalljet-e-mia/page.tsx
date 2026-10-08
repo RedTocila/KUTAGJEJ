@@ -210,7 +210,6 @@ function CardImageHeader({
           size="small"
           label="Okazion"
           color="error"
-          data-native-hide=""
           sx={{ fontWeight: 800, height: 24, fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
         />
       );
@@ -221,7 +220,6 @@ function CardImageHeader({
           size="small"
           label="Premium"
           color="warning"
-          data-native-hide=""
           sx={{ fontWeight: 800, height: 24, fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
         />
       );

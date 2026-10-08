@@ -58,7 +58,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background:
+    radial-gradient(ellipse 42% 32% at 50% 46%, rgba(86, 122, 22, 0.72), transparent 70%),
+    #070906;
   opacity: 1;
   transition: opacity 0.18s ease;
   pointer-events: auto;
@@ -66,8 +68,8 @@ body {
 
 html.dark .kutagjej-splash {
   background:
-    radial-gradient(ellipse 80% 50% at 50% 38%, rgba(118, 186, 27, 0.2), transparent 68%),
-    #0a0a0a;
+    radial-gradient(ellipse 42% 32% at 50% 46%, rgba(86, 122, 22, 0.72), transparent 70%),
+    #070906;
 }
 
 .kutagjej-splash--hide {
@@ -79,81 +81,40 @@ html.dark .kutagjej-splash {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1.15rem;
   padding: 1.5rem;
 }
 
 .kutagjej-splash__logo {
-  width: min(38vw, 132px);
+  width: min(34vw, 148px);
   height: auto;
   display: block;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
 }
 
 .kutagjej-splash__wordmark {
   margin: 0;
   display: flex;
   align-items: baseline;
-  column-gap: 0.12em;
+  column-gap: 0.08em;
   font-family: var(--font-kutagjej-wordmark), 'Space Grotesk', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
-  font-size: clamp(1.65rem, 6vw, 2.15rem);
+  font-size: clamp(1.85rem, 7.2vw, 2.35rem);
   font-weight: 700;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.03em;
   line-height: 1;
+  color: #d4d4d4;
   -webkit-font-smoothing: antialiased;
 }
 
 .kutagjej-splash__wordmark-muted {
-  color: #5c6656;
-  font-weight: 600;
+  color: #d4d4d4;
+  font-weight: 700;
 }
 
 .kutagjej-splash__wordmark-brand {
-  color: #5f9816;
-  font-weight: 800;
-}
-
-html.dark .kutagjej-splash__wordmark-muted {
-  color: #c4cbb8;
-}
-
-html.dark .kutagjej-splash__wordmark-brand {
-  color: #76ba1b;
-}
-
-.kutagjej-splash__progress {
-  width: 56px;
-  height: 4px;
-  margin-top: 0.35rem;
-  border-radius: 999px;
-  background: rgba(95, 152, 22, 0.18);
-  overflow: hidden;
-}
-
-html.dark .kutagjej-splash__progress {
-  background: rgba(118, 186, 27, 0.22);
-}
-
-.kutagjej-splash__progress-fill {
-  display: block;
-  width: 40%;
-  height: 100%;
-  border-radius: inherit;
-  background: #5f9816;
-  animation: kutagjejSplashProgress 1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-html.dark .kutagjej-splash__progress-fill {
-  background: #76ba1b;
-}
-
-@keyframes kutagjejSplashProgress {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(280%);
-  }
+  color: #82c91e;
+  font-weight: 700;
 }
 
 /* Soft page / section enter (transform + opacity only) */
@@ -444,10 +405,6 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
     transition: none;
   }
 
-  .kutagjej-splash__progress-fill {
-    animation: none;
-  }
-
   .kutagjej-enter,
   .kutagjej-fade,
   .kutagjej-card-enter {
@@ -493,10 +450,4 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
 html[data-native-app] [data-browser-seo],
 html[data-native-app] [data-native-hide] {
   display: none !important;
-}
-
-/* App shell has no Okazion / Premium: listing prices use the platform green */
-html[data-native-app] {
-  --kt-price-okazion: var(--mui-palette-primary-main);
-  --kt-price-premium: var(--mui-palette-primary-main);
 }

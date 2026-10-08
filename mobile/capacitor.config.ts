@@ -21,7 +21,7 @@ const config = {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: '#5f9816',
+      backgroundColor: '#070906',
       showSpinner: false,
     },
     StatusBar: {

@@ -36,7 +36,6 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { paths } from '@/paths';
 import { useLanguage } from '@/hooks/use-language';
-import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useUser } from '@/hooks/use-user';
 import { authClient } from '@/lib/auth/client';
 import { fetchCategoryQuotas } from '@/lib/listing-category-quota-client';
@@ -297,7 +296,6 @@ function QuotaStat({
 
 export function UserDashboardHome() {
   const { user, checkSession } = useUser();
-  const nativeApp = useIsNativeApp();
   const { language } = useLanguage();
   const t = getUserDashboardCopy(language);
 
@@ -717,7 +715,7 @@ export function UserDashboardHome() {
         </Box>
       ) : null}
 
-      {canPublish && !nativeApp ? <ReferralSummaryCard /> : null}
+      {canPublish ? <ReferralSummaryCard /> : null}
       {!canPublish ? <DailyStreakCard /> : null}
 
       <PortalLinkGroup>
@@ -729,7 +727,7 @@ export function UserDashboardHome() {
           badge={subscriptionLoading ? undefined : activePlanLabel}
           badgeColor={activePlanBadgeColor}
         />
-        {canPublish && !nativeApp ? (
+        {canPublish ? (
           <PortalLinkCard
             grouped
             href={paths.user.payments}
@@ -748,7 +746,7 @@ export function UserDashboardHome() {
           badge={categoryLabel}
           badgeColor={categoryBadgeColor}
         />
-        {canPublish && !nativeApp ? (
+        {canPublish ? (
           <PortalLinkCard
             grouped
             href={paths.user.aiUsage}

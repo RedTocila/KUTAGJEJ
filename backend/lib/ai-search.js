@@ -155,12 +155,95 @@ Return ONLY valid JSON (no markdown) with this shape:
 }
 
 Rules:
-- Pick 1 most relevant vertical first (primary). You may add 1–2 secondary guesses.
-- Put leftover free-text keywords in "q" (brand, model, role title, product name). Do not put city/zone/price into q when they fit filter fields.
+- Pick exactly 1 vertical, the single best match. Do not add extra categories.
+- Map the request onto filter fields. Use null for any fact the user did not state. Never guess a city, price, category, or make.
+- "q" is a keyword only when the user named something that has no filter field: a car model ("X5", "Golf"), a job title ("kontabilist"), or a product name ("iPhone 13").
+- Leave "q" as "" when city, zone, price, rent/sale, category, make, fuel, year, or bedrooms already express the request.
+- Never copy the sentence into "q". Never add synonyms, filler, or words the user did not say ("modern", "spacious", "near center").
 - For houses/apartments use vertical "real-estate". Apartments → cat "apartment"; villas/houses → cat "villa". Rent → tx "rent"; sale → tx "sale".
 - Put area names like "Komuna e Parisit" / "Blloku" in zoneName; city names like "Tiranë" in cityName.
-- Use null for unknown filter fields.
 - Keep "reply" concise (1–2 sentences). Do not invent listing results.`;
+}
+
+const STOPWORDS = new Set([
+  'me', 'ne', 'te', 'per', 'dhe', 'ose', 'nje', 'nga', 'deri', 'nen', 'mbi',
+  'pak', 'shume', 'afer', 'prane', 'qender', 'modern', 'e', 'i', 'a', 'of',
+  'in', 'for', 'with', 'under', 'over', 'near', 'the', 'an', 'euro', 'eur',
+  'leke', 'lek', 'muaj', 'all', 'kerkoj', 'dua', 'do', 'disa', 'ri', 're',
+  'dhoma', 'dhome', 'rooms', 'room', 'bedroom', 'bedrooms',
+]);
+
+const TX_WORDS = {
+  rent: ['qira', 'qeraje', 'qera', 'rent', 'rental', 'meqira'],
+  sale: ['shitje', 'sale', 'blej', 'buy', 'shitet'],
+};
+
+const CAT_WORDS = {
+  apartment: ['apartament', 'apartment', 'banese', 'banesa', 'flat'],
+  villa: ['vile', 'villa', 'shtepi', 'house', 'home'],
+  office: ['zyre', 'office'],
+  shop: ['dyqan', 'shop', 'lokal'],
+  'building-plot': ['truall', 'troje', 'parcel'],
+  parking: ['parkim', 'parking', 'garazh'],
+};
+
+const FUEL_WORDS = {
+  petrol: ['benzine', 'petrol', 'gasoline'],
+  diesel: ['diesel', 'nafte', 'gazolio'],
+  electric: ['elektrik', 'elektrike', 'electric'],
+  'hybrid-petrol': ['hibrid', 'hybrid'],
+  lpg: ['gaz', 'lpg'],
+};
+
+function wordTokens(value) {
+  return normalizeSearchText(value).split(/\s+/).filter(Boolean);
+}
+
+/** Move filter vocabulary out of the keyword box, then drop filler the user did not need as text. */
+function cleanSearchPlan(parsed) {
+  const filters = parsed.filters && typeof parsed.filters === 'object' ? { ...parsed.filters } : {};
+  let tokens = wordTokens(parsed.q);
+
+  const promote = (field, dictionary) => {
+    if (filterValue(filters, field)) return;
+    for (const [slug, words] of Object.entries(dictionary)) {
+      if (tokens.some((token) => words.includes(token))) {
+        filters[field] = slug;
+        return;
+      }
+    }
+  };
+  promote('tx', TX_WORDS);
+  promote('cat', CAT_WORDS);
+  promote('fuel', FUEL_WORDS);
+
+  const consumed = new Set(STOPWORDS);
+  const consume = (value) => {
+    for (const token of wordTokens(value)) consumed.add(token);
+  };
+  consume(filters.cityName);
+  consume(filters.zoneName);
+  consume(filters.make);
+  consume(filters.maxPrice);
+  consume(filters.minPrice);
+  consume(filters.bedrooms);
+  consume(filters.minYear);
+  consume(filters.maxYear);
+  consume(filters.maxKm);
+  consume(filters.minSurface);
+  for (const words of [...Object.values(TX_WORDS), ...Object.values(CAT_WORDS), ...Object.values(FUEL_WORDS)]) {
+    for (const word of words) consumed.add(word);
+  }
+
+  tokens = tokens.filter((token) => token.length >= 2 && !consumed.has(token));
+  // More than three leftovers is a paraphrased sentence, not a model or product name.
+  const q = tokens.length > 0 && tokens.length <= 3 ? tokens.join(' ') : '';
+
+  const verticals = Array.isArray(parsed.verticals)
+    ? parsed.verticals.filter((vertical) => VERTICALS.includes(vertical)).slice(0, 1)
+    : [];
+
+  return { filters, q, verticals };
 }
 
 async function interpretQuery(query, language = 'sq') {
@@ -179,7 +262,7 @@ async function interpretQuery(query, language = 'sq') {
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
-      temperature: 0.2,
+      temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: buildSystemPrompt(language) },
@@ -205,9 +288,7 @@ async function interpretQuery(query, language = 'sq') {
     parsed = {};
   }
 
-  const verticals = Array.isArray(parsed.verticals)
-    ? parsed.verticals.filter((v) => VERTICALS.includes(v))
-    : [];
+  const plan = cleanSearchPlan(parsed);
 
   return {
     reply:
@@ -216,9 +297,9 @@ async function interpretQuery(query, language = 'sq') {
         : language === 'en'
           ? 'Looking for matching listings…'
           : 'Po kërkoj njoftime që përputhen…',
-    verticals: verticals.length ? verticals : [...VERTICALS],
-    q: typeof parsed.q === 'string' ? parsed.q.trim() : String(query || '').trim(),
-    filters: parsed.filters && typeof parsed.filters === 'object' ? parsed.filters : {},
+    verticals: plan.verticals,
+    q: plan.q,
+    filters: plan.filters,
   };
 }
 
@@ -378,14 +459,14 @@ async function runAiSearch({ query, language = 'sq', limit = 24, interpretOnly =
 
   const intent = await interpretQuery(trimmed, language);
   const params = await buildQueryParams(intent);
-  const verticals = intent.verticals.length ? intent.verticals : [...VERTICALS];
+  const verticals = intent.verticals;
   const resolvedIntent = {
     verticals,
     q: params.q || '',
     filters: params,
   };
 
-  if (interpretOnly) {
+  if (interpretOnly || !verticals.length) {
     return {
       reply: intent.reply,
       intent: resolvedIntent,

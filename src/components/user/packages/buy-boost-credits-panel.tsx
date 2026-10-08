@@ -21,8 +21,22 @@ import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
 import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, formatBc } from './package-ui';
 
-/** Coin packs that exist as App Store consumables in v1. */
-const NATIVE_CREDIT_IDS = new Set(['Starter', 'Growth', 'Pro']);
+/** Coin packs that exist as App Store consumables in v1. Matched on label, not the DB uuid. */
+const NATIVE_CREDIT_ORDER = ['Starter', 'Growth', 'Pro'] as const;
+const NATIVE_CREDIT_IDS = new Set<string>(NATIVE_CREDIT_ORDER);
+
+function nativeCreditKey(pkg: CreditPackage): string | null {
+  const label = String(pkg.labelSq || '').trim();
+  if (NATIVE_CREDIT_IDS.has(label)) return label;
+  if (NATIVE_CREDIT_IDS.has(pkg.id)) return pkg.id;
+  return null;
+}
+
+function nativeCreditRank(pkg: CreditPackage): number {
+  const key = nativeCreditKey(pkg);
+  const index = NATIVE_CREDIT_ORDER.findIndex((id) => id === key);
+  return index < 0 ? NATIVE_CREDIT_ORDER.length : index;
+}
 
 /** Always-visible catalog when the API has no active rows yet. */
 const FALLBACK_CREDIT_PACKAGES: CreditPackage[] = [
@@ -91,17 +105,21 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
 
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
   const visiblePackages = useAppleIap
-    ? packages.filter((pkg) => NATIVE_CREDIT_IDS.has(pkg.id))
+    ? [...packages]
+        .filter((pkg) => nativeCreditKey(pkg))
+        .sort((a, b) => nativeCreditRank(a) - nativeCreditRank(b))
     : packages;
 
-  const buyCredits = async (packageId: string) => {
+  const buyCredits = async (pkg: CreditPackage) => {
     if (!useAppleIap) {
-      router.push(checkoutCreditsHref(packageId));
+      router.push(checkoutCreditsHref(pkg.id));
       return;
     }
+    const storeKey = nativeCreditKey(pkg);
+    if (!storeKey) return;
     setIapBusy(true);
     setIapMessage(null);
-    const result = await purchaseCreditsPackage(packageId, { userId: user?.id });
+    const result = await purchaseCreditsPackage(storeKey, { userId: user?.id });
     setIapBusy(false);
     if (result.ok) {
       setIapMessage('Boost Coins u shtuan në llogari.');
@@ -180,7 +198,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 badge={badge}
                 compactPrice
                 price={<PackageEurPrice listPrice={pkg.priceEur} percent={useAppleIap ? 0 : lifetimePercent} />}
-                onClick={iapBusy ? undefined : () => void buyCredits(pkg.id)}
+                onClick={iapBusy ? undefined : () => void buyCredits(pkg)}
               />
             );
           })}

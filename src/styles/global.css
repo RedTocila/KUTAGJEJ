@@ -60,6 +60,9 @@ body {
   transition: opacity 0.32s ease;
   pointer-events: auto;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kutagjej-splash--hide {
@@ -71,38 +74,48 @@ body {
   animation: kgPendingFadeIn 160ms var(--motion-ease) both;
 }
 
-.kutagjej-splash__art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  background: #020401;
+.kutagjej-splash__mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  transform: translateY(-6%);
 }
 
-/* Phones and tall windows: fill the screen. Wide layouts keep the full poster centered. */
-@media (max-aspect-ratio: 4/5) {
-  .kutagjej-splash__art {
-    object-fit: cover;
-    object-position: center 40%;
-  }
+.kutagjej-splash__logo {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
+  display: block;
+}
+
+.kutagjej-splash__title {
+  margin: 0;
+  font-family: var(--font-kutagjej-wordmark), 'Space Grotesk', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: #f4f6f1;
+}
+
+.kutagjej-splash__title-accent {
+  color: #83b91b;
+  font-weight: 700;
 }
 
 .kutagjej-splash__progress {
   position: absolute;
   z-index: 1;
   left: 50%;
-  /* Stay inside the portrait artwork on wide screens; ~68% of a phone on narrow ones. */
-  width: min(68%, calc(100vh * 0.46 * 0.72));
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.35rem);
-  height: 4px;
+  width: 6.5rem;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
+  height: 2px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
   transform: translateX(-50%);
-  box-shadow: 0 0 18px rgba(130, 201, 30, 0.28);
 }
 
 .kutagjej-splash__progress-fill {
@@ -111,23 +124,9 @@ body {
   height: 100%;
   width: 0%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #3d7a0a 0%, #82c91e 58%, #f3ffd4 100%);
-  box-shadow: 0 0 14px rgba(182, 255, 58, 0.9);
+  background: #83b91b;
   /* Keep duration in sync with FILL_MS in splash-screen.tsx */
   animation: kutagjejSplashReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.kutagjej-splash__progress-fill::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  transform: translate(40%, -50%);
-  background: #f6ffd8;
-  box-shadow: 0 0 12px 4px rgba(198, 255, 74, 0.95);
 }
 
 .kutagjej-splash__progress-fill--pending {

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { brandSplashSrc, config } from '@/config';
+import { brandLogoSrc, config } from '@/config';
 
 type BrandLoadingScreenProps = {
   /** `reveal` fills once (cold start). `pending` keeps sweeping until the page is ready. */
@@ -12,9 +12,9 @@ type BrandLoadingScreenProps = {
 };
 
 /**
- * Full-viewport KuTaGjej artwork with a glowing bar.
- * Cold start fills the bar, then the splash fades and reveals the page.
- * Route loads keep the bar moving until content is ready.
+ * Solid launch cover: small mark, wordmark, thin progress line.
+ * Cold start fills the line, then the splash fades and reveals the page.
+ * Route loads keep the line moving until content is ready.
  */
 export function BrandLoadingScreen({
   mode = 'pending',
@@ -29,6 +29,7 @@ export function BrandLoadingScreen({
   ]
     .filter(Boolean)
     .join(' ');
+  const [lead, accent] = config.site.wordmarkSegments ?? [config.site.name, ''];
 
   return (
     <div
@@ -40,16 +41,13 @@ export function BrandLoadingScreen({
       aria-hidden={hiding || undefined}
       {...(pendingOverlay ? { 'data-nav-pending-overlay': '' } : {})}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- paint before the image optimizer */}
-      <img
-        className="kutagjej-splash__art"
-        src={brandSplashSrc}
-        alt=""
-        width={471}
-        height={1024}
-        decoding="async"
-        fetchPriority="high"
-      />
+      <div className="kutagjej-splash__mark">
+        <img className="kutagjej-splash__logo" src={brandLogoSrc} alt="" width={104} height={104} decoding="async" />
+        <p className="kutagjej-splash__title">
+          {lead}
+          {accent ? <span className="kutagjej-splash__title-accent">{accent}</span> : null}
+        </p>
+      </div>
       <div className="kutagjej-splash__progress" aria-hidden="true">
         <span
           className={

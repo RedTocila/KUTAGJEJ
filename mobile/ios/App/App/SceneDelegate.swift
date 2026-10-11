@@ -8,7 +8,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        guard scene is UIWindowScene else { return }
+        guard let windowScene = scene as? UIWindowScene else { return }
+
+        // StoreKit presents the payment sheet on the key window of this scene. If the window
+        // was never made key, the sheet never appears and the purchase call sits forever.
+        if window == nil {
+            let next = UIWindow(windowScene: windowScene)
+            next.rootViewController = UIStoryboard(name: "Main", bundle: nil).instantiateInitialViewController()
+            window = next
+        }
+        window?.makeKeyAndVisible()
 
         if let url = connectionOptions.urlContexts.first?.url {
             _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])

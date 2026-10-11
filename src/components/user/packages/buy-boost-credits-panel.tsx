@@ -119,15 +119,19 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
     if (!storeKey) return;
     setIapBusy(true);
     setIapMessage(null);
-    const result = await purchaseCreditsPackage(storeKey, { userId: user?.id });
-    setIapBusy(false);
-    if (result.ok) {
-      setIapMessage('Boost Coins u shtuan në llogari.');
-      // Soft refresh — UserProvider may pick up credits on next navigation.
-      window.setTimeout(() => window.location.reload(), 600);
-      return;
+    try {
+      const result = await purchaseCreditsPackage(storeKey, { userId: user?.id });
+      if (result.ok) {
+        setIapMessage('Boost Coins u shtuan në llogari.');
+        window.setTimeout(() => window.location.reload(), 600);
+        return;
+      }
+      if (!result.cancelled) setIapMessage(result.message);
+    } catch (err) {
+      setIapMessage(err instanceof Error ? err.message : 'Blerja dështoi.');
+    } finally {
+      setIapBusy(false);
     }
-    if (!result.cancelled) setIapMessage(result.message);
   };
 
   return (
@@ -167,6 +171,12 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
           {usingFallback ? t.packages.fallbackCatalog : ''}
+        </Alert>
+      ) : null}
+
+      {iapBusy ? (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Po hapet pagesa e Apple…
         </Alert>
       ) : null}
 

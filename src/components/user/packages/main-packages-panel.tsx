@@ -336,14 +336,19 @@ export function MainPackagesPanel() {
       if (!useAppleIap) return;
       setIapBusy(true);
       setIapMessage(null);
-      const result = await purchasePlanByCode(planCode, { userId: user?.id });
-      setIapBusy(false);
-      if (result.ok) {
-        setIapMessage('Plani u aktivizua.');
-        await reload();
-        return;
+      try {
+        const result = await purchasePlanByCode(planCode, { userId: user?.id });
+        if (result.ok) {
+          setIapMessage('Plani u aktivizua.');
+          await reload();
+          return;
+        }
+        if (!result.cancelled) setIapMessage(result.message);
+      } catch (err) {
+        setIapMessage(err instanceof Error ? err.message : 'Blerja dështoi.');
+      } finally {
+        setIapBusy(false);
       }
-      if (!result.cancelled) setIapMessage(result.message);
     },
     [useAppleIap, user?.id, reload],
   );
@@ -443,6 +448,12 @@ export function MainPackagesPanel() {
         onDismiss={() => setCancelSuccess(null)}
         sx={{ borderRadius: 2 }}
       />
+
+      {iapBusy ? (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Po hapet pagesa e Apple…
+        </Alert>
+      ) : null}
 
       {iapMessage ? (
         <Alert

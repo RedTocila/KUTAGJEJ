@@ -25,8 +25,9 @@ const config = {
       showSpinner: false,
     },
     StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#5f9816',
+      style: 'LIGHT',
+      backgroundColor: '#ffffff',
+      overlaysWebView: true,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
@@ -36,7 +37,7 @@ const config = {
     allowMixedContent: false,
   },
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     preferredContentMode: 'mobile',
   },
 };

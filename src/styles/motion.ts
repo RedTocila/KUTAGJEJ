@@ -47,7 +47,7 @@ export const MOTION_SHEET_MS = { enter: 380, exit: 260 } as const;
 export const MOTION_POPOVER_MS = { enter: 240, exit: 160 } as const;
 
 /** Mobile push / pop between routes (keep in sync with `--kg-nav-push` in global.css). */
-export const NAV_PUSH_MS = 380;
+export const NAV_PUSH_MS = 320;
 
 /** Desktop route crossfade. */
 export const MOTION_NAV_FADE_MS = 220;

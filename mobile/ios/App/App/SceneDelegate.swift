@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 import Capacitor
 
 /// UIScene lifecycle (required for apps built with the iOS 27 SDK).
@@ -18,6 +19,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             window = next
         }
         window?.makeKeyAndVisible()
+        extendWebViewToScreenEdges()
+        DispatchQueue.main.async { [weak self] in
+            self?.extendWebViewToScreenEdges()
+        }
 
         if let url = connectionOptions.urlContexts.first?.url {
             _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: url, options: [:])
@@ -30,6 +35,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidBecomeActive(_ scene: UIScene) {
         // StoreKit attaches the payment sheet to the key window. Re-assert it after the scene is active.
         window?.makeKeyAndVisible()
+        extendWebViewToScreenEdges()
+    }
+
+    /// Draw the page under the status bar and home indicator. CSS safe areas keep controls where they are.
+    private func extendWebViewToScreenEdges() {
+        window?.backgroundColor = .systemBackground
+        guard let root = window?.rootViewController else { return }
+        root.edgesForExtendedLayout = .all
+        root.extendedLayoutIncludesOpaqueBars = true
+        root.view.backgroundColor = .systemBackground
+        guard let webView = (root as? CAPBridgeViewController)?.webView ?? Self.findWebView(in: root.view) else { return }
+        webView.isOpaque = true
+        webView.backgroundColor = .systemBackground
+        webView.scrollView.backgroundColor = .systemBackground
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.contentInset = .zero
+    }
+
+    private static func findWebView(in view: UIView) -> WKWebView? {
+        if let webView = view as? WKWebView { return webView }
+        for subview in view.subviews {
+            if let found = findWebView(in: subview) { return found }
+        }
+        return nil
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

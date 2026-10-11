@@ -21,7 +21,7 @@ import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
 } from '@/lib/mobile-layout';
-import { MAIN_TAB_SLIDE_MS } from '@/lib/main-tab-pager';
+import { MAIN_TAB_SLIDE_MS, registerMainTabNavProgress } from '@/lib/main-tab-pager';
 import { beginPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
@@ -121,6 +121,27 @@ export function MobileBottomNav() {
   const slotCount = items.length;
   const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
   const [transitionReady, setTransitionReady] = React.useState(false);
+  const pillRef = React.useRef<HTMLDivElement | null>(null);
+
+  const paintPill = React.useCallback((fraction: number, animate: boolean) => {
+    const el = pillRef.current;
+    if (!el) return;
+    const motion =
+      animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}`
+        : 'none';
+    el.style.transition = motion;
+    el.style.transform = `translate3d(${fraction * 100}%, 0, 0)`;
+  }, []);
+
+  React.useLayoutEffect(() => {
+    paintPill(indicatorIndex, transitionReady);
+  }, [indicatorIndex, paintPill, transitionReady]);
+
+  React.useEffect(() => {
+    registerMainTabNavProgress(paintPill);
+    return () => registerMainTabNavProgress(null);
+  }, [paintPill]);
 
   React.useLayoutEffect(() => {
     if (activeIndex < 0) return undefined;
@@ -250,6 +271,7 @@ export function MobileBottomNav() {
           }}
         >
           <Box
+            ref={pillRef}
             aria-hidden
             sx={{
               position: 'absolute',
@@ -260,10 +282,7 @@ export function MobileBottomNav() {
               borderRadius: 999,
               bgcolor: primaryMainAlpha(0.18),
               opacity: hasActiveTab ? 1 : 0,
-              transform: `translate3d(${indicatorIndex * 100}%, 0, 0)`,
-              transition: transitionReady
-                ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}, opacity 180ms ease`
-                : 'none',
+              transition: 'opacity 180ms ease',
               pointerEvents: 'none',
               zIndex: 0,
               '@media (prefers-reduced-motion: reduce)': {

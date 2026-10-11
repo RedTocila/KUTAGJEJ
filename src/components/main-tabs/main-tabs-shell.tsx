@@ -26,7 +26,7 @@ import {
   mainTabFromPath,
   type MainTab,
 } from '@/lib/main-tabs';
-import { MAIN_TAB_SLIDE_MS, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
+import { MAIN_TAB_SLIDE_MS, publishMainTabNavProgress, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
 import { setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
@@ -282,8 +282,10 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     const el = trackRef.current;
     if (!el) return;
     const animate = withTransition && !reduceMotionRef.current;
-    el.style.transition = animate ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.ease}` : 'none';
+    el.style.transition = animate ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}` : 'none';
     el.style.transform = `translate3d(calc(${(-tabIndex * 100) / MAIN_TAB_COUNT}% + ${offsetPx}px), 0, 0)`;
+    const width = el.parentElement?.clientWidth || window.innerWidth || 1;
+    publishMainTabNavProgress(tabIndex - offsetPx / width, animate);
     if (offsetPx === 0) appliedIndexRef.current = tabIndex;
   }, []);
 

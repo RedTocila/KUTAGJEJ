@@ -25,8 +25,8 @@ const config = {
       showSpinner: false,
     },
     StatusBar: {
-      style: 'LIGHT',
-      backgroundColor: '#ffffff',
+      style: 'DARK',
+      backgroundColor: '#0a0a0a',
       overlaysWebView: true,
     },
     PushNotifications: {

@@ -18,6 +18,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             next.rootViewController = UIStoryboard(name: "Main", bundle: nil).instantiateInitialViewController()
             window = next
         }
+        window?.backgroundColor = UIColor(red: 10 / 255, green: 10 / 255, blue: 10 / 255, alpha: 1)
         window?.makeKeyAndVisible()
         extendWebViewToScreenEdges()
         DispatchQueue.main.async { [weak self] in
@@ -38,17 +39,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         extendWebViewToScreenEdges()
     }
 
-    /// Draw the page under the status bar and home indicator. CSS safe areas keep controls where they are.
+    /// Draw the page under the status bar and home indicator. The page color itself is set
+    /// from the theme in `BridgeViewController`, so a pull does not reveal a different black.
     private func extendWebViewToScreenEdges() {
-        window?.backgroundColor = .systemBackground
         guard let root = window?.rootViewController else { return }
         root.edgesForExtendedLayout = .all
         root.extendedLayoutIncludesOpaqueBars = true
-        root.view.backgroundColor = .systemBackground
         guard let webView = (root as? CAPBridgeViewController)?.webView ?? Self.findWebView(in: root.view) else { return }
-        webView.isOpaque = true
-        webView.backgroundColor = .systemBackground
-        webView.scrollView.backgroundColor = .systemBackground
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.contentInset = .zero
     }

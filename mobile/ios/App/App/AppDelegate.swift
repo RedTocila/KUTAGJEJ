@@ -60,7 +60,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 /// Hosts the Capacitor web view and adds the native pull-to-refresh (the same control Safari uses).
 /// Set as the custom class of the root view controller in Main.storyboard.
-class BridgeViewController: CAPBridgeViewController {
+class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
     private let pullToRefresh = UIRefreshControl()
     private var loadingObservation: NSKeyValueObservation?
     private var refreshTimeout: DispatchWorkItem?
@@ -94,6 +94,8 @@ class BridgeViewController: CAPBridgeViewController {
         webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.refreshControl = pullToRefresh
         webView.scrollView.panGestureRecognizer.addTarget(self, action: #selector(handleScrollPan(_:)))
+        applyPageBackground(dark: true)
+        installThemeBackgroundSync(on: webView)
 
         loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
             guard !webView.isLoading else { return }
@@ -102,7 +104,10 @@ class BridgeViewController: CAPBridgeViewController {
 
         let proxy = NavigationDelegateProxy(target: webView.navigationDelegate)
         proxy.onNetworkFailure = { [weak self] url in self?.showOffline(failedURL: url) }
-        proxy.onPageLoaded = { [weak self] in self?.hideOffline() }
+        proxy.onPageLoaded = { [weak self] in
+            self?.hideOffline()
+            self?.webView?.evaluateJavaScript(Self.themeSyncScript)
+        }
         navigationProxy = proxy
         webView.navigationDelegate = proxy
 
@@ -167,6 +172,45 @@ class BridgeViewController: CAPBridgeViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
             webView.reload()
         }
+    }
+
+    /// Page color behind a pull, so the bounce does not reveal a different black.
+    private static let themeSyncScript = """
+    (function () {
+      if (window.__kgThemeSync) return;
+      window.__kgThemeSync = true;
+      function send() {
+        try {
+          var dark = document.documentElement.classList.contains('dark');
+          window.webkit.messageHandlers.kutagjejTheme.postMessage(dark ? 'dark' : 'light');
+        } catch (e) {}
+      }
+      send();
+      new MutationObserver(send).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    })();
+    """
+
+    private func installThemeBackgroundSync(on webView: WKWebView) {
+        let controller = webView.configuration.userContentController
+        controller.removeScriptMessageHandler(forName: "kutagjejTheme")
+        controller.add(self, name: "kutagjejTheme")
+        let script = WKUserScript(source: Self.themeSyncScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        controller.addUserScript(script)
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        applyPageBackground(dark: (message.body as? String) != "light")
+    }
+
+    private func applyPageBackground(dark: Bool) {
+        let color = dark
+            ? UIColor(red: 10 / 255, green: 10 / 255, blue: 10 / 255, alpha: 1)
+            : UIColor.white
+        view.backgroundColor = color
+        webView?.isOpaque = true
+        webView?.backgroundColor = color
+        webView?.scrollView.backgroundColor = color
+        view.window?.backgroundColor = color
     }
 
     private func finishRefreshing() {

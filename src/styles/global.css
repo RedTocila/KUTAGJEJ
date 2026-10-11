@@ -456,13 +456,36 @@ html[data-native-app] [data-native-hide] {
 }
 
 /*
- * Edge-to-edge web view. The page background fills the status-bar and home-indicator
- * bands. Toolbar controls stay below the status bar; the bar itself grows upward.
+ * Edge-to-edge web view. Fixed bands keep the status-bar and home-indicator
+ * areas painted with the page color while the page scrolls, so a pull never
+ * shows the native black behind them. Toolbar controls stay below the status bar.
  */
 html[data-native-app],
 html[data-native-app] body {
-  background-color: var(--mui-palette-background-default, #ffffff);
+  background-color: var(--mui-palette-background-default, #0a0a0a);
   min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+html[data-native-app]::before,
+html[data-native-app]::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1400;
+  pointer-events: none;
+  background: var(--mui-palette-background-default, #0a0a0a);
+}
+
+html[data-native-app]::before {
+  top: 0;
+  height: env(safe-area-inset-top, 0px);
+}
+
+html[data-native-app]::after {
+  bottom: 0;
+  height: env(safe-area-inset-bottom, 0px);
 }
 
 html[data-native-app] .MuiAppBar-root {

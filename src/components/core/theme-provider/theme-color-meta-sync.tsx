@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useColorScheme } from '@mui/material/styles';
 
 import { setColorSchemeCookie } from '@/lib/color-scheme';
+import { syncNativeStatusBar } from '@/lib/native-app';
 
 /** Matches `color-schemes.ts` background.default for each mode. */
 const THEME_COLOR_LIGHT = '#ffffff';
@@ -50,6 +51,7 @@ export function ThemeColorMetaSync() {
 
     root.style.colorScheme = isDark ? 'dark' : 'light';
     setColorSchemeCookie(colorScheme);
+    void syncNativeStatusBar(isDark);
   }, [colorScheme]);
 
   return null;

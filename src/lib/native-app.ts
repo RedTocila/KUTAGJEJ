@@ -21,6 +21,15 @@ export function isNativeApp(): boolean {
   }
 }
 
+/** White status-bar icons on the dark theme, dark icons on the light theme. */
+export async function syncNativeStatusBar(isDark: boolean): Promise<void> {
+  if (!isNativeApp()) return;
+  const { StatusBar, Style } = await import('@capacitor/status-bar');
+  await StatusBar.setOverlaysWebView({ overlay: true });
+  // Capacitor's Dark style is light text, for a dark page.
+  await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+}
+
 export function getNativePlatform(): 'ios' | 'android' | 'web' {
   if (!isNativeApp()) return 'web';
   const platform = String(getCapacitor()?.getPlatform?.() || '').toLowerCase();

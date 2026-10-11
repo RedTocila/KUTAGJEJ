@@ -35,10 +35,33 @@ post_install do |installer|
   if File.exist?(hybrid)
     File.chmod(0644, hybrid)
     src = File.read(hybrid)
-    unless src.include?('kutagjejConfirmInScene')
-      src.sub!("import Foundation\n", "import Foundation\nimport UIKit\n") unless src.include?("import UIKit\n")
-      needle = "            Self.sharedInstance.purchase(product: storeProduct, completion: hybridCompletion)\n"
-      replacement = <<~'SWIFT'
+    src.sub!("import Foundation\n", "import Foundation\nimport UIKit\n") unless src.include?("import UIKit\n")
+    updated = <<~'SWIFT'
+            // kutagjejConfirmInScene2: StoreKit 2 only presents the payment sheet on the key window's scene, from the main thread.
+            let presentAppleSheet = {
+                let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                let scene = scenes.first { $0.windows.contains { $0.isKeyWindow } }
+                    ?? scenes.first { $0.activationState == .foregroundActive }
+                    ?? scenes.first
+                if let scene {
+                    if !scene.windows.contains(where: { $0.isKeyWindow }) {
+                        scene.windows.first?.makeKeyAndVisible()
+                    }
+                    let params = PurchaseParams.Builder(product: storeProduct)
+                        .with(confirmInScene: scene)
+                        .build()
+                    Self.sharedInstance.purchase(params, completion: hybridCompletion)
+                } else {
+                    Self.sharedInstance.purchase(product: storeProduct, completion: hybridCompletion)
+                }
+            }
+            if Thread.isMainThread {
+                presentAppleSheet()
+            } else {
+                DispatchQueue.main.async(execute: presentAppleSheet)
+            }
+    SWIFT
+    old = <<~'SWIFT'
             // kutagjejConfirmInScene: without the foreground scene, StoreKit 2 never presents the payment sheet and the call never returns.
             if #available(iOS 17.0, *),
                let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first(where: { $0.activationState == .foregroundActive })
@@ -50,10 +73,14 @@ post_install do |installer|
             } else {
                 Self.sharedInstance.purchase(product: storeProduct, completion: hybridCompletion)
             }
-      SWIFT
-      src.gsub!(needle, replacement)
-      File.write(hybrid, src)
+    SWIFT
+    needle = "            Self.sharedInstance.purchase(product: storeProduct, completion: hybridCompletion)\n"
+    if src.include?('kutagjejConfirmInScene:') && !src.include?('kutagjejConfirmInScene2')
+      src.gsub!(old, updated)
+    elsif !src.include?('kutagjejConfirmInScene2')
+      src.gsub!(needle, updated)
     end
+    File.write(hybrid, src)
   end
   # Capacitor pods ship with 14.0; bump to Xcode 27's floor
   installer.pods_project.targets.each do |target|

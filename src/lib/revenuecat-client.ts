@@ -111,7 +111,11 @@ export async function purchaseStoreProductId(
     }
 
     try {
-      await Purchases.purchaseStoreProduct({ product });
+      // Only the identifier crosses the bridge. The full StoreKit dictionary can stall the
+      // Capacitor call so the Apple sheet never appears and this promise never returns.
+      await Purchases.purchaseStoreProduct({
+        product: JSON.parse(JSON.stringify({ identifier: product.identifier })),
+      });
     } catch (err: unknown) {
       const code = (err as { code?: number | string })?.code;
       const msg = String((err as { message?: string })?.message || err || '');

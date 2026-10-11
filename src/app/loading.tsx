@@ -1,20 +1,6 @@
-import * as React from 'react';
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-import { HomeBelowFoldFallback, HomeOkazionFallback, HomeRecommendedFallback } from '@/components/public/home-carousels-fallback';
-import { HeroSection } from '@/components/public/hero-section';
-import { HomeBannerSkeleton } from '@/components/public/homepage-skeletons';
-import { PublicShell } from '@/components/public/public-shell';
-
-/** Instant placeholder when soft-navigating to `/`. */
-export default function Loading(): React.JSX.Element {
-  return (
-    <PublicShell keepDesktopHeader>
-      <HeroSection>
-        <HomeBannerSkeleton />
-      </HeroSection>
-      <HomeRecommendedFallback />
-      <HomeOkazionFallback />
-      <HomeBelowFoldFallback />
-    </PublicShell>
-  );
+/** Branded splash while this route is still loading. */
+export default function Loading() {
+  return <BrandLoadingScreen />;
 }

@@ -1,12 +1,6 @@
-import * as React from 'react';
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
-import { PublicShell } from '@/components/public/public-shell';
-
-export default function OkazionBrowseLoading(): React.JSX.Element {
-  return (
-    <PublicShell hideHeaderBelowMd>
-      <CategoryBrowseSkeleton />
-    </PublicShell>
-  );
+/** Branded splash while this route is still loading. */
+export default function Loading() {
+  return <BrandLoadingScreen />;
 }

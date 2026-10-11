@@ -16,12 +16,11 @@ import {
   clearPendingNavigationIfMatches,
   normalizeNavPath,
 } from '@/lib/navigation-pending';
-import { paths } from '@/paths';
 
 const SCROLL_ENTRY_KEY = '__kutagjejScrollEntryKey';
 const SCROLL_STORAGE_PREFIX = 'kutagjej:scroll:';
-/** Soft back/forward to home that never commits in React → hard reload. */
-const HOME_POP_RECOVERY_MS = 8_000;
+/** Soft back that never commits in React → hard reload, so the skeleton is not a second tap. */
+const POP_COMMIT_MS = 8_000;
 
 type ScrollPosition = {
   left: number;
@@ -117,9 +116,12 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const pathname = usePathname();
   const previousPathnameRef = React.useRef(pathname);
+  const previousUrlRef = React.useRef<string | null>(null);
   const pendingPopNavigationRef = React.useRef(false);
   const scrollEntryKeyRef = React.useRef<string | null>(null);
-  const homePopRecoveryRef = React.useRef<number | null>(null);
+  const popRecoveryRef = React.useRef<number | null>(null);
+  /** One automatic extra back when a pop lands on the same URL (the loading entry). */
+  const samePathSkipRef = React.useRef(false);
 
   React.useEffect(() => {
     registerAppRouterNavigation(
@@ -147,17 +149,31 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     const handlePopState = () => {
       clearPendingNavigation();
       pendingPopNavigationRef.current = true;
-      if (homePopRecoveryRef.current != null) {
-        window.clearTimeout(homePopRecoveryRef.current);
-        homePopRecoveryRef.current = null;
+      if (popRecoveryRef.current != null) {
+        window.clearTimeout(popRecoveryRef.current);
+        popRecoveryRef.current = null;
       }
-      // Browser URL already updated; React pathname may stall on a hung RSC flight.
-      if (normalizeNavPath(window.location.pathname) === paths.home) {
-        homePopRecoveryRef.current = window.setTimeout(() => {
-          homePopRecoveryRef.current = null;
+
+      const landed = `${window.location.pathname}${window.location.search}`;
+      // Opening a category records two history entries with the same URL: the
+      // loading skeleton, then the page. The first back only reveals that skeleton.
+      if (previousUrlRef.current && landed === previousUrlRef.current && !samePathSkipRef.current) {
+        samePathSkipRef.current = true;
+        window.setTimeout(() => {
+          window.history.back();
+        }, 0);
+        return;
+      }
+      samePathSkipRef.current = false;
+
+      // Browser URL already updated; React pathname may stall on a hung flight home.
+      if (normalizeNavPath(window.location.pathname) !== '/') return;
+      popRecoveryRef.current = window.setTimeout(() => {
+        popRecoveryRef.current = null;
+        if (normalizeNavPath(window.location.pathname) === '/') {
           window.location.reload();
-        }, HOME_POP_RECOVERY_MS);
-      }
+        }
+      }, POP_COMMIT_MS);
     };
     const saveCurrentPosition = () => {
       if (scrollEntryKeyRef.current) saveScrollPosition(scrollEntryKeyRef.current);
@@ -168,9 +184,9 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('pagehide', saveCurrentPosition);
-      if (homePopRecoveryRef.current != null) {
-        window.clearTimeout(homePopRecoveryRef.current);
-        homePopRecoveryRef.current = null;
+      if (popRecoveryRef.current != null) {
+        window.clearTimeout(popRecoveryRef.current);
+        popRecoveryRef.current = null;
       }
     };
   }, []);
@@ -200,9 +216,10 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     const isPopNavigation = pendingPopNavigationRef.current;
     pendingPopNavigationRef.current = false;
 
-    if (normalizeNavPath(pathname ?? '') === paths.home && homePopRecoveryRef.current != null) {
-      window.clearTimeout(homePopRecoveryRef.current);
-      homePopRecoveryRef.current = null;
+    previousUrlRef.current = `${window.location.pathname}${window.location.search}`;
+    if (popRecoveryRef.current != null && normalizeNavPath(pathname ?? '') === normalizeNavPath(window.location.pathname)) {
+      window.clearTimeout(popRecoveryRef.current);
+      popRecoveryRef.current = null;
     }
 
     rememberFirstPageIfNeeded();

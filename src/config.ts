@@ -6,10 +6,15 @@ import { getSiteURL } from '@/lib/get-site-url';
  */
 export const brand = {
   logoFileName: 'Ku-Ta-Gjej-Logo.png',
+  /** Full-bleed launch and page-loading artwork in `public/`. */
+  splashFileName: 'splash-screen.jpg',
 } as const;
 
 /** Public URL for {@link brand.logoFileName} (Next serves `public/` at `/`). */
 export const brandLogoSrc = `/${brand.logoFileName}` as const;
+
+/** Public URL for {@link brand.splashFileName}. */
+export const brandSplashSrc = `/${brand.splashFileName}` as const;
 
 /** Official KuTaGjej social profiles (footer + Organization `sameAs`). */
 export const brandSocials = [

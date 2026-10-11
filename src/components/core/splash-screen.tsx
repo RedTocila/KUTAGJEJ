@@ -2,18 +2,14 @@
 
 import * as React from 'react';
 
-import { brandLogoSrc, config } from '@/config';
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-const FADE_MS = 180;
-
-const wordmarkSegments =
-  config.site.wordmarkSegments && config.site.wordmarkSegments[0] + config.site.wordmarkSegments[1] === config.site.name
-    ? config.site.wordmarkSegments
-    : null;
+/** Keep in sync with `kutagjejSplashReveal` in `global.css`. */
+const FILL_MS = 1200;
+const FADE_MS = 320;
 
 /**
- * Cold-start branded overlay. Dismisses as soon as React hydrates so it does
- * not hold the first paint for a minimum time or wait on images (`window.load`).
+ * Cold-start cover. The bar fills, then the artwork fades and reveals the page.
  * Fully React-owned (do not inject/remove sibling DOM under `<body>`).
  */
 export function SplashScreen(): React.JSX.Element | null {
@@ -21,13 +17,10 @@ export function SplashScreen(): React.JSX.Element | null {
 
   React.useEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      setPhase('gone');
-      return;
-    }
-
-    const fadeTimer = window.setTimeout(() => setPhase('hiding'), 0);
-    const goneTimer = window.setTimeout(() => setPhase('gone'), FADE_MS);
+    const fill = reduceMotion ? 0 : FILL_MS;
+    const fade = reduceMotion ? 0 : FADE_MS;
+    const fadeTimer = window.setTimeout(() => setPhase('hiding'), fill);
+    const goneTimer = window.setTimeout(() => setPhase('gone'), fill + fade);
     return () => {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(goneTimer);
@@ -36,36 +29,5 @@ export function SplashScreen(): React.JSX.Element | null {
 
   if (phase === 'gone') return null;
 
-  return (
-    <div
-      className={phase === 'hiding' ? 'kutagjej-splash kutagjej-splash--hide' : 'kutagjej-splash'}
-      role="status"
-      aria-live="polite"
-      aria-label={`${config.site.name} — duke u ngarkuar`}
-      aria-hidden={phase === 'hiding'}
-    >
-      <div className="kutagjej-splash__inner">
-        {/* eslint-disable-next-line @next/next/no-img-element -- splash mark before image optimizer is needed */}
-        <img
-          className="kutagjej-splash__logo"
-          src={brandLogoSrc}
-          alt=""
-          width={148}
-          height={148}
-          decoding="async"
-          fetchPriority="high"
-        />
-        <p className="kutagjej-splash__wordmark">
-          {wordmarkSegments ? (
-            <>
-              <span className="kutagjej-splash__wordmark-muted">{wordmarkSegments[0]}</span>
-              <span className="kutagjej-splash__wordmark-brand">{wordmarkSegments[1]}</span>
-            </>
-          ) : (
-            config.site.name
-          )}
-        </p>
-      </div>
-    </div>
-  );
+  return <BrandLoadingScreen mode="reveal" hiding={phase === 'hiding'} />;
 }

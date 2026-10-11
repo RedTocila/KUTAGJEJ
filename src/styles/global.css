@@ -50,26 +50,16 @@ body {
   overscroll-behavior-x: none;
 }
 
-/* Cold-start splash (React-owned overlay in SplashScreen) */
+/* Launch + route-loading cover (SplashScreen and BrandLoadingScreen) */
 .kutagjej-splash {
   position: fixed;
   inset: 0;
   z-index: 100000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(ellipse 42% 32% at 50% 46%, rgba(86, 122, 22, 0.72), transparent 70%),
-    #070906;
+  background: #020401;
   opacity: 1;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.32s ease;
   pointer-events: auto;
-}
-
-html.dark .kutagjej-splash {
-  background:
-    radial-gradient(ellipse 42% 32% at 50% 46%, rgba(86, 122, 22, 0.72), transparent 70%),
-    #070906;
+  overflow: hidden;
 }
 
 .kutagjej-splash--hide {
@@ -77,44 +67,90 @@ html.dark .kutagjej-splash {
   pointer-events: none;
 }
 
-.kutagjej-splash__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.15rem;
-  padding: 1.5rem;
+.kutagjej-splash--enter {
+  animation: kgPendingFadeIn 160ms var(--motion-ease) both;
 }
 
-.kutagjej-splash__logo {
-  width: min(34vw, 148px);
-  height: auto;
+.kutagjej-splash__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   display: block;
-  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+  background: #020401;
 }
 
-.kutagjej-splash__wordmark {
-  margin: 0;
-  display: flex;
-  align-items: baseline;
-  column-gap: 0.08em;
-  font-family: var(--font-kutagjej-wordmark), 'Space Grotesk', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
-  font-size: clamp(1.85rem, 7.2vw, 2.35rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: #d4d4d4;
-  -webkit-font-smoothing: antialiased;
+/* Phones and tall windows: fill the screen. Wide layouts keep the full poster centered. */
+@media (max-aspect-ratio: 4/5) {
+  .kutagjej-splash__art {
+    object-fit: cover;
+    object-position: center 40%;
+  }
 }
 
-.kutagjej-splash__wordmark-muted {
-  color: #d4d4d4;
-  font-weight: 700;
+.kutagjej-splash__progress {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  /* Stay inside the portrait artwork on wide screens; ~68% of a phone on narrow ones. */
+  width: min(68%, calc(100vh * 0.46 * 0.72));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.35rem);
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  transform: translateX(-50%);
+  box-shadow: 0 0 18px rgba(130, 201, 30, 0.28);
 }
 
-.kutagjej-splash__wordmark-brand {
-  color: #82c91e;
-  font-weight: 700;
+.kutagjej-splash__progress-fill {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3d7a0a 0%, #82c91e 58%, #f3ffd4 100%);
+  box-shadow: 0 0 14px rgba(182, 255, 58, 0.9);
+  /* Keep duration in sync with FILL_MS in splash-screen.tsx */
+  animation: kutagjejSplashReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.kutagjej-splash__progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(40%, -50%);
+  background: #f6ffd8;
+  box-shadow: 0 0 12px 4px rgba(198, 255, 74, 0.95);
+}
+
+.kutagjej-splash__progress-fill--pending {
+  width: 36%;
+  animation: kutagjejSplashSweep 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes kutagjejSplashReveal {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes kutagjejSplashSweep {
+  0% {
+    transform: translateX(-140%);
+  }
+  100% {
+    transform: translateX(380%);
+  }
 }
 
 /* Soft page / section enter (transform + opacity only) */
@@ -401,8 +437,18 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
     animation: none !important;
   }
 
-  .kutagjej-splash {
+  .kutagjej-splash,
+  .kutagjej-splash--enter,
+  .kutagjej-splash__progress-fill,
+  .kutagjej-splash__progress-fill--pending {
     transition: none;
+    animation: none;
+  }
+
+  .kutagjej-splash__progress-fill,
+  .kutagjej-splash__progress-fill--pending {
+    width: 100%;
+    transform: none;
   }
 
   .kutagjej-enter,

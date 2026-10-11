@@ -1,14 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import { Box, Container, Grid, Skeleton, Stack } from '@mui/material';
 
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 import { paths } from '@/paths';
 import { mainTabFromPath } from '@/lib/main-tabs';
-import { PENDING_OVERLAY_ATTR } from '@/lib/nav-transition';
-import { MOTION, MOTION_NAV_FADE_MS, NAV_PUSH_MS } from '@/styles/motion';
 import { HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
 import {
   beginPendingNavigation,
@@ -18,33 +15,11 @@ import {
   pathFromHref,
 } from '@/lib/navigation-pending';
 import { isPostListingPath } from '@/lib/post-listing-path';
-import { isPublicBrowsePath, isPublicListingDetailPath } from '@/lib/public-browse-path';
+import { isPublicListingDetailPath } from '@/lib/public-browse-path';
 import { useNavigationPendingPath } from '@/hooks/use-navigation-pending';
-import { CategoryBrowseSkeleton } from '@/components/public/category-browse-skeleton';
-import { HeroSection } from '@/components/public/hero-section';
-import { HomeBannerSkeleton, HomeCarouselsSkeleton } from '@/components/public/homepage-skeletons';
-import { ListingDetailSkeleton } from '@/components/public/listing-detail-skeleton';
-
-// Lazy: SoftNavigateBridge sits in RootLayout — do not eagerly pull homepage
-// carousels / Phosphor icons into every page (Turbopack HMR otherwise breaks the shell).
-const HomeCarouselsFallback = dynamic(
-  () =>
-    import('@/components/public/home-carousels-fallback').then((m) => ({
-      default: m.HomeCarouselsFallback,
-    })),
-  { loading: () => <HomeCarouselsSkeleton />, ssr: false }
-);
-
-const PostListingFormSkeleton = dynamic(
-  () =>
-    import('@/components/user/post-listing-header').then((m) => ({
-      default: m.PostListingFormSkeleton,
-    })),
-  { ssr: false }
-);
 
 const PENDING_TIMEOUT_MS = 10_000;
-/** Soft-nav to home that never commits → full document load (avoids eternal skeletons). */
+/** Soft-nav to home that never commits → full document load (avoids an endless splash). */
 const HOME_SOFT_NAV_FALLBACK_MS = 8_000;
 
 function shouldSkipOverlay(path: string, currentPath: string): boolean {
@@ -64,54 +39,6 @@ function shouldSkipOverlay(path: string, currentPath: string): boolean {
   // Home ↔ Saves ↔ Messages ↔ Profile is a hosted pager on mobile; don't cover it.
   if (mainTabFromPath(path) && mainTabFromPath(currentPath)) return true;
   return false;
-}
-
-function HomePendingSkeleton() {
-  return (
-    <>
-      <HeroSection>
-        <HomeBannerSkeleton />
-      </HeroSection>
-      <HomeCarouselsFallback refresh />
-    </>
-  );
-}
-
-function AppPendingSkeleton() {
-  return (
-    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }} aria-busy aria-label="Duke u ngarkuar">
-      <Stack spacing={2.5}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Skeleton variant="rounded" animation="wave" width={44} height={44} sx={{ borderRadius: 2.25 }} />
-          <Stack spacing={0.75} sx={{ flex: 1 }}>
-            <Skeleton variant="text" animation="wave" width={180} height={32} />
-            <Skeleton variant="text" animation="wave" width={240} height={20} />
-          </Stack>
-        </Stack>
-        <Grid container spacing={2}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Grid key={i} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Skeleton variant="rounded" animation="wave" height={120} sx={{ borderRadius: 2.5 }} />
-            </Grid>
-          ))}
-        </Grid>
-      </Stack>
-    </Container>
-  );
-}
-
-function PendingRouteSkeleton({ path }: { path: string }) {
-  if (path === paths.home) return <HomePendingSkeleton />;
-  if (isPublicBrowsePath(path) || path === paths.public.search) return <CategoryBrowseSkeleton />;
-  if (isPublicListingDetailPath(path)) return <ListingDetailSkeleton />;
-  if (isPostListingPath(path)) {
-    return (
-      <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, px: { xs: 2, sm: 3 } }} aria-busy>
-        <PostListingFormSkeleton />
-      </Container>
-    );
-  }
-  return <AppPendingSkeleton />;
 }
 
 function isInternalAnchorNavigation(anchor: HTMLAnchorElement): string | null {
@@ -141,8 +68,8 @@ function isInternalAnchorNavigation(anchor: HTMLAnchorElement): string | null {
 }
 
 /**
- * Paints the destination skeleton in the same click turn, before Next.js commits
- * the new route. Chrome (header / side nav / bottom nav) stays above this overlay.
+ * Covers the screen with the branded splash in the same click turn, before Next.js
+ * commits the new route. The bar keeps moving until the destination is ready.
  */
 export function NavigationPendingOverlay(): React.JSX.Element | null {
   const pathname = usePathname();
@@ -192,7 +119,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
     const isHome = target === paths.home;
     const timer = window.setTimeout(() => {
       clearPendingNavigation();
-      // Soft nav never committed — hard load so the user is not stuck on skeletons.
+      // Soft nav never committed — hard load so the user is not stuck on the splash.
       if (
         isHome &&
         typeof window !== 'undefined' &&
@@ -208,38 +135,5 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
   // Hide in the same commit as the route so the settle view transition captures the real page.
   if (pathname && normalizeNavPath(pathname) === pendingPath) return null;
 
-  const isAppShell = pendingPath.startsWith('/dashboard') || pendingPath.startsWith('/user/dashboard');
-  const coverPicker = isPostListingPath(pendingPath);
-  const pushIn = !mainTabFromPath(pendingPath);
-
-  return (
-    <Box
-      role="status"
-      aria-live="polite"
-      aria-busy
-      {...{ [PENDING_OVERLAY_ATTR]: '' }}
-      sx={{
-        position: 'fixed',
-        inset: 0,
-        // Listing-build navigations start from the add-listing sheet; sit above it
-        // so the drawer never stays on screen while the form skeleton paints.
-        zIndex: (theme) => (coverPicker ? theme.zIndex.modal + 2 : theme.zIndex.appBar - 1),
-        bgcolor: 'background.default',
-        overflow: 'auto',
-        pointerEvents: 'auto',
-        pl: {
-          lg: isAppShell ? 'var(--SideNav-width, 0px)' : 0,
-        },
-        animation: {
-          xs: pushIn
-            ? `kgPendingPushIn ${NAV_PUSH_MS}ms ${MOTION.easeIos} both`
-            : `kgPendingFadeIn ${MOTION_NAV_FADE_MS}ms ${MOTION.ease} both`,
-          lg: `kgPendingFadeIn ${MOTION_NAV_FADE_MS}ms ${MOTION.ease} both`,
-        },
-        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-      }}
-    >
-      <PendingRouteSkeleton path={pendingPath} />
-    </Box>
-  );
+  return <BrandLoadingScreen mode="pending" enter pendingOverlay />;
 }

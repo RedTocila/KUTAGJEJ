@@ -1,7 +1,6 @@
-import * as React from 'react';
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-import { PostListingFormSkeleton } from '@/components/user/post-listing-header';
-
-export default function Loading(): React.JSX.Element {
-  return <PostListingFormSkeleton />;
+/** Branded splash while this route is still loading. */
+export default function Loading() {
+  return <BrandLoadingScreen />;
 }

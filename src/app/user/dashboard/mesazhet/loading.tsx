@@ -1,7 +1,6 @@
-/**
- * Prefer an empty fallback over the dashboard spinner so soft-nav to Chats
- * does not flash a blank loader — the page paints from cache on mount.
- */
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
+
+/** Branded splash while this route is still loading. */
 export default function Loading() {
-  return null;
+  return <BrandLoadingScreen />;
 }

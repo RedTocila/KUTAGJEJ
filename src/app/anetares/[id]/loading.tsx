@@ -1,12 +1,6 @@
-import * as React from 'react';
+import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-import { MemberProfileSkeleton } from '@/components/public/member-profile-skeleton';
-import { PublicShell } from '@/components/public/public-shell';
-
-export default function Loading(): React.JSX.Element {
-  return (
-    <PublicShell hideHeader>
-      <MemberProfileSkeleton />
-    </PublicShell>
-  );
+/** Branded splash while this route is still loading. */
+export default function Loading() {
+  return <BrandLoadingScreen />;
 }

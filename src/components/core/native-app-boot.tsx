@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 
+import { NativePullRefresh } from '@/components/core/native-pull-refresh';
 import { isNativeApp, registerNativePush } from '@/lib/native-app';
 import { rememberNativePushToken, syncNativePushToken } from '@/lib/native-push-client';
 import { ensureRevenueCat } from '@/lib/revenuecat-client';
@@ -22,7 +23,7 @@ function markNativeDocument(): void {
  * Boots native-only behaviors when the site runs inside the Capacitor shell.
  * Harmless on mobile/desktop browsers.
  */
-export function NativeAppBoot(): null {
+export function NativeAppBoot(): React.JSX.Element {
   const { user } = useUser();
   const userId = user?.id ?? null;
   const [pushToken, setPushToken] = React.useState<string | null>(null);
@@ -133,5 +134,5 @@ export function NativeAppBoot(): null {
     };
   }, []);
 
-  return null;
+  return <NativePullRefresh />;
 }

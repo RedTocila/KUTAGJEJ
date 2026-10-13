@@ -69,6 +69,7 @@ import {
   type ConversationSummary,
 } from '@/lib/conversations-client';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
+import { clearStatusBarTop } from '@/lib/mobile-layout';
 import { languageHtmlLang } from '@/lib/language';
 import { toAbsoluteSiteUrl, whatsappInquireHref } from '@/lib/listing-contact';
 import {
@@ -2624,7 +2625,7 @@ export function UserMessagesView() {
         sx={{
           display: { xs: showThreadOnMobile ? 'none' : 'flex', md: 'flex' },
           px: { xs: 2, md: 0 },
-          pt: { xs: 1.25, md: 0 },
+          pt: { xs: clearStatusBarTop(10), md: 0 },
           pb: { xs: 0.75, md: 0 },
           // Mobile: title only; keep description on desktop.
           '& .MuiTypography-body2': { display: { xs: 'none', md: 'block' } },
@@ -2979,7 +2980,8 @@ export function UserMessagesView() {
                     zIndex: 2,
                     alignItems: 'center',
                     px: { xs: 1.25, md: 1.5 },
-                    py: 1.25,
+                    pt: { xs: clearStatusBarTop(10), md: 1.25 },
+                    pb: 1.25,
                     minHeight: 64,
                     flexShrink: 0,
                     bgcolor: 'background.paper',
@@ -3025,7 +3027,8 @@ export function UserMessagesView() {
                     zIndex: 2,
                     alignItems: 'center',
                     px: { xs: 1.25, md: 1.5 },
-                    py: 1.25,
+                    pt: { xs: clearStatusBarTop(10), md: 1.25 },
+                    pb: 1.25,
                     minHeight: 64,
                     flexShrink: 0,
                     bgcolor: 'background.paper',

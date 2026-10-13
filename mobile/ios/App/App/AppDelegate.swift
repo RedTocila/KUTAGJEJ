@@ -62,6 +62,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 /// Set as the custom class of the root view controller in Main.storyboard.
 class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
     private let pullToRefresh = UIRefreshControl()
+    private var publishedSafeTop: CGFloat = -1
     private var loadingObservation: NSKeyValueObservation?
     private var refreshTimeout: DispatchWorkItem?
     private var navigationProxy: NavigationDelegateProxy?
@@ -94,17 +95,31 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         }
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.contentInset = .zero
+        publishSafeArea()
+    }
+
+    /// Tell the page how tall the status bar is. CSS `env(safe-area-inset-top)` stays 0
+    /// in this edge-to-edge web view, so headers use `--kg-safe-top` instead.
+    private func publishSafeArea() {
+        guard let webView = webView else { return }
+        let top = view.safeAreaInsets.top
+        guard top > 1, abs(top - publishedSafeTop) > 0.5 else { return }
+        publishedSafeTop = top
+        let bottom = view.safeAreaInsets.bottom
+        let js = "document.documentElement.style.setProperty('--kg-safe-top','\(top)px');document.documentElement.style.setProperty('--kg-safe-bottom','\(bottom)px');"
+        webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         guard let webView = webView else { return }
 
+        // Pull-to-refresh is the page's iPhone spinner. The native control sat under the
+        // status bar and reloaded the whole web view, so it stays detached.
         pullToRefresh.addTarget(self, action: #selector(handlePullToRefresh), for: .valueChanged)
         webView.scrollView.bounces = true
         webView.scrollView.alwaysBounceVertical = true
-        webView.scrollView.refreshControl = pullToRefresh
-        webView.scrollView.panGestureRecognizer.addTarget(self, action: #selector(handleScrollPan(_:)))
+        webView.scrollView.refreshControl = nil
         applyPageBackground(dark: true)
         installThemeBackgroundSync(on: webView)
 
@@ -149,21 +164,6 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         offlineView.setRetrying(true)
         let target = lastFailedURL ?? bridge?.config.serverURL ?? URL(string: "https://kutagjej.al/")!
         webView.load(URLRequest(url: target))
-    }
-
-    @objc private func handleScrollPan(_ gesture: UIPanGestureRecognizer) {
-        guard gesture.state == .began, let webView = webView, !pullToRefresh.isRefreshing else { return }
-        webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
-            guard let self = self, let webView = self.webView else { return }
-            let allowed = (result as? Bool) ?? true
-            if allowed {
-                if webView.scrollView.refreshControl == nil {
-                    webView.scrollView.refreshControl = self.pullToRefresh
-                }
-            } else if !self.pullToRefresh.isRefreshing {
-                webView.scrollView.refreshControl = nil
-            }
-        }
     }
 
     @objc private func handlePullToRefresh() {

@@ -469,6 +469,8 @@ html[data-native-app] body {
   min-height: 100dvh;
   overscroll-behavior-x: none;
   overscroll-behavior-y: auto;
+  /* Edge-to-edge WKWebView reports a 0px safe-area inset. 59px clears a Dynamic Island. */
+  --kg-safe-top: max(env(safe-area-inset-top, 0px), 59px);
 }
 
 /* Explicit colors. A CSS variable here can fail to paint the status-bar inset,
@@ -493,7 +495,7 @@ html[data-native-app]::after {
   position: fixed;
   left: 0;
   right: 0;
-  z-index: 1400;
+  z-index: 8;
   pointer-events: none;
   background: #0a0a0a;
 }
@@ -505,7 +507,7 @@ html.light[data-native-app]::after {
 
 html[data-native-app]::before {
   top: 0;
-  height: env(safe-area-inset-top, 0px);
+  height: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
 
 html[data-native-app]::after {
@@ -514,12 +516,41 @@ html[data-native-app]::after {
 }
 
 html[data-native-app] .MuiAppBar-root {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
 
 html[data-native-app] .MuiAppBar-positionFixed + .MuiToolbar-root {
   box-sizing: content-box;
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
+}
+
+/* iPhone activity indicator used by native pull-to-refresh. */
+.kg-ios-spinner {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  color: inherit;
+}
+
+.kg-ios-spinner span {
+  position: absolute;
+  left: 10px;
+  top: 1px;
+  width: 2px;
+  height: 6px;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: 1px 10px;
+  animation: kg-ios-spinner 0.9s linear infinite;
+}
+
+@keyframes kg-ios-spinner {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.18;
+  }
 }
 
 /*

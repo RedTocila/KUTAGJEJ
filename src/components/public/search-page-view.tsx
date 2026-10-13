@@ -529,8 +529,8 @@ export function SearchPageView({
             px: { xs: 2, sm: 3, lg: 0 },
             pt: {
               xs: categoriesHidden
-                ? 'calc(8px + env(safe-area-inset-top, 0px))'
-                : 'calc(10px + env(safe-area-inset-top, 0px))',
+                ? 'calc(8px + var(--kg-safe-top, env(safe-area-inset-top, 0px)))'
+                : 'calc(10px + var(--kg-safe-top, env(safe-area-inset-top, 0px)))',
               lg: 0,
             },
             pb: { xs: 1.25, lg: 0 },

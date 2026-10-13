@@ -28,6 +28,18 @@ export function mobileBottomSheetUnderNavSx(maxHeight: string) {
   } as const;
 }
 
+/**
+ * Status-bar clearance inside the Capacitor shell.
+ * iOS reports `env(safe-area-inset-top)` as 0 when the web view is forced edge-to-edge,
+ * so the native app sets `--kg-safe-top` (with a Dynamic Island fallback in CSS).
+ */
+export const SAFE_AREA_TOP = 'var(--kg-safe-top, env(safe-area-inset-top, 0px))';
+
+/** Keep `webPx` on the website. In the app, sit `nativeGapPx` below the status bar. */
+export function clearStatusBarTop(webPx: number, nativeGapPx = webPx): string {
+  return `max(${webPx}px, calc(${SAFE_AREA_TOP} + ${nativeGapPx}px))`;
+}
+
 /** Matches dashboard `HeaderSearchBar` height. */
 export const MOBILE_SEARCH_BAR_HEIGHT_PX = 42;
 
@@ -41,7 +53,7 @@ export const MOBILE_SEARCH_DOCK_GAP_PX = 12;
 export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
 
 /** Content padding so /kerko results clear the top search bar when categories are hidden. */
-export const MOBILE_SEARCH_TOP_BAR_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px)`;
+export const MOBILE_SEARCH_TOP_BAR_PADDING = `calc(${SAFE_AREA_TOP} + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px)`;
 
 /** Content padding so /kerko results clear the search bar + categories at the top. */
-export const MOBILE_SEARCH_TOP_DOCK_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px)`;
+export const MOBILE_SEARCH_TOP_DOCK_PADDING = `calc(${SAFE_AREA_TOP} + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px)`;

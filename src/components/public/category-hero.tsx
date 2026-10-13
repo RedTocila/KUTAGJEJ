@@ -132,7 +132,7 @@ export function PublicCategoryHero({
             boxSizing: 'border-box',
             zIndex: { xs: theme.zIndex.appBar, md: 'auto' },
             pt: {
-              xs: 'max(10px, env(safe-area-inset-top, 0px))',
+              xs: 'max(10px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 10px))',
               md: 5,
             },
             pb: isOkazion || isProfiles ? { xs: 0.75, md: 2 } : { xs: 1.5, md: 3 },

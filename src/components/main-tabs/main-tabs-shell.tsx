@@ -27,7 +27,7 @@ import {
   type MainTab,
 } from '@/lib/main-tabs';
 import { MAIN_TAB_SLIDE_MS, publishMainTabNavProgress, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
-import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { clearStatusBarTop, MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
 import { setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
 import { MOTION } from '@/styles/motion';
@@ -590,7 +590,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               paneIndex={1}
               active={index === 1}
               layoutActive={layoutIndex === 1}
-              contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+              contentSx={{ px: 2, pt: { xs: clearStatusBarTop(24, 12), md: 3 }, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
               {shouldMountPane(1, index, visited) ? (
@@ -635,7 +635,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 4}
               contentSx={{
                 px: 2,
-                pt: 3,
+                pt: { xs: clearStatusBarTop(24, 12), md: 3 },
                 pb: MOBILE_CONTENT_BOTTOM_PADDING,
                 bgcolor: 'background.paper',
                 minHeight: '100%',

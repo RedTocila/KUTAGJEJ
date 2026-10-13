@@ -50,7 +50,7 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useStorePrices } from '@/hooks/use-store-prices';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
@@ -237,7 +237,6 @@ function PremiumListingSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
@@ -442,7 +441,7 @@ function PremiumListingSection() {
                     sx={dualPayButtonSx('warning')}
                   >
                     {useAppleIap ? (
-                      <StorePriceLabel value={storePrices[pkg.id]} />
+                      <StorePriceLabel value={appleSheetUsd(pkg.id)} />
                     ) : (
                       <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                     )}

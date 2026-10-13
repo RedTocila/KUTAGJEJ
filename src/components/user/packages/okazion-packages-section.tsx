@@ -40,7 +40,7 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useStorePrices } from '@/hooks/use-store-prices';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
@@ -165,7 +165,6 @@ export function OkazionPackagesSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -436,7 +435,7 @@ export function OkazionPackagesSection() {
               sx={dualPayButtonSx('error')}
             >
               {useAppleIap ? (
-                <StorePriceLabel value={storePrices[pkg.id]} />
+                <StorePriceLabel value={appleSheetUsd(pkg.id)} />
               ) : (
                 <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
               )}

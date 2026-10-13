@@ -15,7 +15,7 @@ import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useStorePrices } from '@/hooks/use-store-prices';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
 import { isIapAvailable, purchaseCreditsPackage } from '@/lib/revenuecat-client';
@@ -80,7 +80,6 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
@@ -208,7 +207,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 compactPrice
                 price={
                   useAppleIap ? (
-                    <StorePriceLabel value={storePrices[nativeCreditKey(pkg) || '']} />
+                    <StorePriceLabel value={appleSheetUsd(nativeCreditKey(pkg))} />
                   ) : (
                     <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />
                   )

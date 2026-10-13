@@ -27,8 +27,8 @@ import {
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
 import { formatEurWithLifetime } from '@/components/user/packages/package-ui';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useCopy } from '@/hooks/use-copy';
-import { useStorePrices } from '@/hooks/use-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
@@ -120,7 +120,6 @@ export function ListingBoostChoiceBar({
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -248,7 +247,7 @@ export function ListingBoostChoiceBar({
                 >
                   <Typography sx={{ fontWeight: 800, color: PREMIUM_AMBER, mb: 1 }}>
                     {useAppleIap
-                      ? t.packages.daysStorePrice(pkg.days, storePrices[pkg.id] || '…', pkg.priceBc)
+                      ? t.packages.daysStorePrice(pkg.days, appleSheetUsd(pkg.id) || '…', pkg.priceBc)
                       : t.packages.daysPrice(pkg.days, pkg.priceEur, pkg.priceBc)}
                   </Typography>
                   <Stack direction="row" spacing={1}>
@@ -273,7 +272,7 @@ export function ListingBoostChoiceBar({
                       }}
                     >
                       {useAppleIap
-                        ? storePrices[pkg.id] || '…'
+                        ? appleSheetUsd(pkg.id) || '…'
                         : formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                     </Button>
                     <Button
@@ -334,7 +333,7 @@ export function ListingBoostChoiceBar({
             >
               <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
                 {useAppleIap
-                  ? t.packages.daysStorePrice(7, storePrices[OKAZION_PACKAGE_ID] || '…', OKAZION_PRICE_BC)
+                  ? t.packages.daysStorePrice(7, appleSheetUsd(OKAZION_PACKAGE_ID) || '…', OKAZION_PRICE_BC)
                   : t.packages.daysPrice(7, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
               </Typography>
             </Box>
@@ -358,7 +357,7 @@ export function ListingBoostChoiceBar({
                 }}
               >
                 {useAppleIap
-                  ? storePrices[OKAZION_PACKAGE_ID] || '…'
+                  ? appleSheetUsd(OKAZION_PACKAGE_ID) || '…'
                   : formatEurWithLifetime(OKAZION_PRICE_EUR, lifetimePercent)}
               </Button>
               <Button

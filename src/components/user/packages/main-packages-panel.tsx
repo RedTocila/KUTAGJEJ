@@ -19,7 +19,7 @@ import { listPublicContracts } from '@/lib/public-contracts-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { useStorePrices } from '@/hooks/use-store-prices';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
@@ -294,7 +294,6 @@ export function MainPackagesPanel() {
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
@@ -516,7 +515,7 @@ export function MainPackagesPanel() {
                 badge={titleBadge(t, isCurrent)}
                 price={
                   useAppleIap ? (
-                    <StorePriceLabel value={storePrices[planCode]} />
+                    <StorePriceLabel value={appleSheetUsd(planCode)} />
                   ) : (
                     <PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />
                   )

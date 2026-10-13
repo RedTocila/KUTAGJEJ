@@ -16,7 +16,7 @@ import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/S
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
-import { useStorePrices } from '@/hooks/use-store-prices';
+import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -69,7 +69,6 @@ export function OkazionBoostUpsell({
   const t = useCopy();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const [planRemaining, setPlanRemaining] = React.useState(0);
@@ -107,7 +106,7 @@ export function OkazionBoostUpsell({
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
         {useAppleIap
-          ? t.packages.okazionUpsellStoreBody(storePrices[OKAZION_PACKAGE_ID] || '…', OKAZION_PRICE_BC)
+          ? t.packages.okazionUpsellStoreBody(appleSheetUsd(OKAZION_PACKAGE_ID) || '…', OKAZION_PRICE_BC)
           : t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
       </Typography>
 
@@ -138,7 +137,7 @@ export function OkazionBoostUpsell({
           control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
           label={
             useAppleIap
-              ? `${t.packages.buyNow} · ${storePrices[OKAZION_PACKAGE_ID] || '…'}`
+              ? `${t.packages.buyNow} · ${appleSheetUsd(OKAZION_PACKAGE_ID) || '…'}`
               : `${t.packages.buyNow} · ${OKAZION_PRICE_EUR}€`
           }
         />
@@ -169,7 +168,6 @@ export function OkazionPostActions({
   const t = useCopy();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
-  const storePrices = useStorePrices(useAppleIap);
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
@@ -265,7 +263,7 @@ export function OkazionPostActions({
             {submitting
               ? t.packages.posting
               : useAppleIap
-                ? `${t.packages.post} · ${storePrices[OKAZION_PACKAGE_ID] || '…'}`
+                ? `${t.packages.post} · ${appleSheetUsd(OKAZION_PACKAGE_ID) || '…'}`
                 : `${t.packages.post} · ${OKAZION_PRICE_EUR}€`}
           </Button>
           <Button

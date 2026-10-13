@@ -89,65 +89,6 @@ export async function fetchIapCatalog(): Promise<IapCatalog> {
   return res.data;
 }
 
-let cachedStorePrices: Record<string, string> | null = null;
-let loadingStorePrices: Promise<Record<string, string>> | null = null;
-
-/** Same text as the Apple payment sheet: currency code plus the charged amount (`USD 10.99`). */
-function formatAppleSheetPrice(product: {
-  price?: number | string | null;
-  currencyCode?: string | null;
-  priceString?: string | null;
-}): string {
-  const code = String(product.currencyCode || '').trim().toUpperCase();
-  const amount = typeof product.price === 'number' ? product.price : Number(product.price);
-  if (code && Number.isFinite(amount)) {
-    const formatted = new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-    return `${code} ${formatted}`;
-  }
-  return String(product.priceString || '').trim();
-}
-
-/**
- * App Store prices for this Apple ID, keyed by product id and catalog key
- * (`starter`, `Starter`, `premium-30`, …). Taken from StoreKit, not the euro catalog.
- */
-export async function fetchStorePriceStrings(): Promise<Record<string, string>> {
-  if (cachedStorePrices) return cachedStorePrices;
-  if (!isIapAvailable()) return {};
-  if (!loadingStorePrices) {
-    loadingStorePrices = (async () => {
-      await ensureRevenueCat();
-      const catalog = await fetchIapCatalog();
-      const groups = [catalog.plans, catalog.credits, catalog.premium, catalog.okazion];
-      const ids = [...new Set(groups.flatMap((group) => Object.values(group)).filter(Boolean))];
-      if (ids.length === 0) return {};
-      const { Purchases } = await loadPurchases();
-      const result = await Purchases.getProducts({ productIdentifiers: ids });
-      const byId: Record<string, string> = {};
-      for (const product of result.products || []) {
-        const label = formatAppleSheetPrice(product);
-        if (product.identifier && label) byId[product.identifier] = label;
-      }
-      const map: Record<string, string> = { ...byId };
-      for (const group of groups) {
-        for (const [key, productId] of Object.entries(group)) {
-          const price = byId[productId];
-          if (price) map[key] = price;
-        }
-      }
-      cachedStorePrices = map;
-      return map;
-    })().catch((err) => {
-      loadingStorePrices = null;
-      throw err;
-    });
-  }
-  return loadingStorePrices;
-}
-
 type PurchaseResult =
   | { ok: true }
   | { ok: false; cancelled?: boolean; message: string };

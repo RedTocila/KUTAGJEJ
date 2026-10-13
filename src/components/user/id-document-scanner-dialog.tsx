@@ -395,7 +395,7 @@ export function IdDocumentScannerDialog({ open, onClose, onCapture }: IdDocument
         aria-label="Mbyll skanerin"
         sx={{
           position: 'fixed',
-          top: 'max(10px, env(safe-area-inset-top))',
+          top: 'max(10px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 10px))',
           right: 'max(10px, env(safe-area-inset-right))',
           zIndex: 9999,
           width: 48,

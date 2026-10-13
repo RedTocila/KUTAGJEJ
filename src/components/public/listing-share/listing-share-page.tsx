@@ -817,7 +817,7 @@ export function ListingSharePage({
           alignItems: 'center',
           justifyContent: 'space-between',
           px: { xs: 1.25, sm: 2 },
-          pt: { xs: 'max(10px, env(safe-area-inset-top))', sm: 1.5 },
+          pt: { xs: 'max(10px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 10px))', sm: 1.5 },
           pb: 1,
           flexShrink: 0,
           zIndex: 2,

@@ -596,7 +596,7 @@ export function FilterDrawerPanel({
           transition: 'transform 0.42s cubic-bezier(0.22, 1, 0.36, 1)',
           overflow: 'hidden',
           overscrollBehavior: 'contain',
-          pt: 'env(safe-area-inset-top, 0px)',
+          pt: 'var(--kg-safe-top, env(safe-area-inset-top, 0px))',
         }}
       >
         <Box

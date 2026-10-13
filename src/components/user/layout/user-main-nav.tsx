@@ -53,7 +53,7 @@ export function UserMainNav() {
           borderBottom: '1px solid var(--mui-palette-divider)',
           backgroundColor: 'var(--mui-palette-background-paper)',
           position: 'sticky',
-          top: 0,
+          top: 'var(--kg-safe-top, 0px)',
           zIndex: 'var(--mui-zIndex-appBar)',
         }}
       >

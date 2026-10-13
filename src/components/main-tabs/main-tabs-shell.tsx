@@ -27,7 +27,7 @@ import {
   type MainTab,
 } from '@/lib/main-tabs';
 import { MAIN_TAB_SLIDE_MS, publishMainTabNavProgress, registerMainTabPagerPreview } from '@/lib/main-tab-pager';
-import { clearStatusBarTop, MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { APP_VIEWPORT_HEIGHT, MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { beginPendingNavigation } from '@/lib/navigation-pending';
 import { setActiveTabForRefresh, subscribeTabRefresh } from '@/lib/tab-refresh';
 import { MOTION } from '@/styles/motion';
@@ -147,7 +147,7 @@ function MainTabPane({
       aria-hidden={!active}
       sx={{
         width: `${100 / MAIN_TAB_COUNT}%`,
-        minHeight: '100dvh',
+        minHeight: APP_VIEWPORT_HEIGHT,
         display: 'flex',
         flexDirection: 'column',
         overscrollBehaviorX: 'none',
@@ -156,7 +156,7 @@ function MainTabPane({
         pointerEvents: active ? 'auto' : 'none',
         ...(fill
           ? {
-              height: '100dvh',
+              height: APP_VIEWPORT_HEIGHT,
               overflowX: 'hidden',
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
@@ -175,7 +175,7 @@ function MainTabPane({
                 },
               }
             : {
-                height: '100dvh',
+                height: APP_VIEWPORT_HEIGHT,
                 overflow: 'hidden',
                 alignSelf: 'flex-start',
               }),
@@ -548,13 +548,13 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
           sx={{
             width: '100%',
             maxWidth: '100%',
-            minHeight: '100dvh',
+            minHeight: APP_VIEWPORT_HEIGHT,
             touchAction: 'pan-y',
             overscrollBehaviorX: 'none',
             bgcolor: 'background.default',
             ...(threadOpen
               ? {
-                  height: '100dvh',
+                  height: APP_VIEWPORT_HEIGHT,
                   overflow: 'hidden',
                 }
               : {
@@ -570,7 +570,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             sx={{
               display: 'flex',
               width: `${MAIN_TAB_COUNT * 100}%`,
-              minHeight: threadOpen ? '100%' : '100dvh',
+              minHeight: threadOpen ? '100%' : APP_VIEWPORT_HEIGHT,
               height: threadOpen ? '100%' : 'auto',
               alignItems: 'flex-start',
               willChange: 'transform',
@@ -590,7 +590,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               paneIndex={1}
               active={index === 1}
               layoutActive={layoutIndex === 1}
-              contentSx={{ px: 2, pt: { xs: clearStatusBarTop(24, 12), md: 3 }, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
+              contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
               {shouldMountPane(1, index, visited) ? (
@@ -635,7 +635,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 4}
               contentSx={{
                 px: 2,
-                pt: { xs: clearStatusBarTop(24, 12), md: 3 },
+                pt: 3,
                 pb: MOBILE_CONTENT_BOTTOM_PADDING,
                 bgcolor: 'background.paper',
                 minHeight: '100%',

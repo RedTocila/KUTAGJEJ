@@ -161,7 +161,15 @@ export function SearchOverlay({
           },
         }}
       >
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            pt: 'var(--kg-safe-top, 0px)',
+          }}
+        >
           <Suspense fallback={<SearchOverlayFallback />}>
             <SearchPageView
               variant="overlay"

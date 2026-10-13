@@ -35,7 +35,7 @@ export function isIapAvailable(): boolean {
 
 async function loadPurchases() {
   const mod = await import('@revenuecat/purchases-capacitor');
-  return mod.Purchases;
+  return mod;
 }
 
 /** Configure SDK once; call again with userId after login to identify the customer. */
@@ -49,9 +49,16 @@ export async function ensureRevenueCat(appUserId?: string | null): Promise<boole
 
   if (!configuring) {
     configuring = (async () => {
-      const Purchases = await loadPurchases();
+      const { Purchases, STOREKIT_VERSION } = await loadPurchases();
       if (!configured) {
-        await Purchases.configure({ apiKey, appUserID: appUserId || undefined });
+        // StoreKit 2's purchase() runs off the main actor in this SDK build, so the
+        // Apple sheet never appears and the call never returns. StoreKit 1 presents
+        // the same sheet from the key window.
+        await Purchases.configure({
+          apiKey,
+          appUserID: appUserId || undefined,
+          storeKitVersion: STOREKIT_VERSION.STOREKIT_1,
+        });
         configured = true;
       } else if (appUserId) {
         await Purchases.logIn({ appUserID: appUserId });
@@ -64,7 +71,7 @@ export async function ensureRevenueCat(appUserId?: string | null): Promise<boole
   } else if (appUserId) {
     // Already configuring/configured — still log in when we learn the user id.
     await configuring;
-    const Purchases = await loadPurchases();
+    const { Purchases } = await loadPurchases();
     await Purchases.logIn({ appUserID: appUserId });
   }
 
@@ -98,7 +105,7 @@ export async function purchaseStoreProductId(
   }
   try {
     await ensureRevenueCat(opts?.userId);
-    const Purchases = await loadPurchases();
+    const { Purchases } = await loadPurchases();
     const started = Date.now();
 
     const products = await Purchases.getProducts({ productIdentifiers: [productId] });
@@ -151,7 +158,7 @@ export async function restorePurchases(opts?: { userId?: string | null }): Promi
   }
   try {
     await ensureRevenueCat(opts?.userId);
-    const Purchases = await loadPurchases();
+    const { Purchases } = await loadPurchases();
     await Purchases.restorePurchases();
     // Renewals / prior subs are granted via webhook when RC syncs.
     await new Promise((r) => setTimeout(r, 1500));

@@ -53,7 +53,10 @@ export const MOBILE_SEARCH_DOCK_GAP_PX = 12;
 export const MOBILE_SEARCH_CATEGORY_ROW_PX = 120;
 
 /** Content padding so /kerko results clear the top search bar when categories are hidden. */
-export const MOBILE_SEARCH_TOP_BAR_PADDING = `calc(${SAFE_AREA_TOP} + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px)`;
+export const MOBILE_SEARCH_TOP_BAR_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px)`;
 
 /** Content padding so /kerko results clear the search bar + categories at the top. */
-export const MOBILE_SEARCH_TOP_DOCK_PADDING = `calc(${SAFE_AREA_TOP} + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px)`;
+export const MOBILE_SEARCH_TOP_DOCK_PADDING = `calc(env(safe-area-inset-top, 0px) + ${MOBILE_SEARCH_DOCK_TOP_PADDING_PX}px + ${MOBILE_SEARCH_BAR_HEIGHT_PX}px + ${MOBILE_SEARCH_DOCK_GAP_PX}px + ${MOBILE_SEARCH_CATEGORY_ROW_PX}px)`;
+
+/** Full-height panes inside the native shell, after the status-bar padding on body. */
+export const APP_VIEWPORT_HEIGHT = 'calc(100dvh - var(--kg-safe-top, 0px))';

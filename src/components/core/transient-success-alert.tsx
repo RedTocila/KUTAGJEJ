@@ -45,7 +45,7 @@ export function TransientNotification({
     <Box
       sx={{
         position: 'fixed',
-        top: 'max(12px, env(safe-area-inset-top))',
+        top: 'max(12px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 12px))',
         left: { xs: 12, sm: '50%' },
         right: { xs: 12, sm: 'auto' },
         zIndex: (theme) => theme.zIndex.snackbar,

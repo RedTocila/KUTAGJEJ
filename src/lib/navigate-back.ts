@@ -92,6 +92,14 @@ export function canPageNavigateBack(): boolean {
   return canNavigateBack();
 }
 
+/** True when `navigatePageBack` will pop history (and fire popstate) rather than push a fallback. */
+export function pageBackUsesHistory(): boolean {
+  const delta = getPageBackDelta();
+  if (delta != null && delta > 0) return true;
+  if (getNavigationIndex() != null) return false;
+  return canNavigateBack();
+}
+
 type AppRouterLike = {
   back: () => void;
   push: (href: string) => void;

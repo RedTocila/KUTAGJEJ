@@ -497,7 +497,7 @@ export function ImageLightbox({
         aria-label="Mbyll pamjen e fotos"
         sx={{
           position: 'fixed',
-          top: { xs: 'max(12px, env(safe-area-inset-top))', md: 16 },
+          top: { xs: 'max(12px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 12px))', md: 16 },
           right: { xs: 'max(12px, env(safe-area-inset-right))', md: 16 },
           ...controlButtonSx,
         }}

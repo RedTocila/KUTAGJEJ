@@ -428,7 +428,7 @@ export function BusinessMenuFullPage({ listing }: { listing: PublicDirectoryList
         <Box
           sx={{
             position: 'sticky',
-            top: 0,
+            top: 'var(--kg-safe-top, 0px)',
             zIndex: 10,
             bgcolor: 'rgba(var(--mui-palette-background-defaultChannel) / 0.92)',
             backdropFilter: 'blur(12px)',

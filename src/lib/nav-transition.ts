@@ -35,6 +35,16 @@ let committedEntryIndex: number | null = null;
 let traverseWaiter: { path: string; resolve: () => void } | null = null;
 let replayingPopState = false;
 let popStateInstalled = false;
+/** Runs synchronously inside the popstate handler, before the old frame is snapshotted. */
+let beforeTraverseCapture: (() => void) | null = null;
+
+/**
+ * Edge-swipe back keeps a live transform until the popstate snapshot.
+ * Clearing it here (same turn as `startViewTransition`) avoids a paint of the unshifted page.
+ */
+export function runBeforeNextTraverseCapture(fn: () => void): void {
+  beforeTraverseCapture = fn;
+}
 
 function navigationEntryIndex(): number | null {
   const { navigation } = window as Window & { navigation?: { currentEntry?: { index: number } | null } };
@@ -96,14 +106,39 @@ export function onNavTransitionStart(href: string, navigationType: RouterNavigat
   addTransitionType(NAV_TRANSITION_TYPES[direction]);
 }
 
+function takeTraverseCaptureHook(): void {
+  const hook = beforeTraverseCapture;
+  beforeTraverseCapture = null;
+  hook?.();
+}
+
+function clearEdgeCommitStyles(): void {
+  const root = document.documentElement;
+  delete root.dataset.kgEdgeCommit;
+  root.style.removeProperty('--kg-edge-from');
+  root.style.removeProperty('--kg-edge-under');
+  root.style.removeProperty('--kg-edge-dim');
+  root.style.removeProperty('--kg-edge-dur');
+}
+
 function handlePopState(event: PopStateEvent): void {
-  if (replayingPopState || prefersReducedMotion()) return;
+  if (replayingPopState) return;
+  if (prefersReducedMotion()) {
+    takeTraverseCaptureHook();
+    return;
+  }
   // Safari / Chrome swipe-back already animated the page.
-  if ((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition) return;
+  if ((event as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition) {
+    takeTraverseCaptureHook();
+    return;
+  }
 
   const to = normalizeNavPath(window.location.pathname);
   const from = currentPath();
-  if (to === from || isPagerSwap(from, to)) return;
+  if (to === from || isPagerSwap(from, to)) {
+    takeTraverseCaptureHook();
+    return;
+  }
 
   const index = navigationEntryIndex();
   const direction: NavTransitionDirection =
@@ -111,8 +146,12 @@ function handlePopState(event: PopStateEvent): void {
   const { state } = event;
 
   event.stopImmediatePropagation();
+  // Drop the live finger-tracking transform before the snapshot so the pop
+  // animation can continue from `--kg-edge-from` without doubling the offset.
+  takeTraverseCaptureHook();
   document.documentElement.dataset.kgNav = direction;
-  document.startViewTransition(
+  const edgeCommit = document.documentElement.dataset.kgEdgeCommit === '1';
+  const transition = document.startViewTransition(
     () =>
       new Promise<void>((resolve) => {
         const done = () => {
@@ -130,6 +169,9 @@ function handlePopState(event: PopStateEvent): void {
         }
       }),
   );
+  if (edgeCommit) {
+    void transition.finished.finally(clearEdgeCommitStyles);
+  }
 }
 
 /** Must run before Next's router registers its popstate listener. */

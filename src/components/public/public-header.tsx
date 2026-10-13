@@ -91,7 +91,9 @@ export function PublicHeader() {
               };
 
           return {
-            ...(pinToViewport ? { top: 0, left: 0, right: 0 } : { width: '100%' }),
+            ...(pinToViewport
+              ? { top: 'var(--kg-safe-top, env(safe-area-inset-top, 0px))', left: 0, right: 0 }
+              : { width: '100%' }),
             color: 'text.primary',
             backgroundColor,
             backdropFilter: backdrop,
@@ -99,7 +101,10 @@ export function PublicHeader() {
             borderBottom: 'none',
             boxShadow: 'none',
             backgroundImage: 'none',
-            transform: pinToViewport && headerHidden ? 'translateY(-100%)' : 'translateY(0)',
+            transform:
+              pinToViewport && headerHidden
+                ? 'translateY(calc(-100% - var(--kg-safe-top, 0px)))'
+                : 'translateY(0)',
             transition: pinToViewport
               ? theme.transitions.create(['transform', 'background-color'], {
                   duration: 220,

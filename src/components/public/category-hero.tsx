@@ -123,7 +123,7 @@ export function PublicCategoryHero({
 
           return {
             position: { xs: 'fixed', md: 'static' },
-            top: { xs: 0, md: 'auto' },
+            top: { xs: 'var(--kg-safe-top, env(safe-area-inset-top, 0px))', md: 'auto' },
             left: { xs: 0, md: 'auto' },
             right: { xs: 0, md: 'auto' },
             width: { xs: '100%', md: 'auto' },
@@ -132,7 +132,7 @@ export function PublicCategoryHero({
             boxSizing: 'border-box',
             zIndex: { xs: theme.zIndex.appBar, md: 'auto' },
             pt: {
-              xs: 'max(10px, calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + 10px))',
+              xs: 'max(10px, env(safe-area-inset-top, 0px))',
               md: 5,
             },
             pb: isOkazion || isProfiles ? { xs: 0.75, md: 2 } : { xs: 1.5, md: 3 },
@@ -143,7 +143,7 @@ export function PublicCategoryHero({
             backdropFilter: { xs: showFrost ? blur : 'none', md: 'none' },
             WebkitBackdropFilter: { xs: showFrost ? blur : 'none', md: 'none' },
             transform: {
-              xs: chromeHidden ? 'translateY(-100%)' : 'translateY(0)',
+              xs: chromeHidden ? 'translateY(calc(-100% - var(--kg-safe-top, 0px)))' : 'translateY(0)',
               md: 'none',
             },
             transition: theme.transitions.create(['transform', 'background-color', 'backdrop-filter'], {

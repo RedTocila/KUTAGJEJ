@@ -348,6 +348,74 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
   }
 }
 
+/*
+ * Interactive edge-swipe back (native shell). The live page tracks the finger;
+ * on release the pop view-transition continues from `--kg-edge-from`.
+ */
+#kg-edge-underlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #ffffff;
+  transform: translate3d(var(--kg-edge-under, 0px), 0, 0);
+  will-change: transform;
+}
+
+html.dark #kg-edge-underlay {
+  background: #0a0a0a;
+}
+
+#kg-edge-underlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, var(--kg-edge-dim, 0));
+}
+
+html[data-kg-edge='drag'] body {
+  position: relative;
+  z-index: 2;
+  transform: translate3d(var(--kg-edge-x, 0px), 0, 0);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.16);
+  transition: none;
+  will-change: transform;
+}
+
+html[data-kg-edge='drag'][data-kg-edge-anim] body,
+html[data-kg-edge='drag'][data-kg-edge-anim] #kg-edge-underlay {
+  transition: transform var(--kg-edge-dur, 280ms) var(--motion-ease-ios);
+}
+
+html[data-kg-nav='back'][data-kg-edge-commit]::view-transition-old(root) {
+  animation: kgEdgePopOld var(--kg-edge-dur, 280ms) var(--motion-ease-ios) both;
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.16);
+}
+
+html[data-kg-nav='back'][data-kg-edge-commit]::view-transition-new(root) {
+  animation: kgEdgePopNew var(--kg-edge-dur, 280ms) var(--motion-ease-ios) both;
+}
+
+@keyframes kgEdgePopOld {
+  from {
+    transform: translate3d(var(--kg-edge-from, 0px), 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes kgEdgePopNew {
+  from {
+    transform: translate3d(var(--kg-edge-under, -30%), 0, 0);
+    filter: brightness(calc(1 - var(--kg-edge-dim, 0.12)));
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    filter: none;
+  }
+}
+
 @keyframes kgNavFadeIn {
   from {
     opacity: 0;
@@ -394,6 +462,12 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+
+  html[data-kg-edge='drag'] body,
+  #kg-edge-underlay {
+    transform: none !important;
+    transition: none !important;
   }
 
   .kutagjej-splash,
@@ -473,6 +547,11 @@ html[data-native-app] body {
   --kg-safe-top: max(env(safe-area-inset-top, 0px), 59px);
 }
 
+/* Every in-flow page starts below the status bar. Fixed bars set their own top. */
+html[data-native-app] body {
+  padding-top: var(--kg-safe-top);
+}
+
 /* Explicit colors. A CSS variable here can fail to paint the status-bar inset,
    and iOS then shows its default black canvas as a stripe above every page. */
 html.dark,
@@ -515,12 +594,11 @@ html[data-native-app]::after {
   height: env(safe-area-inset-bottom, 0px);
 }
 
-html[data-native-app] .MuiAppBar-root {
-  padding-top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
+html[data-native-app] .MuiAppBar-positionFixed {
+  top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
 
-html[data-native-app] .MuiAppBar-positionFixed + .MuiToolbar-root {
-  box-sizing: content-box;
+html[data-native-app] .MuiDialog-paperFullScreen {
   padding-top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
 

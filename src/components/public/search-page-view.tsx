@@ -522,15 +522,13 @@ export function SearchPageView({
             position: { xs: 'fixed', lg: 'static' },
             left: { xs: 0, lg: 'auto' },
             right: { xs: 0, lg: 'auto' },
-            top: { xs: 0, lg: 'auto' },
+            top: { xs: 'var(--kg-safe-top, env(safe-area-inset-top, 0px))', lg: 'auto' },
             bottom: { xs: 'auto', lg: 'auto' },
             zIndex: { xs: 4000, lg: 'auto' },
             isolation: { xs: 'isolate', lg: 'auto' },
             px: { xs: 2, sm: 3, lg: 0 },
             pt: {
-              xs: categoriesHidden
-                ? 'calc(8px + var(--kg-safe-top, env(safe-area-inset-top, 0px)))'
-                : 'calc(10px + var(--kg-safe-top, env(safe-area-inset-top, 0px)))',
+              xs: categoriesHidden ? '8px' : '10px',
               lg: 0,
             },
             pb: { xs: 1.25, lg: 0 },

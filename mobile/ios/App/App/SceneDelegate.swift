@@ -43,11 +43,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// from the theme in `BridgeViewController`, so a pull does not reveal a different black.
     private func extendWebViewToScreenEdges() {
         guard let root = window?.rootViewController else { return }
+        root.additionalSafeAreaInsets = .zero
         root.edgesForExtendedLayout = .all
         root.extendedLayoutIncludesOpaqueBars = true
+        let page = UIColor(red: 10 / 255, green: 10 / 255, blue: 10 / 255, alpha: 1)
+        root.view.backgroundColor = page
+        window?.backgroundColor = page
         guard let webView = (root as? CAPBridgeViewController)?.webView ?? Self.findWebView(in: root.view) else { return }
+        webView.backgroundColor = page
+        webView.scrollView.backgroundColor = page
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.contentInset = .zero
+        webView.scrollView.scrollIndicatorInsets = .zero
     }
 
     private static func findWebView(in view: UIView) -> WKWebView? {

@@ -25,7 +25,6 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
 import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { User as UserIcon } from '@phosphor-icons/react/dist/ssr/User';
 import { Eye as EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
@@ -36,8 +35,8 @@ import { z as zod } from 'zod';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { SearchableSelect } from '@/components/core/searchable-select';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
-import { useNavigateBack } from '@/hooks/use-navigate-back';
 import { authClient } from '@/lib/auth/client';
 import { passwordInputDisableSuggestions } from '@/lib/auth/password-input';
 import { getDefaultAuthenticatedPath } from '@/lib/auth/post-login-path';
@@ -951,8 +950,6 @@ export function UserAuthView() {
   const indRoot = individualForm.formState.errors.root;
   const busRoot = businessForm.formState.errors.root;
 
-  const handleBack = useNavigateBack(paths.home);
-
   const onResendConfirmation = async () => {
     if (!pendingEmail || resendBusy) return;
     setResendBusy(true);
@@ -979,30 +976,15 @@ export function UserAuthView() {
           theme.palette.mode === 'dark'
             ? 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.18), transparent 70%)'
             : 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.14), transparent 70%)',
-        py: { xs: 3, md: 5 },
+        pt: { xs: 'calc(8px + env(safe-area-inset-top, 0px))', md: 5 },
+        pb: { xs: 3, md: 5 },
         px: 2,
       }}
     >
       <Container maxWidth={false} disableGutters sx={{ width: '100%', maxWidth: 480 }}>
-        <Button
-          type="button"
-          onClick={handleBack}
-          aria-label={t.auth.backAria}
-          startIcon={<ArrowLeftIcon size={18} weight="bold" />}
-          sx={{
-            display: 'inline-flex',
-            textTransform: 'none',
-            fontWeight: 700,
-            color: 'text.secondary',
-            px: 0.75,
-            ml: -0.75,
-            mb: 1.5,
-            minHeight: 36,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          {t.auth.back}
-        </Button>
+        <Box sx={{ mb: 1.5 }}>
+          <ProductBackButton href={paths.home} aria-label={t.auth.backAria} />
+        </Box>
         <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme), overflow: 'visible' })}>
           <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
             <Stack spacing={2.5}>

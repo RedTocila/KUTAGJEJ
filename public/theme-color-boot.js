@@ -17,6 +17,8 @@
       else if (v === 'system') dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     var c = dark ? '#0a0a0a' : '#ffffff';
+    // Paint the root now. iOS otherwise fills the status-bar inset with the
+    // default dark canvas (#000), which shows up as a black stripe.
     var id = 'kutagjej-theme-color';
     var m = document.getElementById(id);
     if (!m) {
@@ -28,6 +30,7 @@
     m.setAttribute('content', c);
     var root = document.documentElement;
     root.style.colorScheme = dark ? 'dark' : 'light';
+    root.style.backgroundColor = c;
     root.classList.remove('light', 'dark');
     root.classList.add(dark ? 'dark' : 'light');
     document.cookie =

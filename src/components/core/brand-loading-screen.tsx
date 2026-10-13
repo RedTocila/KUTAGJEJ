@@ -1,6 +1,64 @@
+'use client';
+
 import * as React from 'react';
 
 import { brandLogoSrc, config } from '@/config';
+
+/**
+ * Several covers can be mounted at once (cold-start splash + a route loader).
+ * Only the first one locks the document; the last one to leave unlocks it.
+ */
+let scrollLocks = 0;
+let releaseScrollLock: (() => void) | null = null;
+
+function acquireScrollLock(): () => void {
+  scrollLocks += 1;
+  if (scrollLocks === 1) {
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      htmlTouch: html.style.touchAction,
+      bodyTouch: body.style.touchAction,
+      htmlOverscroll: html.style.overscrollBehavior,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    html.style.touchAction = 'none';
+    body.style.touchAction = 'none';
+    html.style.overscrollBehavior = 'none';
+    body.style.overscrollBehavior = 'none';
+
+    const blockGesture = (event: Event) => {
+      event.preventDefault();
+    };
+    document.addEventListener('touchmove', blockGesture, { capture: true, passive: false });
+    document.addEventListener('wheel', blockGesture, { capture: true, passive: false });
+
+    releaseScrollLock = () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      html.style.touchAction = prev.htmlTouch;
+      body.style.touchAction = prev.bodyTouch;
+      html.style.overscrollBehavior = prev.htmlOverscroll;
+      body.style.overscrollBehavior = prev.bodyOverscroll;
+      document.removeEventListener('touchmove', blockGesture, { capture: true });
+      document.removeEventListener('wheel', blockGesture, { capture: true });
+      releaseScrollLock = null;
+    };
+  }
+
+  return () => {
+    scrollLocks = Math.max(0, scrollLocks - 1);
+    if (scrollLocks === 0) releaseScrollLock?.();
+  };
+}
+
+function useSplashScrollLock(): void {
+  React.useEffect(() => acquireScrollLock(), []);
+}
 
 type BrandLoadingScreenProps = {
   /** `reveal` fills once (cold start). `pending` keeps sweeping until the page is ready. */
@@ -22,6 +80,7 @@ export function BrandLoadingScreen({
   enter = false,
   pendingOverlay = false,
 }: BrandLoadingScreenProps): React.JSX.Element {
+  useSplashScrollLock();
   const className = [
     'kutagjej-splash',
     hiding ? 'kutagjej-splash--hide' : '',

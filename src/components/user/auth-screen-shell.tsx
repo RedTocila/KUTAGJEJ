@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Button, Card, CardContent, Container, Stack, Typography } from '@mui/material';
-import { ArrowLeft as ArrowLeftIcon } from '@phosphor-icons/react/dist/ssr/ArrowLeft';
-import RouterLink from 'next/link';
+import { Box, Card, CardContent, Container, Stack, Typography } from '@mui/material';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { ProductBackButton } from '@/components/public/product-browse-chrome';
 import { useCopy } from '@/hooks/use-copy';
 import { paths } from '@/paths';
 import { productSurfacePaperSx } from '@/styles/product-sx';
@@ -35,30 +34,15 @@ export function AuthScreenShell({
           theme.palette.mode === 'dark'
             ? 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.18), transparent 70%)'
             : 'radial-gradient(ellipse 70% 55% at 50% 38%, rgba(118, 186, 27, 0.14), transparent 70%)',
-        py: { xs: 3, md: 5 },
+        pt: { xs: 'calc(8px + env(safe-area-inset-top, 0px))', md: 5 },
+        pb: { xs: 3, md: 5 },
         px: 2,
       }}
     >
       <Container maxWidth={false} disableGutters sx={{ width: '100%', maxWidth: 480 }}>
-        <Button
-          component={RouterLink}
-          href={backHref}
-          aria-label={t.auth.backAria}
-          startIcon={<ArrowLeftIcon size={18} weight="bold" />}
-          sx={{
-            display: 'inline-flex',
-            textTransform: 'none',
-            fontWeight: 700,
-            color: 'text.secondary',
-            px: 0.75,
-            ml: -0.75,
-            mb: 1.5,
-            minHeight: 36,
-            '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
-          }}
-        >
-          {t.auth.backToLogin}
-        </Button>
+        <Box sx={{ mb: 1.5 }}>
+          <ProductBackButton href={backHref} aria-label={t.auth.backAria} />
+        </Box>
         <Card elevation={0} sx={(theme) => ({ ...productSurfacePaperSx(theme), overflow: 'visible' })}>
           <CardContent sx={{ p: { xs: 3, sm: 3.5 } }}>
             <Stack spacing={2.5}>

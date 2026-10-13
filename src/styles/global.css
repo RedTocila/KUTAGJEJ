@@ -60,6 +60,8 @@ body {
   transition: opacity 0.32s ease;
   pointer-events: auto;
   overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,14 +459,32 @@ html[data-native-app] [data-native-hide] {
 
 /*
  * Edge-to-edge web view. Fixed bands keep the status-bar and home-indicator
- * areas painted with the page color while the page scrolls, so a pull never
- * shows the native black behind them. Toolbar controls stay below the status bar.
+ * areas painted with the page color. Sideways overscroll stays locked so a
+ * horizontal swipe does not reveal the native layer. Vertical bounce stays on:
+ * the iOS shell's pull-to-refresh only appears when the document can rubber-band.
+ * `overscroll-behavior: none` (both axes) was what removed that gesture.
  */
 html[data-native-app],
 html[data-native-app] body {
-  background-color: var(--mui-palette-background-default, #0a0a0a);
   min-height: 100dvh;
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto;
+}
+
+/* Explicit colors. A CSS variable here can fail to paint the status-bar inset,
+   and iOS then shows its default black canvas as a stripe above every page. */
+html.dark,
+html.dark body,
+html.dark[data-native-app],
+html.dark[data-native-app] body {
+  background-color: #0a0a0a;
+}
+
+html.light,
+html.light body,
+html.light[data-native-app],
+html.light[data-native-app] body {
+  background-color: #ffffff;
 }
 
 html[data-native-app]::before,
@@ -475,7 +495,12 @@ html[data-native-app]::after {
   right: 0;
   z-index: 1400;
   pointer-events: none;
-  background: var(--mui-palette-background-default, #0a0a0a);
+  background: #0a0a0a;
+}
+
+html.light[data-native-app]::before,
+html.light[data-native-app]::after {
+  background: #ffffff;
 }
 
 html[data-native-app]::before {
@@ -495,4 +520,16 @@ html[data-native-app] .MuiAppBar-root {
 html[data-native-app] .MuiAppBar-positionFixed + .MuiToolbar-root {
   box-sizing: content-box;
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/*
+ * While the launch splash or a route loader is on screen, the page underneath
+ * is already in the document. Freeze it so a drag cannot scroll that page.
+ * `!important` beats the native-app vertical bounce used for pull-to-refresh.
+ */
+html:has(.kutagjej-splash),
+html:has(.kutagjej-splash) body {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
 }

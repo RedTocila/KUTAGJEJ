@@ -12,7 +12,7 @@ export const metadata = {
 
 export default function TermsPage(): React.ReactNode {
   return (
-    <LegalDocumentPage title="Kushtet e përdorimit" updated="5 gusht 2026">
+    <LegalDocumentPage title="Kushtet e përdorimit" updated="13 tetor 2026">
       <Typography component="h2">1. Pranimi i kushteve</Typography>
       <Typography component="p">
         Duke përdorur {config.site.name}, ju pranoni këto kushte. Nëse nuk pajtoheni, mos e përdorni
@@ -144,6 +144,12 @@ export default function TermsPage(): React.ReactNode {
         Kushtet e ofertës, kohëzgjatja dhe çmimi shfaqen para blerjes. Pagesat e kryera për shërbime
         digjitale zakonisht nuk rimbursohen, përveç rasteve të kërkuara nga ligji.
       </Typography>
+      <Typography component="p">
+        Blerjet brenda aplikacionit për iOS kryhen përmes Apple. Abonimet me rinovim automatik
+        përshkruhen në seksionin 11. Blerjet njëherëshe (Boost Coins, Premium, Okazion, Auto-Refresh)
+        nuk rinovohen. Politika e privatësisë është në{' '}
+        <a href="https://www.kutagjej.al/privatesia">https://www.kutagjej.al/privatesia</a>.
+      </Typography>
 
       <Typography component="h2">7. Sjellja e ndaluar</Typography>
       <ul>
@@ -189,7 +195,137 @@ export default function TermsPage(): React.ReactNode {
 
       <Typography component="h2">10. Kontakti</Typography>
       <Typography component="p">
-        Për pyetje rreth këtyre kushteve, na kontaktoni përmes faqes së kontaktit në {config.site.name}.
+        KuTaGjej. Për pyetje, ankesa ose pretendime rreth këtyre kushteve ose aplikacionit, na
+        kontaktoni në <a href="mailto:hello@kutagjej.al">hello@kutagjej.al</a> ose në{' '}
+        <a href="https://www.kutagjej.al/kontakt">https://www.kutagjej.al/kontakt</a>.
+      </Typography>
+
+      <Typography component="h2">11. Abonimet me rinovim automatik (App Store)</Typography>
+      <Typography component="p">
+        Në aplikacionin për iOS, KuTaGjej ofron këto abonime mujore me rinovim automatik. Çmimi që
+        paguani është çmimi që Apple shfaq në ekranin e blerjes për vendin dhe monedhën tuaj. Çmimet
+        e katalogut në euro, para lokalizimit të Apple, janë:
+      </Typography>
+      <ul>
+        <li>
+          <Typography component="span">
+            Starter Monthly — 1 muaj, rinovim automatik. Çmimi i katalogut: 14€.
+          </Typography>
+        </li>
+        <li>
+          <Typography component="span">
+            Grow Monthly — 1 muaj, rinovim automatik. Çmimi i katalogut: 59€.
+          </Typography>
+        </li>
+        <li>
+          <Typography component="span">
+            Elite Monthly — 1 muaj, rinovim automatik. Çmimi i katalogut: 149€.
+          </Typography>
+        </li>
+      </ul>
+      <Typography component="p">
+        Pagesa ngarkohet në llogarinë tuaj Apple ID në momentin e konfirmimit të blerjes. Abonimi
+        rinovohet automatikisht, përveç nëse e fikni rinovimin automatik të paktën 24 orë para
+        fundit të periudhës aktuale. Llogaria ngarkohet për rinovimin brenda 24 orëve para fundit të
+        periudhës, me çmimin e planit të zgjedhur.
+      </Typography>
+      <Typography component="p">
+        Abonimet menaxhohen dhe rinovimi automatik fiket te Cilësimet e llogarisë Apple ID pas
+        blerjes (Cilësimet → Apple ID → Abonimet). Anulimi hyn në fuqi në fund të periudhës së
+        paguar; qasja vazhdon deri atëherë. Nëse ofrohet një periudhë prove falas, pjesa e papërdorur
+        e saj humbet kur blini një abonim.
+      </Typography>
+      <Typography component="p">
+        Rimbursimet për blerjet në App Store i trajton Apple sipas politikave të App Store, përveç
+        rasteve kur ligji kërkon ndryshe. KuTaGjej ofron mirëmbajtjen dhe mbështetjen e shërbimit.
+        Apple nuk është e detyruar të ofrojë mirëmbajtje ose mbështetje për aplikacionin.
+      </Typography>
+
+      <Typography component="h2">12. Apple Licensed Application</Typography>
+      <Typography component="p">
+        Ky seksion zbatohet për aplikacionin KuTaGjej të shkarkuar nga Apple App Store
+        (&quot;Licensed Application&quot;). Teksti në anglisht më poshtë është marrëveshja e
+        licencës që plotëson kushtet minimale të Apple dhe është teksti që përdoret si EULA në App
+        Store.
+      </Typography>
+      <Typography component="p">
+        This End-User License Agreement (&quot;EULA&quot;) is between you and KuTaGjej only, and not
+        with Apple. KuTaGjej, not Apple, is solely responsible for the Licensed Application and its
+        content. This EULA may not provide for usage rules that are less restrictive than the Usage
+        Rules set forth for Licensed Applications in the Apple Media Services Terms and Conditions.
+      </Typography>
+      <Typography component="p">
+        The license granted to you is a non-transferable license to use the Licensed Application on
+        any Apple-branded products that you own or control, as permitted by the Usage Rules in the
+        Apple Media Services Terms and Conditions, except that the Licensed Application may be
+        accessed and used by other accounts associated with the purchaser via Family Sharing or
+        volume purchasing.
+      </Typography>
+      <Typography component="p">
+        KuTaGjej is solely responsible for providing maintenance and support for the Licensed
+        Application. You and KuTaGjej acknowledge that Apple has no obligation whatsoever to furnish
+        any maintenance or support services for the Licensed Application. Support:{' '}
+        <a href="mailto:hello@kutagjej.al">hello@kutagjej.al</a>.
+      </Typography>
+      <Typography component="p">
+        KuTaGjej is solely responsible for any product warranties, whether express or implied by
+        law, to the extent not effectively disclaimed. If the Licensed Application fails to conform
+        to any applicable warranty, you may notify Apple, and Apple will refund the purchase price
+        for the Licensed Application. To the maximum extent permitted by applicable law, Apple has
+        no other warranty obligation whatsoever with respect to the Licensed Application, and any
+        other claims, losses, liabilities, damages, costs, or expenses attributable to any failure
+        to conform to any warranty are KuTaGjej&apos;s sole responsibility.
+      </Typography>
+      <Typography component="p">
+        You and KuTaGjej acknowledge that KuTaGjej, not Apple, is responsible for addressing any
+        claims by you or any third party relating to the Licensed Application or your possession
+        and/or use of it, including: (i) product liability claims; (ii) any claim that the Licensed
+        Application fails to conform to any applicable legal or regulatory requirement; and (iii)
+        claims arising under consumer protection, privacy, or similar legislation.
+      </Typography>
+      <Typography component="p">
+        You and KuTaGjej acknowledge that, in the event of any third-party claim that the Licensed
+        Application or your possession and use of it infringes that third party&apos;s intellectual
+        property rights, KuTaGjej, not Apple, will be solely responsible for the investigation,
+        defense, settlement, and discharge of any such intellectual property infringement claim.
+      </Typography>
+      <Typography component="p">
+        You represent and warrant that (i) you are not located in a country that is subject to a
+        U.S. Government embargo, or that has been designated by the U.S. Government as a
+        &quot;terrorist supporting&quot; country; and (ii) you are not listed on any U.S. Government
+        list of prohibited or restricted parties.
+      </Typography>
+      <Typography component="p">
+        You must comply with applicable third-party terms of agreement when using the Licensed
+        Application, including your wireless data service agreement.
+      </Typography>
+      <Typography component="p">
+        Auto-renewable subscriptions available in the iOS app are Starter Monthly, Grow Monthly, and
+        Elite Monthly. Each subscription length is 1 month. The price is the price displayed on the
+        App Store purchase sheet for your storefront at the time of purchase. Catalog reference
+        prices before Apple localization are Starter Monthly 14 EUR, Grow Monthly 59 EUR, and Elite
+        Monthly 149 EUR. Payment is charged to your Apple ID account at confirmation of purchase.
+        The subscription automatically renews unless you turn off auto-renew at least 24 hours
+        before the end of the current period. Your account is charged for renewal within 24 hours
+        prior to the end of the current period. You can manage the subscription and turn off
+        auto-renewal in your Apple ID Account Settings after purchase. If a free trial is offered,
+        any unused portion of that free trial is forfeited when you purchase a subscription. One-time
+        in-app purchases (Boost Coins, Premium, Okazion, Auto-Refresh) do not auto-renew.
+      </Typography>
+      <Typography component="p">
+        Developer: KuTaGjej. Contact for questions, complaints, or claims:{' '}
+        <a href="mailto:hello@kutagjej.al">hello@kutagjej.al</a>,{' '}
+        <a href="https://www.kutagjej.al/kontakt">https://www.kutagjej.al/kontakt</a>. Privacy
+        Policy:{' '}
+        <a href="https://www.kutagjej.al/privatesia">https://www.kutagjej.al/privatesia</a>. Terms of
+        Use:{' '}
+        <a href="https://www.kutagjej.al/kushtet">https://www.kutagjej.al/kushtet</a>.
+      </Typography>
+      <Typography component="p">
+        You and KuTaGjej acknowledge and agree that Apple, and Apple&apos;s subsidiaries, are third-party
+        beneficiaries of this EULA, and that, upon your acceptance of this EULA, Apple will have the
+        right (and will be deemed to have accepted the right) to enforce this EULA against you as a
+        third-party beneficiary.
       </Typography>
     </LegalDocumentPage>
   );

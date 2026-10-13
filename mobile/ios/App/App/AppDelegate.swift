@@ -85,6 +85,17 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
     })();
     """
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Keep the page under the status bar. A safe-area inset leaves a black stripe.
+        guard let webView = webView else { return }
+        if webView.frame != view.bounds {
+            webView.frame = view.bounds
+        }
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.contentInset = .zero
+    }
+
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         guard let webView = webView else { return }

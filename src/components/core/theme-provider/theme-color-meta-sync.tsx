@@ -50,6 +50,7 @@ export function ThemeColorMetaSync() {
     schemeMeta.setAttribute('content', isDark ? 'dark' : 'light');
 
     root.style.colorScheme = isDark ? 'dark' : 'light';
+    root.style.backgroundColor = color;
     setColorSchemeCookie(colorScheme);
     void syncNativeStatusBar(isDark);
   }, [colorScheme]);

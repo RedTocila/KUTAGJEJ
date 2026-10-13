@@ -93,6 +93,11 @@ function isLiveSearchCategory(value: string | null | undefined): value is 'profi
   return isProfilesSearchCategory(value) || isHomeVerticalId(value);
 }
 
+function isSearchRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return pathname === paths.public.search || pathname.startsWith(`${paths.public.search}/`);
+}
+
 async function fetchVerticalResults(
   verticalId: HomeVerticalId,
   query: string,
@@ -240,6 +245,8 @@ export function SearchPageView({
   const categoriesHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const skipFirstLive = React.useRef(isLiveSearchCategory(initialCategory));
   const searchGeneration = React.useRef(0);
+  /** Bumped when leaving /kerko so a delayed URL sync cannot cancel that navigation. */
+  const urlSyncGeneration = React.useRef(0);
 
   const selectedIndex = categoryId ? localizedCategories.findIndex((v) => v.id === categoryId) : -1;
   const activeCategory = categoryId ? (localizedCategories.find((v) => v.id === categoryId) ?? null) : null;
@@ -283,6 +290,7 @@ export function SearchPageView({
 
   const goTo = React.useCallback(
     (href: string) => {
+      urlSyncGeneration.current += 1;
       onNavigate?.();
       if (isOverlay) {
         router.replace(href);
@@ -295,13 +303,13 @@ export function SearchPageView({
 
   const syncUrl = React.useCallback(
     (nextCat: SearchCategoryId | null, nextQ: string) => {
-      if (isOverlay) return;
+      if (isOverlay || !isSearchRoute(pathname)) return;
       const params = new URLSearchParams();
       if (nextCat) params.set('cat', nextCat);
       const trimmed = nextQ.trim();
       if (trimmed) params.set('q', trimmed);
       const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      router.replace(qs ? `${paths.public.search}?${qs}` : paths.public.search, { scroll: false });
     },
     [isOverlay, pathname, router]
   );
@@ -422,6 +430,7 @@ export function SearchPageView({
 
   // Live results while typing (debounced). AI only runs on explicit submit.
   React.useEffect(() => {
+    if (!isSearchRoute(pathname)) return;
     if (!categoryId || categoryId === 'ai') return;
     if (!isLiveSearchCategory(categoryId)) return;
     if (skipFirstLive.current) {
@@ -429,9 +438,14 @@ export function SearchPageView({
       return;
     }
     const trimmed = query.trim();
+    const generation = urlSyncGeneration.current;
     setLoading(true);
     const handle = window.setTimeout(
       () => {
+        if (generation !== urlSyncGeneration.current) {
+          setLoading(false);
+          return;
+        }
         syncUrl(categoryId, trimmed);
         if (isProfilesSearchCategory(categoryId)) {
           void runProfileSearch(trimmed);
@@ -443,7 +457,7 @@ export function SearchPageView({
     );
 
     return () => window.clearTimeout(handle);
-  }, [query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
+  }, [pathname, query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
 
   const handleSelectCategory = (index: number) => {
     const next = localizedCategories[index];

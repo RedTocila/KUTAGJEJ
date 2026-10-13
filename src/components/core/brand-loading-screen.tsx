@@ -61,28 +61,32 @@ function useSplashScrollLock(): void {
 }
 
 type BrandLoadingScreenProps = {
-  /** `reveal` fills once (cold start). `pending` keeps sweeping until the page is ready. */
+  /** `reveal` is the cold-start cover. `pending` keeps sweeping until a route is ready. */
   mode?: 'reveal' | 'pending';
   hiding?: boolean;
   /** Soft fade-in when covering a page that is already on screen. */
   enter?: boolean;
   pendingOverlay?: boolean;
+  /** Cold start is the artwork only. Route loads keep the progress line. */
+  progress?: boolean;
 };
 
 /**
- * Solid launch cover: small mark, wordmark, thin progress line.
- * Cold start fills the line, then the splash fades and reveals the page.
- * Route loads keep the line moving until content is ready.
+ * Solid cover: small mark and wordmark.
+ * Cold start is the artwork only, held until the first page is ready, then faded out.
+ * Route loads keep a progress line until that route is ready.
  */
 export function BrandLoadingScreen({
   mode = 'pending',
   hiding = false,
   enter = false,
   pendingOverlay = false,
+  progress = true,
 }: BrandLoadingScreenProps): React.JSX.Element {
   useSplashScrollLock();
   const className = [
     'kutagjej-splash',
+    mode === 'reveal' ? 'kutagjej-splash--launch' : '',
     hiding ? 'kutagjej-splash--hide' : '',
     enter ? 'kutagjej-splash--enter' : '',
   ]
@@ -99,6 +103,7 @@ export function BrandLoadingScreen({
       aria-label={`${config.site.name} — duke u ngarkuar`}
       aria-hidden={hiding || undefined}
       {...(pendingOverlay ? { 'data-nav-pending-overlay': '' } : {})}
+      {...(mode === 'pending' ? { 'data-kg-route-loader': '' } : {})}
     >
       <div className="kutagjej-splash__mark">
         <img className="kutagjej-splash__logo" src={brandLogoSrc} alt="" width={104} height={104} decoding="async" />
@@ -107,15 +112,11 @@ export function BrandLoadingScreen({
           {accent ? <span className="kutagjej-splash__title-accent">{accent}</span> : null}
         </p>
       </div>
-      <div className="kutagjej-splash__progress" aria-hidden="true">
-        <span
-          className={
-            mode === 'reveal'
-              ? 'kutagjej-splash__progress-fill'
-              : 'kutagjej-splash__progress-fill kutagjej-splash__progress-fill--pending'
-          }
-        />
-      </div>
+      {progress ? (
+        <div className="kutagjej-splash__progress" aria-hidden="true">
+          <span className="kutagjej-splash__progress-fill kutagjej-splash__progress-fill--pending" />
+        </div>
+      ) : null}
     </div>
   );
 }

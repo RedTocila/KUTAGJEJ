@@ -57,7 +57,6 @@ body {
   z-index: 100000;
   background: #020401;
   opacity: 1;
-  transition: opacity 0.32s ease;
   pointer-events: auto;
   overflow: hidden;
   touch-action: none;
@@ -67,9 +66,15 @@ body {
   justify-content: center;
 }
 
+/* Launch cover sits above route loaders so entry never flashes the loading bar. */
+.kutagjej-splash--launch {
+  z-index: 100001;
+}
+
 .kutagjej-splash--hide {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.42s var(--motion-ease-soft);
 }
 
 .kutagjej-splash--enter {
@@ -127,22 +132,11 @@ body {
   width: 0%;
   border-radius: inherit;
   background: #83b91b;
-  /* Keep duration in sync with FILL_MS in splash-screen.tsx */
-  animation: kutagjejSplashReveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .kutagjej-splash__progress-fill--pending {
   width: 36%;
   animation: kutagjejSplashSweep 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes kutagjejSplashReveal {
-  from {
-    width: 0%;
-  }
-  to {
-    width: 100%;
-  }
 }
 
 @keyframes kutagjejSplashSweep {
@@ -349,8 +343,10 @@ html[data-kg-nav='settle']::view-transition-old(kg-bottom-nav):only-child {
 }
 
 /*
- * Interactive edge-swipe back (native shell). The live page tracks the finger;
- * on release the pop view-transition continues from `--kg-edge-from`.
+ * Interactive edge-swipe back (native shell). The live page tracks the finger.
+ * On release, `playEdgeCommitMotion` continues from that offset. Stylesheet
+ * keyframes stay off here: `var()` inside them does not resolve on the
+ * view-transition pseudos, so the pop would restart at the left edge.
  */
 #kg-edge-underlay {
   position: fixed;
@@ -388,32 +384,12 @@ html[data-kg-edge='drag'][data-kg-edge-anim] #kg-edge-underlay {
 }
 
 html[data-kg-nav='back'][data-kg-edge-commit]::view-transition-old(root) {
-  animation: kgEdgePopOld var(--kg-edge-dur, 280ms) var(--motion-ease-ios) both;
+  animation: none;
   box-shadow: -18px 0 40px rgba(0, 0, 0, 0.16);
 }
 
 html[data-kg-nav='back'][data-kg-edge-commit]::view-transition-new(root) {
-  animation: kgEdgePopNew var(--kg-edge-dur, 280ms) var(--motion-ease-ios) both;
-}
-
-@keyframes kgEdgePopOld {
-  from {
-    transform: translate3d(var(--kg-edge-from, 0px), 0, 0);
-  }
-  to {
-    transform: translate3d(100%, 0, 0);
-  }
-}
-
-@keyframes kgEdgePopNew {
-  from {
-    transform: translate3d(var(--kg-edge-under, -30%), 0, 0);
-    filter: brightness(calc(1 - var(--kg-edge-dim, 0.12)));
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-    filter: none;
-  }
+  animation: none;
 }
 
 @keyframes kgNavFadeIn {

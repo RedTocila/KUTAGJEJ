@@ -7,6 +7,7 @@ export function HomeBannerSkeleton(): React.JSX.Element {
     <Skeleton
       variant="rounded"
       animation="wave"
+      data-kg-boot-pending=""
       sx={{
         width: '100%',
         minHeight: { xs: 240, sm: 260 },
@@ -49,7 +50,7 @@ export function HomeCarouselRowSkeleton({ compactTop = false }: { compactTop?: b
 /** Placeholder while homepage listing carousels stream in. */
 export function HomeCarouselsSkeleton(): React.JSX.Element {
   return (
-    <Box sx={{ bgcolor: 'background.default' }} aria-busy aria-label="Duke u ngarkuar">
+    <Box sx={{ bgcolor: 'background.default' }} aria-busy aria-label="Duke u ngarkuar" data-kg-boot-pending="">
       <Container maxWidth="xl" sx={{ py: { xs: 3, md: 5 } }}>
         <Stack spacing={4}>
           <CarouselRowSkeleton />

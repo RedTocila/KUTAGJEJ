@@ -4,30 +4,55 @@ import * as React from 'react';
 
 import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
 
-/** Keep in sync with `kutagjejSplashReveal` in `global.css`. */
-const FILL_MS = 1200;
-const FADE_MS = 320;
+/** Keep in sync with `.kutagjej-splash--hide` in `global.css`. */
+const FADE_MS = 420;
+/** Never trap the launch cover if a loader fails to clear. */
+const BOOT_TIMEOUT_MS = 12_000;
+
+function bootStillPending(): boolean {
+  return document.querySelector('[data-kg-boot-pending], [data-kg-route-loader]') != null;
+}
 
 /**
- * Cold-start cover. The bar fills, then the artwork fades and reveals the page.
- * Fully React-owned (do not inject/remove sibling DOM under `<body>`).
+ * Cold-start cover. Stays up until the first page is ready (no route loader,
+ * no entry skeletons), then fades out. Fully React-owned.
  */
 export function SplashScreen(): React.JSX.Element | null {
   const [phase, setPhase] = React.useState<'show' | 'hiding' | 'gone'>('show');
 
   React.useEffect(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const fill = reduceMotion ? 0 : FILL_MS;
     const fade = reduceMotion ? 0 : FADE_MS;
-    const fadeTimer = window.setTimeout(() => setPhase('hiding'), fill);
-    const goneTimer = window.setTimeout(() => setPhase('gone'), fill + fade);
+    let raf = 0;
+    let goneTimer = 0;
+    let quietFrames = 0;
+    const started = performance.now();
+
+    const finish = () => {
+      setPhase('hiding');
+      goneTimer = window.setTimeout(() => setPhase('gone'), fade);
+    };
+
+    const tick = () => {
+      const timedOut = performance.now() - started >= BOOT_TIMEOUT_MS;
+      if (!bootStillPending() || timedOut) quietFrames += 1;
+      else quietFrames = 0;
+      // Two quiet frames so a loader that mounts on the next commit can still hold the cover.
+      if (quietFrames >= 2) {
+        finish();
+        return;
+      }
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    raf = window.requestAnimationFrame(tick);
     return () => {
-      window.clearTimeout(fadeTimer);
+      window.cancelAnimationFrame(raf);
       window.clearTimeout(goneTimer);
     };
   }, []);
 
   if (phase === 'gone') return null;
 
-  return <BrandLoadingScreen mode="reveal" hiding={phase === 'hiding'} />;
+  return <BrandLoadingScreen mode="reveal" progress={false} hiding={phase === 'hiding'} />;
 }

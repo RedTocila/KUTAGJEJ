@@ -112,6 +112,16 @@ function takeTraverseCaptureHook(): void {
   hook?.();
 }
 
+/** Matches `--motion-ease-ios` in global.css. */
+const EDGE_COMMIT_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+
+type EdgeCommitMotion = {
+  from: string;
+  under: string;
+  dim: number;
+  duration: number;
+};
+
 function clearEdgeCommitStyles(): void {
   const root = document.documentElement;
   delete root.dataset.kgEdgeCommit;
@@ -119,6 +129,71 @@ function clearEdgeCommitStyles(): void {
   root.style.removeProperty('--kg-edge-under');
   root.style.removeProperty('--kg-edge-dim');
   root.style.removeProperty('--kg-edge-dur');
+}
+
+/**
+ * Read the finger release offset before the pop snapshot.
+ * CSS variables inside `@keyframes` do not resolve on `::view-transition-*` in
+ * the native web view, so the pop would restart at the left edge.
+ */
+function readEdgeCommitMotion(): EdgeCommitMotion | null {
+  const root = document.documentElement;
+  if (root.dataset.kgEdgeCommit !== '1') return null;
+  const from = root.style.getPropertyValue('--kg-edge-from').trim();
+  const under = root.style.getPropertyValue('--kg-edge-under').trim();
+  const dim = Number(root.style.getPropertyValue('--kg-edge-dim'));
+  const duration = Number.parseFloat(root.style.getPropertyValue('--kg-edge-dur'));
+  return {
+    from: from || '0px',
+    under: under || '0px',
+    dim: Number.isFinite(dim) ? dim : 0,
+    duration: Number.isFinite(duration) && duration > 0 ? duration : 280,
+  };
+}
+
+function cancelStylesheetPop(name: 'old' | 'new'): void {
+  const marker = `view-transition-${name}(root)`;
+  for (const animation of document.getAnimations()) {
+    const effect = animation.effect;
+    if (!(effect instanceof KeyframeEffect)) continue;
+    if (!effect.pseudoElement?.includes(marker)) continue;
+    animation.cancel();
+  }
+}
+
+/** Slide the snapshots from the release point. `ready` fires before the first painted frame. */
+function playEdgeCommitMotion(transition: ViewTransition, motion: EdgeCommitMotion): void {
+  const root = document.documentElement;
+  const timing = {
+    duration: motion.duration,
+    easing: EDGE_COMMIT_EASE,
+    fill: 'both' as const,
+  };
+  void transition.ready
+    .then(() => {
+      const oldPseudo = '::view-transition-old(root)';
+      const newPseudo = '::view-transition-new(root)';
+      const width = `${window.innerWidth || 1}px`;
+      cancelStylesheetPop('old');
+      cancelStylesheetPop('new');
+      root.animate(
+        [
+          { transform: `translate3d(${motion.from}, 0, 0)` },
+          { transform: `translate3d(${width}, 0, 0)` },
+        ],
+        { ...timing, pseudoElement: oldPseudo },
+      );
+      root.animate(
+        [
+          { transform: `translate3d(${motion.under}, 0, 0)`, filter: `brightness(${1 - motion.dim})` },
+          { transform: 'translate3d(0, 0, 0)', filter: 'brightness(1)' },
+        ],
+        { ...timing, pseudoElement: newPseudo },
+      );
+    })
+    .catch(() => {
+      // Transition was skipped. Commit styles still clear when it finishes.
+    });
 }
 
 function handlePopState(event: PopStateEvent): void {
@@ -147,10 +222,10 @@ function handlePopState(event: PopStateEvent): void {
 
   event.stopImmediatePropagation();
   // Drop the live finger-tracking transform before the snapshot so the pop
-  // animation can continue from `--kg-edge-from` without doubling the offset.
+  // does not add that offset twice. The release position is replayed below.
   takeTraverseCaptureHook();
   document.documentElement.dataset.kgNav = direction;
-  const edgeCommit = document.documentElement.dataset.kgEdgeCommit === '1';
+  const edgeMotion = direction === 'back' ? readEdgeCommitMotion() : null;
   const transition = document.startViewTransition(
     () =>
       new Promise<void>((resolve) => {
@@ -169,7 +244,8 @@ function handlePopState(event: PopStateEvent): void {
         }
       }),
   );
-  if (edgeCommit) {
+  if (edgeMotion) {
+    playEdgeCommitMotion(transition, edgeMotion);
     void transition.finished.finally(clearEdgeCommitStyles);
   }
 }

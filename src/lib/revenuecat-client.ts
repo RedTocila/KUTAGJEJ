@@ -89,6 +89,46 @@ export async function fetchIapCatalog(): Promise<IapCatalog> {
   return res.data;
 }
 
+let cachedStorePrices: Record<string, string> | null = null;
+let loadingStorePrices: Promise<Record<string, string>> | null = null;
+
+/**
+ * App Store price strings for the signed-in storefront, keyed by product id and catalog key
+ * (`starter`, `Starter`, `premium-30`, …). This is the same amount the payment sheet charges.
+ */
+export async function fetchStorePriceStrings(): Promise<Record<string, string>> {
+  if (cachedStorePrices) return cachedStorePrices;
+  if (!isIapAvailable()) return {};
+  if (!loadingStorePrices) {
+    loadingStorePrices = (async () => {
+      await ensureRevenueCat();
+      const catalog = await fetchIapCatalog();
+      const groups = [catalog.plans, catalog.credits, catalog.premium, catalog.okazion];
+      const ids = [...new Set(groups.flatMap((group) => Object.values(group)).filter(Boolean))];
+      if (ids.length === 0) return {};
+      const { Purchases } = await loadPurchases();
+      const result = await Purchases.getProducts({ productIdentifiers: ids });
+      const byId: Record<string, string> = {};
+      for (const product of result.products || []) {
+        if (product.identifier && product.priceString) byId[product.identifier] = product.priceString;
+      }
+      const map: Record<string, string> = { ...byId };
+      for (const group of groups) {
+        for (const [key, productId] of Object.entries(group)) {
+          const price = byId[productId];
+          if (price) map[key] = price;
+        }
+      }
+      cachedStorePrices = map;
+      return map;
+    })().catch((err) => {
+      loadingStorePrices = null;
+      throw err;
+    });
+  }
+  return loadingStorePrices;
+}
+
 type PurchaseResult =
   | { ok: true }
   | { ok: false; cancelled?: boolean; message: string };

@@ -50,6 +50,7 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
@@ -70,6 +71,7 @@ import {
   formatBc,
   packageAccentSurfaceSx,
   PackageEurPrice,
+  StorePriceLabel,
   PurchasedVoucherStack,
   ReferralDiscountNote,
 } from './package-ui';
@@ -235,6 +237,7 @@ function PremiumListingSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
@@ -438,11 +441,11 @@ function PremiumListingSection() {
                     onClick={() => onBuyCard(pkg)}
                     sx={dualPayButtonSx('warning')}
                   >
-                    <PackageEurPrice
-                      listPrice={pkg.priceEur}
-                      percent={useAppleIap ? 0 : lifetimePercent}
-                      onAccent
-                    />
+                    {useAppleIap ? (
+                      <StorePriceLabel value={storePrices[pkg.id]} />
+                    ) : (
+                      <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
+                    )}
                   </Button>
                   <Button
                     size="small"

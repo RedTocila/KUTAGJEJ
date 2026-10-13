@@ -15,6 +15,8 @@ import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/S
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -65,6 +67,9 @@ export function OkazionBoostUpsell({
   onChange: (mode: OkazionBoostMode) => void;
 }) {
   const t = useCopy();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const [planRemaining, setPlanRemaining] = React.useState(0);
@@ -101,7 +106,9 @@ export function OkazionBoostUpsell({
         <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>{t.packages.okazion7Days}</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
-        {t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
+        {useAppleIap
+          ? t.packages.okazionUpsellStoreBody(storePrices[OKAZION_PACKAGE_ID] || '…', OKAZION_PRICE_BC)
+          : t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
       </Typography>
 
       <RadioGroup value={value} onChange={(e) => onChange(e.target.value as OkazionBoostMode)}>
@@ -129,7 +136,11 @@ export function OkazionBoostUpsell({
         <FormControlLabel
           value="buy-card"
           control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
-          label={`${t.packages.buyNow} · ${OKAZION_PRICE_EUR}€`}
+          label={
+            useAppleIap
+              ? `${t.packages.buyNow} · ${storePrices[OKAZION_PACKAGE_ID] || '…'}`
+              : `${t.packages.buyNow} · ${OKAZION_PRICE_EUR}€`
+          }
         />
       </RadioGroup>
 
@@ -156,6 +167,9 @@ export function OkazionPostActions({
   onPost: (mode: OkazionPayMode) => void;
 }) {
   const t = useCopy();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
@@ -248,7 +262,11 @@ export function OkazionPostActions({
               '&.Mui-disabled': { bgcolor: OKAZION_RED, color: OKAZION_RED_ON, opacity: 0.55 },
             }}
           >
-            {submitting ? t.packages.posting : `${t.packages.post} · ${OKAZION_PRICE_EUR}€`}
+            {submitting
+              ? t.packages.posting
+              : useAppleIap
+                ? `${t.packages.post} · ${storePrices[OKAZION_PACKAGE_ID] || '…'}`
+                : `${t.packages.post} · ${OKAZION_PRICE_EUR}€`}
           </Button>
           <Button
             type="button"

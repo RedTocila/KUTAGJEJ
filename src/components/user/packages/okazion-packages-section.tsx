@@ -40,6 +40,7 @@ import {
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
@@ -53,7 +54,7 @@ import {
 import { TransientSuccessAlert } from '@/components/core/transient-success-alert';
 
 import { BcPurchaseDialog } from './bc-purchase-dialog';
-import { dualPayButtonSx, ExtraPackageCard, formatBc, PackageEurPrice, PurchasedVoucherStack } from './package-ui';
+import { dualPayButtonSx, ExtraPackageCard, formatBc, PackageEurPrice, PurchasedVoucherStack, StorePriceLabel } from './package-ui';
 
 const FALLBACK_OKAZION_PACKAGES: OkazionPackage[] = [
   {
@@ -164,6 +165,7 @@ export function OkazionPackagesSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -433,11 +435,11 @@ export function OkazionPackagesSection() {
               onClick={() => onBuyCard(pkg)}
               sx={dualPayButtonSx('error')}
             >
-              <PackageEurPrice
-                listPrice={useAppleIap ? Number(pkg.priceEur) : totalEur}
-                percent={useAppleIap ? 0 : lifetimePercent}
-                onAccent
-              />
+              {useAppleIap ? (
+                <StorePriceLabel value={storePrices[pkg.id]} />
+              ) : (
+                <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
+              )}
             </Button>
             <Button
               size="small"

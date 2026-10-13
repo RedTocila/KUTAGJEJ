@@ -15,12 +15,13 @@ import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
 import { isIapAvailable, purchaseCreditsPackage } from '@/lib/revenuecat-client';
 import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
-import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, formatBc } from './package-ui';
+import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, StorePriceLabel, formatBc } from './package-ui';
 
 /** Coin packs that exist as App Store consumables in v1. Matched on label, not the DB uuid. */
 const NATIVE_CREDIT_ORDER = ['Starter', 'Growth', 'Pro'] as const;
@@ -79,6 +80,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const lifetimePercent = useLifetimePackageDiscount();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
@@ -204,7 +206,13 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 subtitle={packageSubtitle(pkg)}
                 badge={badge}
                 compactPrice
-                price={<PackageEurPrice listPrice={pkg.priceEur} percent={useAppleIap ? 0 : lifetimePercent} />}
+                price={
+                  useAppleIap ? (
+                    <StorePriceLabel value={storePrices[nativeCreditKey(pkg) || '']} />
+                  ) : (
+                    <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />
+                  )
+                }
                 onClick={iapBusy ? undefined : () => void buyCredits(pkg)}
               />
             );

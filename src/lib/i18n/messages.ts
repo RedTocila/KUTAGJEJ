@@ -517,10 +517,13 @@ const sq = {
     okazionPaySubtitle: 'Njoftimi shfaqet me temë të kuqe në Okazion për 7 ditë.',
     daysShort: (n: number) => `${n} ditë`,
     daysPrice: (days: number, eur: number, bc: number) => `${days} ditë · ${eur}€ / ${bc} BC`,
+    daysStorePrice: (days: number, price: string, bc: number) => `${days} ditë · ${price} / ${bc} BC`,
     okazion7Days: 'Okazion · 7 ditë',
     premiumDaysTitle: (days: number) => `Premium · ${days} ditë`,
     okazionUpsellBody: (eur: number, bc: number) =>
       `Shfaqe njoftimin me temë të kuqe në Okazion. ${eur}€ ose ${bc} BC — ose përdor vendin nga Grow/Elite.`,
+    okazionUpsellStoreBody: (price: string, bc: number) =>
+      `Shfaqe njoftimin me temë të kuqe në Okazion. ${price} ose ${bc} BC — ose përdor vendin nga Grow/Elite.`,
     premiumWithPlan: (remaining: number, days: number) =>
       `Përdoret vendi nga paketa juaj (${remaining} të mbetura). Njoftimi shfaqet me prioritet për ${days} ditë.`,
     premiumWithoutPlan: (days: number) =>
@@ -1312,10 +1315,13 @@ const en: AppMessages = {
     okazionPaySubtitle: 'Your listing appears with a red theme in Okazion for 7 days.',
     daysShort: (n: number) => `${n} days`,
     daysPrice: (days: number, eur: number, bc: number) => `${days} days · ${eur}€ / ${bc} BC`,
+    daysStorePrice: (days: number, price: string, bc: number) => `${days} days · ${price} / ${bc} BC`,
     okazion7Days: 'Okazion · 7 days',
     premiumDaysTitle: (days: number) => `Premium · ${days} days`,
     okazionUpsellBody: (eur: number, bc: number) =>
       `Show your listing with a red Okazion theme. ${eur}€ or ${bc} BC — or use a Grow/Elite slot.`,
+    okazionUpsellStoreBody: (price: string, bc: number) =>
+      `Show your listing with a red Okazion theme. ${price} or ${bc} BC — or use a Grow/Elite slot.`,
     premiumWithPlan: (remaining: number, days: number) =>
       `Uses a slot from your package (${remaining} left). Listing gets priority for ${days} days.`,
     premiumWithoutPlan: (days: number) => `Listing gets top priority for ${days} days.`,

@@ -7,6 +7,8 @@ import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/C
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -59,6 +61,9 @@ export function PremiumPostActions({
   onPost: (mode: PremiumPayMode) => void;
 }) {
   const t = useCopy();
+  const nativeApp = useIsNativeApp();
+  const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= PREMIUM_PRICE_BC;
@@ -151,7 +156,11 @@ export function PremiumPostActions({
               '&.Mui-disabled': { bgcolor: PREMIUM_AMBER, color: PREMIUM_AMBER_ON, opacity: 0.55 },
             }}
           >
-            {submitting ? t.packages.posting : `${t.packages.post} · ${PREMIUM_PRICE_EUR}€`}
+            {submitting
+              ? t.packages.posting
+              : useAppleIap
+                ? `${t.packages.post} · ${storePrices[PREMIUM_PACKAGE_ID] || '…'}`
+                : `${t.packages.post} · ${PREMIUM_PRICE_EUR}€`}
           </Button>
           <Button
             type="button"

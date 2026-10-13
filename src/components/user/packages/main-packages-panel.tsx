@@ -19,6 +19,7 @@ import { listPublicContracts } from '@/lib/public-contracts-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
+import { useStorePrices } from '@/hooks/use-store-prices';
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
@@ -37,6 +38,7 @@ import {
   formatEur,
   PackageCheckoutCard,
   PackageEurPrice,
+  StorePriceLabel,
   planIconForCode,
   ReferralDiscountNote,
   type FeatureListItem,
@@ -292,6 +294,7 @@ export function MainPackagesPanel() {
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const storePrices = useStorePrices(useAppleIap);
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
@@ -511,7 +514,13 @@ export function MainPackagesPanel() {
                 icon={PlanIcon}
                 title={plan.title}
                 badge={titleBadge(t, isCurrent)}
-                price={<PackageEurPrice listPrice={opt.price} percent={useAppleIap ? 0 : lifetimePercent} />}
+                price={
+                  useAppleIap ? (
+                    <StorePriceLabel value={storePrices[planCode]} />
+                  ) : (
+                    <PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />
+                  )
+                }
                 priceSuffix={priceSuffixForMonths(t, opt.months)}
                 priceHint={equivalentMonthlyHint(t, opt.months, opt.price)}
                 priceBadge={save}

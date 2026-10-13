@@ -98,6 +98,18 @@ function accentContrast(theme: Theme, accent: PlanAccent = 'primary'): string {
   return theme.palette.common.black;
 }
 
+/** App Store price string (`$10.99`). Ellipsis until StoreKit returns it. */
+export function StorePriceLabel({ value }: { value?: string | null }) {
+  if (!value) {
+    return (
+      <Box component="span" sx={{ opacity: 0.45 }} aria-hidden>
+        …
+      </Box>
+    );
+  }
+  return <>{value}</>;
+}
+
 export function formatEur(n: number) {
   const v = Number(n) || 0;
   return `€${v.toFixed(2).replace(/\.00$/, '')}`;

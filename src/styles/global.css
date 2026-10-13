@@ -622,6 +622,31 @@ html[data-native-app] .MuiDialog-paperFullScreen {
   animation: kg-ios-spinner 0.9s linear infinite;
 }
 
+.kg-ios-spinner--large {
+  width: 37px;
+  height: 37px;
+}
+
+.kg-ios-spinner--large span {
+  left: 17px;
+  top: 2px;
+  width: 3px;
+  height: 9px;
+  border-radius: 1.5px;
+  transform-origin: 1.5px 16.5px;
+}
+
+.kg-ios-activity {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+}
+
 @keyframes kg-ios-spinner {
   0% {
     opacity: 1;

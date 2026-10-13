@@ -11,6 +11,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
+import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
@@ -174,11 +175,7 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         </Alert>
       ) : null}
 
-      {iapBusy ? (
-        <Alert severity="info" sx={{ borderRadius: 2 }}>
-          Po hapet pagesa e Apple…
-        </Alert>
-      ) : null}
+      {iapBusy ? <IosActivityOverlay /> : null}
 
       {iapMessage ? (
         <Alert

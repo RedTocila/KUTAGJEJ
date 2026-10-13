@@ -22,6 +22,7 @@ import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discoun
 import { useUser } from '@/hooks/use-user';
 import { isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
+import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import {
   ProductDialog,
   ProductDialogActions,
@@ -449,11 +450,7 @@ export function MainPackagesPanel() {
         sx={{ borderRadius: 2 }}
       />
 
-      {iapBusy ? (
-        <Alert severity="info" sx={{ borderRadius: 2 }}>
-          Po hapet pagesa e Apple…
-        </Alert>
-      ) : null}
+      {iapBusy ? <IosActivityOverlay /> : null}
 
       {iapMessage ? (
         <Alert

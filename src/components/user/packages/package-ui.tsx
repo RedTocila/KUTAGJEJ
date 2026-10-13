@@ -98,7 +98,7 @@ function accentContrast(theme: Theme, accent: PlanAccent = 'primary'): string {
   return theme.palette.common.black;
 }
 
-/** App Store price string (`$10.99`). Ellipsis until StoreKit returns it. */
+/** Apple sheet price (`USD 10.99`). Ellipsis until StoreKit returns it. Never the euro catalog. */
 export function StorePriceLabel({ value }: { value?: string | null }) {
   if (!value) {
     return (

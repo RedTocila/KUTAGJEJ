@@ -92,9 +92,27 @@ export async function fetchIapCatalog(): Promise<IapCatalog> {
 let cachedStorePrices: Record<string, string> | null = null;
 let loadingStorePrices: Promise<Record<string, string>> | null = null;
 
+/** Same text as the Apple payment sheet: currency code plus the charged amount (`USD 10.99`). */
+function formatAppleSheetPrice(product: {
+  price?: number | string | null;
+  currencyCode?: string | null;
+  priceString?: string | null;
+}): string {
+  const code = String(product.currencyCode || '').trim().toUpperCase();
+  const amount = typeof product.price === 'number' ? product.price : Number(product.price);
+  if (code && Number.isFinite(amount)) {
+    const formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+    return `${code} ${formatted}`;
+  }
+  return String(product.priceString || '').trim();
+}
+
 /**
- * App Store price strings for the signed-in storefront, keyed by product id and catalog key
- * (`starter`, `Starter`, `premium-30`, …). This is the same amount the payment sheet charges.
+ * App Store prices for this Apple ID, keyed by product id and catalog key
+ * (`starter`, `Starter`, `premium-30`, …). Taken from StoreKit, not the euro catalog.
  */
 export async function fetchStorePriceStrings(): Promise<Record<string, string>> {
   if (cachedStorePrices) return cachedStorePrices;
@@ -110,7 +128,8 @@ export async function fetchStorePriceStrings(): Promise<Record<string, string>> 
       const result = await Purchases.getProducts({ productIdentifiers: ids });
       const byId: Record<string, string> = {};
       for (const product of result.products || []) {
-        if (product.identifier && product.priceString) byId[product.identifier] = product.priceString;
+        const label = formatAppleSheetPrice(product);
+        if (product.identifier && label) byId[product.identifier] = label;
       }
       const map: Record<string, string> = { ...byId };
       for (const group of groups) {

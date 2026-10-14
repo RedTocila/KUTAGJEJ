@@ -92,7 +92,11 @@ export function PublicHeader() {
 
           return {
             ...(pinToViewport
-              ? { top: 'var(--kg-safe-top, env(safe-area-inset-top, 0px))', left: 0, right: 0 }
+              ? {
+                  top: 'calc(var(--kg-safe-top, env(safe-area-inset-top, 0px)) + var(--kg-app-store-banner, 0px))',
+                  left: 0,
+                  right: 0,
+                }
               : { width: '100%' }),
             color: 'text.primary',
             backgroundColor,
@@ -103,7 +107,7 @@ export function PublicHeader() {
             backgroundImage: 'none',
             transform:
               pinToViewport && headerHidden
-                ? 'translateY(calc(-100% - var(--kg-safe-top, 0px)))'
+                ? 'translateY(calc(-100% - var(--kg-safe-top, 0px) - var(--kg-app-store-banner, 0px)))'
                 : 'translateY(0)',
             transition: pinToViewport
               ? theme.transitions.create(['transform', 'background-color'], {
@@ -265,7 +269,10 @@ export function PublicHeader() {
           disableGutters
           aria-hidden
           sx={{
-            minHeight: TOOLBAR_MIN_HEIGHT,
+            minHeight: {
+              xs: TOOLBAR_MIN_HEIGHT.xs,
+              md: `calc(${TOOLBAR_MIN_HEIGHT.md}px + var(--kg-app-store-banner, 0px))`,
+            },
             visibility: 'hidden',
             pointerEvents: 'none',
           }}

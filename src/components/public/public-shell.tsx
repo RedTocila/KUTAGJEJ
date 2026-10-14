@@ -7,6 +7,7 @@ import { useMainTabsHosted } from '@/components/main-tabs/main-tabs-shell';
 import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isNativeApp } from '@/lib/native-app';
 
+import { AppStoreDesktopPrompt } from './app-store-desktop-prompt';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { PublicFooter } from './public-footer';
 import { PublicHeader } from './public-header';
@@ -52,6 +53,7 @@ export function PublicShell({
   }, []);
 
   const showFooter = !hideFooter && !nativeApp;
+  const desktopHeaderVisible = keepDesktopHeader && !hideHeader && !hideHeaderBelowMd;
 
   let header: React.ReactNode = null;
   if (hideHeader || hideHeaderBelowMd) {
@@ -76,6 +78,7 @@ export function PublicShell({
         maxWidth: '100%',
         overflowX: 'clip',
         pb: clearFloatingNav ? { xs: MOBILE_CONTENT_BOTTOM_PADDING, md: 0 } : 0,
+        pt: desktopHeaderVisible ? 0 : { md: 'var(--kg-app-store-banner, 0px)' },
       }}
     >
       <Box
@@ -87,6 +90,7 @@ export function PublicShell({
           overflowX: 'clip',
         }}
       >
+        <AppStoreDesktopPrompt />
         {header}
         <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
       </Box>

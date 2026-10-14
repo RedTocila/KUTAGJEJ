@@ -23,6 +23,14 @@ export const brandSocials = [
   { label: 'YouTube', href: 'https://www.youtube.com/@kutagjej' },
 ] as const;
 
+/**
+ * App Store listing for the desktop download prompt.
+ * Set `NEXT_PUBLIC_APP_STORE_URL` to the live `https://apps.apple.com/app/id…` link.
+ */
+export const appStoreUrl =
+  process.env.NEXT_PUBLIC_APP_STORE_URL?.trim() ||
+  'https://apps.apple.com/al/search?term=KuTaGjej';
+
 export interface Config {
   site: {
     name: string;

@@ -174,6 +174,9 @@ const sq = {
     back: 'Kthehu',
     backAria: 'Kthehu te faqja e mëparshme',
     backToProfile: 'Kthehu te profili',
+    appStorePrompt: 'Shkarko KuTaGjej në App Store',
+    appStoreDownload: 'Shkarko',
+    appStoreDownloadAria: 'Shkarko në App Store',
   },
   home: {
     latestListings: 'Njoftimet e fundit',
@@ -973,6 +976,9 @@ const en: AppMessages = {
     back: 'Back',
     backAria: 'Go back to the previous page',
     backToProfile: 'Back to profile',
+    appStorePrompt: 'Download on the App Store',
+    appStoreDownload: 'Download',
+    appStoreDownloadAria: 'Download on the App Store',
   },
   home: {
     latestListings: 'Latest listings',

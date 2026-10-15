@@ -14,6 +14,7 @@ import { RouteTransitionTrigger } from '@/components/core/route-transition-trigg
 import { SearchOverlayProvider } from '@/contexts/search-overlay-context';
 import { MainTabsShell } from '@/components/main-tabs/main-tabs-shell';
 import { ThemeProvider } from '@/components/core/theme-provider/theme-provider';
+import { AppStoreIphonePrompt } from '@/components/public/app-store-iphone-prompt';
 import type { ColorScheme } from '@/lib/color-scheme';
 import { AuthProvider } from '@/providers/auth-provider';
 import { getVisitorId } from '@/lib/listing-metrics';
@@ -36,6 +37,7 @@ export function AppProviders({
           <SavedListingsProvider>
             <ThemeProvider initialColorScheme={initialColorScheme}>
               <SearchOverlayProvider>
+                <AppStoreIphonePrompt />
                 <SoftNavigateBridge>
                   <NativeAppBoot />
                   <NativeEdgeBack />

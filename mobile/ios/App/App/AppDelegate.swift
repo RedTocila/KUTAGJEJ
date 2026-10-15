@@ -58,44 +58,212 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 }
 
-/// Hosts the Capacitor web view and adds the native pull-to-refresh (the same control Safari uses).
-/// Set as the custom class of the root view controller in Main.storyboard.
-class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
-    private let pullToRefresh = UIRefreshControl()
-    private var publishedSafeTop: CGFloat = -1
-    private var loadingObservation: NSKeyValueObservation?
-    private var refreshTimeout: DispatchWorkItem?
-    private var navigationProxy: NavigationDelegateProxy?
-    private lazy var offlineView = OfflineView()
-    private var lastFailedURL: URL?
+/// System activity indicator parked in the rubber-band gap, below the status bar.
+/// UIRefreshControl draws in the top inset, which sits under the Dynamic Island here.
+private final class PagePullRefresh: NSObject {
+    private let indicator = UIActivityIndicatorView(style: .medium)
+    private weak var host: BridgeViewController?
+    private var observation: NSKeyValueObservation?
+    private var phase: Phase = .idle
+    private var pullAllowed = true
+    private var finishToken = 0
+    private let hold: CGFloat = 64
+    private let trigger: CGFloat = 72
 
-    /// Off while a sheet / dialog / overlay locks the page, or the page isn't scrolled to the top,
-    /// so pulling down inside a bottom sheet dismisses the sheet instead of reloading.
-    /// Pages can opt out with a `data-no-pull-refresh` attribute.
+    private enum Phase {
+        case idle
+        case holding
+        case closing
+    }
+
+    var isRefreshing: Bool { phase != .idle }
+
+    func attach(to controller: BridgeViewController) {
+        host = controller
+        guard let scroll = controller.webView?.scrollView else { return }
+        indicator.hidesWhenStopped = false
+        indicator.isUserInteractionEnabled = false
+        indicator.alpha = 0
+        indicator.sizeToFit()
+        controller.view.addSubview(indicator)
+        controller.view.bringSubviewToFront(indicator)
+        scroll.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+        observation = scroll.observe(\.contentOffset, options: [.new]) { [weak self] scrollView, _ in
+            if Thread.isMainThread {
+                self?.layout(scrollView)
+            } else {
+                DispatchQueue.main.async { self?.layout(scrollView) }
+            }
+        }
+        applyStyle(dark: true)
+        layout(scroll)
+    }
+
+    func applyStyle(dark: Bool) {
+        indicator.overrideUserInterfaceStyle = dark ? .dark : .light
+        indicator.color = nil
+    }
+
+    func layout(_ scroll: UIScrollView) {
+        guard let host = host else { return }
+        let pulled = max(0, -scroll.contentOffset.y)
+        let safeTop = host.view.safeAreaInsets.top
+        let shown = phase == .holding ? max(pulled, hold) : pulled
+        let alpha: CGFloat = phase == .holding ? 1 : min(1, max(0, (pulled - 8) / 48))
+        indicator.alpha = alpha
+        if alpha > 0.04 {
+            if !indicator.isAnimating { indicator.startAnimating() }
+        } else if phase == .idle {
+            indicator.stopAnimating()
+        }
+        host.view.bringSubviewToFront(indicator)
+        indicator.center = CGPoint(x: host.view.bounds.midX, y: safeTop + shown / 2)
+    }
+
+    @objc private func handlePan(_ pan: UIPanGestureRecognizer) {
+        guard let webView = host?.webView else { return }
+        if pan.state == .began {
+            webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
+                guard let self = self else { return }
+                let allowed = Self.isTrue(result)
+                self.pullAllowed = allowed
+                if !allowed, self.phase == .holding {
+                    self.end()
+                }
+            }
+            return
+        }
+        guard phase == .idle, pullAllowed, pan.state == .ended || pan.state == .cancelled else { return }
+        let pulled = max(0, -webView.scrollView.contentOffset.y)
+        guard pulled >= trigger else { return }
+        begin(webView)
+    }
+
+    private func begin(_ webView: WKWebView) {
+        phase = .holding
+        finishToken += 1
+        let token = finishToken
+        UIView.animate(withDuration: 0.32, delay: 0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState]) {
+            webView.scrollView.contentInset.top = self.hold
+        }
+        layout(webView.scrollView)
+        webView.evaluateJavaScript(Self.startRefreshScript) { [weak self] result, _ in
+            guard let self = self, self.finishToken == token, self.phase == .holding else { return }
+            if !Self.isTrue(result) {
+                self.end()
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+            guard let self = self, self.finishToken == token else { return }
+            self.end()
+        }
+    }
+
+    func end() {
+        guard phase == .holding, let scroll = host?.webView?.scrollView else { return }
+        phase = .closing
+        finishToken += 1
+        UIView.animate(withDuration: 0.42, delay: 0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState]) {
+            scroll.contentInset.top = 0
+        } completion: { [weak self] _ in
+            guard let self = self else { return }
+            self.phase = .idle
+            self.indicator.stopAnimating()
+            self.layout(scroll)
+        }
+    }
+
+    private static func isTrue(_ value: Any?) -> Bool {
+        if let flag = value as? Bool { return flag }
+        if let number = value as? NSNumber { return number.boolValue }
+        return false
+    }
+
     private static let canRefreshScript = """
     (function () {
       try {
         var d = document, b = d.body, h = d.documentElement;
-        if (!b) return true;
+        if (!b) return false;
         if (b.style.position === 'fixed' || b.style.overflow === 'hidden' || h.style.overflow === 'hidden') return false;
         if (d.querySelector('.MuiModal-root:not(.MuiModal-hidden), [aria-modal="true"], [data-no-pull-refresh]')) return false;
-        return (window.scrollY || 0) <= 1;
+        if ((window.scrollY || h.scrollTop || b.scrollTop || 0) > 2) return false;
+        return typeof window.__kutagjejPullRefresh === 'function';
       } catch (e) {
-        return true;
+        return false;
       }
-    })();
+    })()
     """
+
+    private static let startRefreshScript = """
+    (function () {
+      try {
+        if (typeof window.__kutagjejPullRefresh !== 'function') return false;
+        window.__kutagjejPullRefresh();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    })()
+    """
+}
+
+/// Hosts the Capacitor web view. Pull-to-refresh uses the system activity indicator.
+/// Set as the custom class of the root view controller in Main.storyboard.
+class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
+    private let pagePull = PagePullRefresh()
+    var isRefreshHeld: Bool { pagePull.isRefreshing }
+    var offlineCoverVisible: Bool { offlineView.superview != nil }
+    private var publishedSafeTop: CGFloat = -1
+    private var loadingObservation: NSKeyValueObservation?
+    private var navigationProxy: NavigationDelegateProxy?
+    private lazy var offlineView = OfflineView()
+    private var lastFailedURL: URL?
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        // Keep the page under the status bar. A safe-area inset leaves a black stripe.
+        pinWebViewToScreen()
+        publishSafeArea()
+        if let scroll = webView?.scrollView {
+            pagePull.layout(scroll)
+        }
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        pinWebViewToScreen()
+        publishSafeArea()
+    }
+
+    /// Draw the web view across the whole glass, including under the status bar and home indicator.
+    private func pinWebViewToScreen() {
         guard let webView = webView else { return }
+        edgesForExtendedLayout = .all
+        extendedLayoutIncludesOpaqueBars = true
+        additionalSafeAreaInsets = .zero
+        view.insetsLayoutMarginsFromSafeArea = false
+        let pinned = view.constraints.filter {
+            ($0.firstItem as AnyObject?) === webView || ($0.secondItem as AnyObject?) === webView
+        }
+        if !pinned.isEmpty {
+            NSLayoutConstraint.deactivate(pinned)
+            webView.translatesAutoresizingMaskIntoConstraints = true
+        }
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         if webView.frame != view.bounds {
             webView.frame = view.bounds
         }
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.scrollView.contentInset = .zero
-        publishSafeArea()
+        let scroll = webView.scrollView
+        scroll.contentInsetAdjustmentBehavior = .never
+        scroll.bounces = true
+        scroll.alwaysBounceVertical = true
+        scroll.alwaysBounceHorizontal = false
+        if !pagePull.isRefreshing {
+            scroll.contentInset = .zero
+        }
+        let top = view.safeAreaInsets.top
+        let bottom = view.safeAreaInsets.bottom
+        scroll.verticalScrollIndicatorInsets.top = top
+        scroll.verticalScrollIndicatorInsets.bottom = bottom
     }
 
     /// Tell the page how tall the status bar is. CSS `env(safe-area-inset-top)` stays 0
@@ -114,12 +282,10 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         super.capacitorDidLoad()
         guard let webView = webView else { return }
 
-        // Pull-to-refresh is the page's iPhone spinner. The native control sat under the
-        // status bar and reloaded the whole web view, so it stays detached.
-        pullToRefresh.addTarget(self, action: #selector(handlePullToRefresh), for: .valueChanged)
         webView.scrollView.bounces = true
         webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.refreshControl = nil
+        pagePull.attach(to: self)
         applyPageBackground(dark: true)
         installThemeBackgroundSync(on: webView)
 
@@ -166,25 +332,6 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         webView.load(URLRequest(url: target))
     }
 
-    @objc private func handlePullToRefresh() {
-        guard let webView = webView else {
-            pullToRefresh.endRefreshing()
-            return
-        }
-        webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
-            guard let self = self, let webView = self.webView else { return }
-            guard (result as? Bool) ?? true else {
-                self.pullToRefresh.endRefreshing()
-                return
-            }
-            let timeout = DispatchWorkItem { [weak self] in self?.finishRefreshing() }
-            self.refreshTimeout?.cancel()
-            self.refreshTimeout = timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
-            webView.reload()
-        }
-    }
-
     /// Page color behind a pull, so the bounce does not reveal a different black.
     private static let themeSyncScript = """
     (function () {
@@ -205,12 +352,25 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         let controller = webView.configuration.userContentController
         controller.removeScriptMessageHandler(forName: "kutagjejTheme")
         controller.add(self, name: "kutagjejTheme")
+        controller.removeScriptMessageHandler(forName: "kutagjejRefresh")
+        controller.add(self, name: "kutagjejRefresh")
         let script = WKUserScript(source: Self.themeSyncScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         controller.addUserScript(script)
+        let nativePull = WKUserScript(
+            source: "document.documentElement.dataset.nativePull='1';",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        controller.addUserScript(nativePull)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "kutagjejRefresh" {
+            pagePull.end()
+            return
+        }
         applyPageBackground(dark: (message.body as? String) != "light")
+        pagePull.applyStyle(dark: (message.body as? String) != "light")
     }
 
     private func applyPageBackground(dark: Bool) {
@@ -222,14 +382,11 @@ class BridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
         webView?.backgroundColor = color
         webView?.scrollView.backgroundColor = color
         view.window?.backgroundColor = color
+        pagePull.applyStyle(dark: dark)
     }
 
     private func finishRefreshing() {
-        refreshTimeout?.cancel()
-        refreshTimeout = nil
-        if pullToRefresh.isRefreshing {
-            pullToRefresh.endRefreshing()
-        }
+        pagePull.end()
     }
 }
 

@@ -5,7 +5,7 @@ import { Box, type SxProps, type Theme } from '@mui/material';
 import { createPortal } from 'react-dom';
 
 import { type ConversationListingKind } from '@/lib/conversations-client';
-import { MOBILE_BOTTOM_NAV_FLOAT_INSET_PX, MOBILE_BOTTOM_NAV_OFFSET } from '@/lib/mobile-layout';
+import { MOBILE_BOTTOM_NAV_FLOAT_INSET_PX, MOBILE_BOTTOM_NAV_OFFSET, SAFE_AREA_BOTTOM } from '@/lib/mobile-layout';
 import { ListingMessageButton } from '@/components/public/listing-message-button';
 
 /** Shared “CONTACT” CTA — full width across listing detail surfaces. */
@@ -76,7 +76,7 @@ export function StickyListingCtaSlot({
   const [host, setHost] = React.useState<HTMLElement | null>(null);
 
   React.useEffect(() => {
-    setHost(document.body);
+    setHost(document.documentElement);
   }, []);
 
   React.useEffect(() => {
@@ -139,7 +139,7 @@ export function StickyListingCtaSlot({
               right: 0,
               zIndex: theme.zIndex.appBar + 10,
               bottom: alwaysFloating
-                ? `calc(env(safe-area-inset-bottom, 0px) + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px)`
+                ? `calc(${SAFE_AREA_BOTTOM} + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px)`
                 : MOBILE_BOTTOM_NAV_OFFSET,
               px: 2,
               py: 1.25,

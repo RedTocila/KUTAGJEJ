@@ -73,7 +73,7 @@ export function PublicShell({
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        minHeight: 'calc(100dvh - var(--kg-safe-top, 0px))',
         width: '100%',
         maxWidth: '100%',
         overflowX: 'clip',

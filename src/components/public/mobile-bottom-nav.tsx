@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Badge, Box } from '@mui/material';
@@ -20,6 +21,7 @@ import { hardNavigate, hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX,
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
+  SAFE_AREA_BOTTOM,
 } from '@/lib/mobile-layout';
 import { MAIN_TAB_SLIDE_MS, registerMainTabNavProgress } from '@/lib/main-tab-pager';
 import { beginPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
@@ -61,6 +63,10 @@ export function MobileBottomNav() {
   const unreadMessages = useUnreadMessagesCount();
   const t = useCopy();
   const searchOverlay = useOptionalSearchOverlay();
+  const [navRoot, setNavRoot] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    setNavRoot(document.documentElement);
+  }, []);
   const isAuthed = Boolean(user);
   const searchActive =
     Boolean(searchOverlay?.open) ||
@@ -228,7 +234,7 @@ export function MobileBottomNav() {
     hardNavigate(item.href, event);
   };
 
-  return (
+  const nav = (
     <Box
       component="nav"
       aria-label={t.chrome.bottomNavAria}
@@ -237,7 +243,7 @@ export function MobileBottomNav() {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: `calc(${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${SAFE_AREA_BOTTOM})`,
         zIndex: theme.zIndex.modal + 12,
         display: { xs: 'flex', lg: 'none' },
         justifyContent: 'center',
@@ -396,4 +402,6 @@ export function MobileBottomNav() {
       </Box>
     </Box>
   );
+
+  return navRoot ? createPortal(nav, navRoot) : nav;
 }

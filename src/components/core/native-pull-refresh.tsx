@@ -1,28 +1,30 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 
+import { IosSpinner } from '@/components/core/ios-spinner';
 import { getNativePlatform, isNativeApp } from '@/lib/native-app';
 import { runActiveTabRefresh } from '@/lib/tab-refresh';
 
-const THRESHOLD = 68;
-const MAX_PULL = 108;
+const HOLD = 64;
+const TRIGGER = 72;
 
-function IosSpinner(): React.JSX.Element {
-  return (
-    <span className="kg-ios-spinner" aria-hidden>
-      {Array.from({ length: 12 }, (_, index) => (
-        <span
-          key={index}
-          style={{
-            transform: `rotate(${index * 30}deg)`,
-            animationDelay: `${(-0.9 + index * 0.075).toFixed(3)}s`,
-          }}
-        />
-      ))}
-    </span>
-  );
+/** UIScrollView rubber-band. Small pulls track the finger; longer pulls resist. */
+function rubberBand(distance: number): number {
+  const dimension = Math.max(window.innerHeight, 1);
+  const coefficient = 0.55;
+  return (1 - 1 / ((distance * coefficient) / dimension + 1)) * dimension;
 }
+
+type PullWindow = Window & {
+  __kutagjejPullRefresh?: () => void;
+  webkit?: {
+    messageHandlers?: {
+      kutagjejRefresh?: { postMessage: (body: string) => void };
+    };
+  };
+};
 
 function gestureBlocked(): boolean {
   const body = document.body;
@@ -36,7 +38,7 @@ function gestureBlocked(): boolean {
 }
 
 function scrolledAway(target: EventTarget | null): boolean {
-  if ((window.scrollY || rootScrollTop()) > 2) return true;
+  if ((window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) > 2) return true;
   let el: Element | null = target instanceof Element ? target : null;
   for (let depth = 0; el && depth < 14; depth += 1, el = el.parentElement) {
     if (!(el instanceof HTMLElement)) continue;
@@ -48,137 +50,139 @@ function scrolledAway(target: EventTarget | null): boolean {
   return false;
 }
 
-function rootScrollTop(): number {
-  return document.documentElement.scrollTop || document.body.scrollTop || 0;
+function installNativeRefreshBridge(): () => void {
+  const win = window as PullWindow;
+  win.__kutagjejPullRefresh = () => {
+    const started = Date.now();
+    void runActiveTabRefresh()
+      .catch(() => undefined)
+      .finally(() => {
+        const wait = Math.max(0, 480 - (Date.now() - started));
+        window.setTimeout(() => {
+          win.webkit?.messageHandlers?.kutagjejRefresh?.postMessage('done');
+        }, wait);
+      });
+  };
+  return () => {
+    delete win.__kutagjejPullRefresh;
+  };
 }
 
 /**
- * Pull-down refresh for the iOS shell, with the system activity indicator.
- * The website does not get this gesture.
+ * Pull-down refresh for the iOS shell.
+ * A rebuilt app draws the real UIActivityIndicatorView and rubber-band.
+ * Until that binary is installed, this draws the same spinner and slides the page with the finger.
  */
 export function NativePullRefresh(): React.JSX.Element | null {
-  const [enabled, setEnabled] = React.useState(false);
-  const [pull, setPull] = React.useState(0);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [dragging, setDragging] = React.useState(false);
-  const [dark, setDark] = React.useState(true);
-  const pullRef = React.useRef(0);
-  const refreshingRef = React.useRef(false);
-  const tracking = React.useRef<{ x: number; y: number; armed: boolean } | null>(null);
+  const [webFallback, setWebFallback] = React.useState(false);
 
   React.useEffect(() => {
     if (!isNativeApp() || getNativePlatform() !== 'ios') return;
-    setEnabled(true);
-    const sync = () => setDark(document.documentElement.classList.contains('dark'));
-    sync();
-    const observer = new MutationObserver(sync);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+    if (document.documentElement.dataset.nativePull === '1') {
+      return installNativeRefreshBridge();
+    }
 
-  React.useEffect(() => {
-    if (!enabled) return;
-    refreshingRef.current = refreshing;
+    setWebFallback(true);
+    const root = document.documentElement;
+    let tracking: { x: number; y: number; armed: boolean } | null = null;
+    let distance = 0;
+    let refreshing = false;
+    let clearTimer = 0;
 
-    const resetPull = () => {
-      pullRef.current = 0;
-      setPull(0);
-      setDragging(false);
+    const paint = (next: number, interactive: boolean) => {
+      distance = next;
+      window.clearTimeout(clearTimer);
+      if (next > 0 || refreshing) root.dataset.kgPull = '1';
+      if (interactive) root.dataset.kgPulling = '1';
+      else delete root.dataset.kgPulling;
+      root.style.setProperty('--kg-pull', `${next}px`);
+      const opacity = refreshing ? 1 : Math.min(1, Math.max(0, (next - 8) / 48));
+      root.style.setProperty('--kg-pull-p', opacity.toFixed(3));
+      if (next === 0 && !refreshing) {
+        clearTimer = window.setTimeout(() => {
+          if (distance > 0 || refreshing) return;
+          delete root.dataset.kgPull;
+          delete root.dataset.kgPulling;
+          root.style.removeProperty('--kg-pull');
+          root.style.setProperty('--kg-pull-p', '0');
+        }, 460);
+      }
     };
 
     const onStart = (event: TouchEvent) => {
-      if (refreshingRef.current || event.touches.length !== 1) return;
+      if (refreshing || event.touches.length !== 1) return;
       if (gestureBlocked() || scrolledAway(event.target)) {
-        tracking.current = null;
+        tracking = null;
         return;
       }
       const touch = event.touches[0]!;
-      tracking.current = { x: touch.clientX, y: touch.clientY, armed: true };
+      tracking = { x: touch.clientX, y: touch.clientY, armed: true };
     };
 
     const onMove = (event: TouchEvent) => {
-      const start = tracking.current;
-      if (!start?.armed || refreshingRef.current || event.touches.length !== 1) return;
+      const start = tracking;
+      if (!start?.armed || refreshing || event.touches.length !== 1) return;
       const touch = event.touches[0]!;
       const dx = touch.clientX - start.x;
       const dy = touch.clientY - start.y;
-      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
         start.armed = false;
-        resetPull();
+        paint(0, false);
         return;
       }
-      if (dy <= 8 || scrolledAway(event.target)) {
-        resetPull();
+      if (dy <= 0 || scrolledAway(event.target)) {
+        if (distance > 0) paint(0, true);
         return;
       }
-      const next = Math.min(MAX_PULL, (dy - 8) * 0.42);
-      pullRef.current = next;
-      setDragging(true);
-      setPull(next);
+      if (event.cancelable) event.preventDefault();
+      paint(rubberBand(dy), true);
     };
 
     const onEnd = () => {
-      const distance = pullRef.current;
-      tracking.current = null;
-      setDragging(false);
-      pullRef.current = 0;
-      if (refreshingRef.current) return;
-      if (distance < THRESHOLD) {
-        setPull(0);
+      const pulled = distance;
+      tracking = null;
+      if (refreshing) return;
+      if (pulled < TRIGGER) {
+        paint(0, false);
         return;
       }
-      setPull(52);
-      setRefreshing(true);
-      refreshingRef.current = true;
+      refreshing = true;
+      paint(HOLD, false);
       const started = Date.now();
       void runActiveTabRefresh()
         .catch(() => undefined)
         .finally(() => {
-          const wait = Math.max(0, 600 - (Date.now() - started));
+          const wait = Math.max(0, 480 - (Date.now() - started));
           window.setTimeout(() => {
-            refreshingRef.current = false;
-            setRefreshing(false);
-            setPull(0);
+            refreshing = false;
+            paint(0, false);
           }, wait);
         });
     };
 
     document.addEventListener('touchstart', onStart, { passive: true });
-    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false, capture: true });
     document.addEventListener('touchend', onEnd);
     document.addEventListener('touchcancel', onEnd);
     return () => {
       document.removeEventListener('touchstart', onStart);
-      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchmove', onMove, true);
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onEnd);
+      window.clearTimeout(clearTimer);
+      delete root.dataset.kgPull;
+      delete root.dataset.kgPulling;
+      root.style.removeProperty('--kg-pull');
+      root.style.setProperty('--kg-pull-p', '0');
     };
-  }, [enabled, refreshing]);
+  }, []);
 
-  if (!enabled) return null;
+  if (!webFallback) return null;
 
-  const progress = refreshing ? 1 : Math.min(1, pull / THRESHOLD);
-  const visible = refreshing || pull > 8;
-
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: 'fixed',
-        zIndex: 5000,
-        left: 0,
-        right: 0,
-        top: 'calc(var(--kg-safe-top, 59px) + 6px)',
-        display: 'flex',
-        justifyContent: 'center',
-        pointerEvents: 'none',
-        opacity: visible ? progress : 0,
-        transform: `translate3d(0, ${refreshing ? 0 : Math.max(0, pull - 24)}px, 0) scale(${0.7 + progress * 0.3})`,
-        transition: dragging ? 'none' : 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1), opacity 180ms ease',
-        color: dark ? 'rgba(255, 255, 255, 0.92)' : 'rgba(60, 60, 67, 0.72)',
-      }}
-    >
+  return createPortal(
+    <div className="kg-pull-indicator" aria-hidden>
       <IosSpinner />
-    </div>
+    </div>,
+    document.documentElement,
   );
 }

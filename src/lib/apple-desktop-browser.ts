@@ -27,3 +27,20 @@ export function isAppleDesktopBrowser(): boolean {
 
   return mac;
 }
+
+/**
+ * iPhone visitors in Safari, Chrome, Firefox, Edge, Opera, and in-app browsers.
+ * Every iOS browser is WebKit and keeps “iPhone” in the user agent (Chrome adds
+ * CriOS, Firefox FxiOS, Edge EdgiOS, Opera OPiOS). Skips the native app and iPad.
+ */
+export function isIphoneMobileBrowser(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (isNativeApp()) return false;
+
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  if (/iPad|iPod/i.test(ua) || platform === 'iPad') return false;
+  if (/iPhone/i.test(ua) || platform === 'iPhone') return true;
+  // Engine tokens used when a browser shortens the device name but is still iOS.
+  return /(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)\//i.test(ua);
+}

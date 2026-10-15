@@ -508,19 +508,26 @@ html[data-native-app] [data-native-hide] {
 }
 
 /*
- * Edge-to-edge web view. Fixed bands keep the status-bar and home-indicator
- * areas painted with the page color. Sideways overscroll stays locked so a
- * horizontal swipe does not reveal the native layer. Vertical bounce stays on:
- * the iOS shell's pull-to-refresh only appears when the document can rubber-band.
- * `overscroll-behavior: none` (both axes) was what removed that gesture.
+ * Edge-to-edge web view. The document is the phone glass: 100dvh runs from the
+ * top of the display to the bottom. Status-bar padding sits inside that height
+ * so the page is not taller than the screen. Sideways overscroll stays locked.
+ * Vertical bounce stays on when the native shell owns pull-to-refresh
+ * (`data-native-pull`); the web fallback locks it and moves the page itself.
  */
 html[data-native-app],
 html[data-native-app] body {
+  box-sizing: border-box;
   min-height: 100dvh;
   overscroll-behavior-x: none;
   overscroll-behavior-y: auto;
-  /* Edge-to-edge WKWebView reports a 0px safe-area inset. 59px clears a Dynamic Island. */
+  /* Edge-to-edge WKWebView reports 0px safe-area insets. */
   --kg-safe-top: max(env(safe-area-inset-top, 0px), 59px);
+  --kg-safe-bottom: max(env(safe-area-inset-bottom, 0px), 34px);
+}
+
+html[data-native-app]:not([data-native-pull]),
+html[data-native-app]:not([data-native-pull]) body {
+  overscroll-behavior-y: none;
 }
 
 /* Every in-flow page starts below the status bar. Fixed bars set their own top. */
@@ -544,32 +551,6 @@ html.light[data-native-app] body {
   background-color: #ffffff;
 }
 
-html[data-native-app]::before,
-html[data-native-app]::after {
-  content: '';
-  position: fixed;
-  left: 0;
-  right: 0;
-  z-index: 8;
-  pointer-events: none;
-  background: #0a0a0a;
-}
-
-html.light[data-native-app]::before,
-html.light[data-native-app]::after {
-  background: #ffffff;
-}
-
-html[data-native-app]::before {
-  top: 0;
-  height: var(--kg-safe-top, env(safe-area-inset-top, 0px));
-}
-
-html[data-native-app]::after {
-  bottom: 0;
-  height: env(safe-area-inset-bottom, 0px);
-}
-
 html[data-native-app] .MuiAppBar-positionFixed {
   top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
@@ -578,38 +559,81 @@ html[data-native-app] .MuiDialog-paperFullScreen {
   padding-top: var(--kg-safe-top, env(safe-area-inset-top, 0px));
 }
 
-/* iPhone activity indicator used by native pull-to-refresh. */
+/* UIActivityIndicatorView.medium: 12 stationary ticks, opacity chasing clockwise. */
 .kg-ios-spinner {
-  width: 22px;
-  height: 22px;
+  --kg-spin: 20px;
+  --kg-tick-w: 2px;
+  --kg-tick-h: 5px;
+  --kg-tick-top: 1px;
+  width: var(--kg-spin);
+  height: var(--kg-spin);
+  display: block;
   position: relative;
   color: inherit;
 }
 
 .kg-ios-spinner span {
   position: absolute;
-  left: 10px;
-  top: 1px;
-  width: 2px;
-  height: 6px;
-  border-radius: 1px;
+  left: 50%;
+  top: var(--kg-tick-top);
+  width: var(--kg-tick-w);
+  height: var(--kg-tick-h);
+  margin-left: calc(var(--kg-tick-w) / -2);
+  border-radius: calc(var(--kg-tick-w) / 2);
   background: currentColor;
-  transform-origin: 1px 10px;
-  animation: kg-ios-spinner 0.9s linear infinite;
+  transform-origin: 50% calc(var(--kg-spin) / 2 - var(--kg-tick-top));
+  animation: kg-ios-tick 1s linear infinite;
 }
 
 .kg-ios-spinner--large {
-  width: 37px;
-  height: 37px;
+  --kg-spin: 37px;
+  --kg-tick-w: 3.7px;
+  --kg-tick-h: 9.25px;
+  --kg-tick-top: 1.85px;
 }
 
-.kg-ios-spinner--large span {
-  left: 17px;
-  top: 2px;
-  width: 3px;
-  height: 9px;
-  border-radius: 1.5px;
-  transform-origin: 1.5px 16.5px;
+/* Centered in the gap that opens between the status bar and the page. */
+.kg-pull-indicator {
+  position: fixed;
+  z-index: 5000;
+  left: 0;
+  right: 0;
+  top: var(--kg-safe-top, 59px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  opacity: var(--kg-pull-p, 0);
+  color: #8e8e93;
+  --kg-spin: 20px;
+  transform: translate3d(0, calc(var(--kg-pull, 0px) / 2 - var(--kg-spin) / 2), 0);
+}
+
+html.dark .kg-pull-indicator {
+  color: rgba(235, 235, 245, 0.6);
+}
+
+html[data-native-app][data-kg-pull] body,
+html[data-native-app][data-kg-pull] [data-kg-bottom-nav] {
+  transform: translate3d(0, var(--kg-pull, 0px), 0);
+}
+
+html[data-native-app][data-kg-pull]:not([data-kg-pulling]) body,
+html[data-native-app][data-kg-pull]:not([data-kg-pulling]) [data-kg-bottom-nav],
+html[data-native-app][data-kg-pull]:not([data-kg-pulling]) .kg-pull-indicator {
+  transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kg-ios-spinner span {
+    animation: none;
+    opacity: 0.55;
+  }
+
+  html[data-native-app][data-kg-pull]:not([data-kg-pulling]) body,
+  html[data-native-app][data-kg-pull]:not([data-kg-pulling]) [data-kg-bottom-nav],
+  html[data-native-app][data-kg-pull]:not([data-kg-pulling]) .kg-pull-indicator {
+    transition-duration: 1ms;
+  }
 }
 
 .kg-ios-activity {
@@ -623,12 +647,12 @@ html[data-native-app] .MuiDialog-paperFullScreen {
   color: #fff;
 }
 
-@keyframes kg-ios-spinner {
+@keyframes kg-ios-tick {
   0% {
     opacity: 1;
   }
   100% {
-    opacity: 0.18;
+    opacity: 0;
   }
 }
 

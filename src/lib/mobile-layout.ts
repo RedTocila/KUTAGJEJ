@@ -7,11 +7,17 @@ export const MOBILE_BOTTOM_NAV_FLOAT_INSET_PX = 14;
 /** Extra space so scroll content doesn’t sit flush against the nav. */
 export const MOBILE_BOTTOM_NAV_CONTENT_GAP_PX = 28;
 
+/**
+ * Home-indicator inset. Safari reports `env(safe-area-inset-bottom)`.
+ * The iOS shell publishes `--kg-safe-bottom` because that env value stays 0 there.
+ */
+export const SAFE_AREA_BOTTOM = 'var(--kg-safe-bottom, env(safe-area-inset-bottom, 0px))';
+
 /** Distance from viewport bottom to stack a bar flush above the mobile nav. */
-export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + env(safe-area-inset-bottom, 0px))`;
+export const MOBILE_BOTTOM_NAV_OFFSET = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${SAFE_AREA_BOTTOM})`;
 
 /** Scroll/content padding so the last item clears the nav with a visible gap. */
-export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + env(safe-area-inset-bottom, 0px))`;
+export const MOBILE_CONTENT_BOTTOM_PADDING = `calc(${MOBILE_BOTTOM_NAV_CONTENT_HEIGHT_PX}px + ${MOBILE_BOTTOM_NAV_FLOAT_INSET_PX}px + ${MOBILE_BOTTOM_NAV_CONTENT_GAP_PX}px + ${SAFE_AREA_BOTTOM})`;
 
 /** Bottom padding for sheets/drawers that run behind the floating nav, so the last row clears it. */
 export const MOBILE_SHEET_UNDER_NAV_PADDING = `calc(${MOBILE_BOTTOM_NAV_OFFSET} + 8px)`;

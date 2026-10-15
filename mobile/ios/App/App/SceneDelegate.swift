@@ -46,6 +46,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         root.additionalSafeAreaInsets = .zero
         root.edgesForExtendedLayout = .all
         root.extendedLayoutIncludesOpaqueBars = true
+        root.view.insetsLayoutMarginsFromSafeArea = false
         let page = UIColor(red: 10 / 255, green: 10 / 255, blue: 10 / 255, alpha: 1)
         root.view.backgroundColor = page
         window?.backgroundColor = page
@@ -53,7 +54,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         webView.backgroundColor = page
         webView.scrollView.backgroundColor = page
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.scrollView.contentInset = .zero
+        if (root as? BridgeViewController)?.isRefreshHeld != true {
+            webView.scrollView.contentInset = .zero
+        }
         webView.scrollView.scrollIndicatorInsets = .zero
     }
 

@@ -24,7 +24,6 @@ import { createPortal } from 'react-dom';
 
 import { paths } from '@/paths';
 import { fetchAiSearch, type AiSearchResult } from '@/lib/ai-search-client';
-import { hardRefreshToTop } from '@/lib/hard-navigate';
 import {
   AI_SEARCH_BLUE,
   AI_SEARCH_BLUE_HOVER,
@@ -309,9 +308,13 @@ export function SearchPageView({
       const trimmed = nextQ.trim();
       if (trimmed) params.set('q', trimmed);
       const qs = params.toString();
-      router.replace(qs ? `${paths.public.search}?${qs}` : paths.public.search, { scroll: false });
+      const href = qs ? `${paths.public.search}?${qs}` : paths.public.search;
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (current === href) return;
+      // Keep the search tab mounted. router.replace refetches the route and shows the page loader.
+      window.history.replaceState(window.history.state, '', href);
     },
-    [isOverlay, pathname, router]
+    [isOverlay, pathname]
   );
 
   const runVerticalSearch = React.useCallback(
@@ -462,10 +465,7 @@ export function SearchPageView({
   const handleSelectCategory = (index: number) => {
     const next = localizedCategories[index];
     if (!next) return;
-    if (categoryId === next.id) {
-      if (!isOverlay) hardRefreshToTop();
-      return;
-    }
+    if (categoryId === next.id) return;
     searchGeneration.current += 1;
     setCategoryId(next.id);
     setQuery('');

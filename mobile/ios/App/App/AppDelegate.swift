@@ -116,7 +116,7 @@ private final class PagePullRefresh: NSObject {
         } else if phase == .idle {
             indicator.stopAnimating()
         }
-        host.view.bringSubviewToFront(indicator)
+        if phase == .idle, pulled < 0.5, indicator.alpha == 0 { return }
         indicator.center = CGPoint(x: host.view.bounds.midX, y: safeTop + shown / 2)
     }
 

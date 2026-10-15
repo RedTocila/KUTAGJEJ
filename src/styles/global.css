@@ -617,10 +617,16 @@ html[data-native-app][data-kg-pull] [data-kg-bottom-nav] {
   transform: translate3d(0, var(--kg-pull, 0px), 0);
 }
 
+html[data-native-app][data-kg-pulling] body,
+html[data-native-app][data-kg-pulling] [data-kg-bottom-nav],
+html[data-native-app][data-kg-pulling] .kg-pull-indicator {
+  will-change: transform;
+}
+
 html[data-native-app][data-kg-pull]:not([data-kg-pulling]) body,
 html[data-native-app][data-kg-pull]:not([data-kg-pulling]) [data-kg-bottom-nav],
 html[data-native-app][data-kg-pull]:not([data-kg-pulling]) .kg-pull-indicator {
-  transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms linear;
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1), opacity 160ms linear;
 }
 
 @media (prefers-reduced-motion: reduce) {

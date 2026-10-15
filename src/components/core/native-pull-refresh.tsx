@@ -10,11 +10,11 @@ import { runActiveTabRefresh } from '@/lib/tab-refresh';
 const HOLD = 64;
 const TRIGGER = 72;
 
-/** UIScrollView rubber-band. Small pulls track the finger; longer pulls resist. */
+/** Follow the finger until refresh, then resist. A full-screen rubber-band feels late. */
 function rubberBand(distance: number): number {
-  const dimension = Math.max(window.innerHeight, 1);
-  const coefficient = 0.55;
-  return (1 - 1 / ((distance * coefficient) / dimension + 1)) * dimension;
+  const linear = 96;
+  if (distance <= linear) return distance;
+  return linear + (distance - linear) * 0.22;
 }
 
 type PullWindow = Window & {
@@ -86,27 +86,53 @@ export function NativePullRefresh(): React.JSX.Element | null {
     const root = document.documentElement;
     let tracking: { x: number; y: number; armed: boolean } | null = null;
     let distance = 0;
+    let pulling = false;
     let refreshing = false;
     let clearTimer = 0;
+    let raf = 0;
+    let queued: { next: number; interactive: boolean } | null = null;
 
     const paint = (next: number, interactive: boolean) => {
-      distance = next;
+      const rounded = Math.round(next);
+      if (rounded === distance && interactive === pulling) return;
+      distance = rounded;
+      pulling = interactive;
       window.clearTimeout(clearTimer);
-      if (next > 0 || refreshing) root.dataset.kgPull = '1';
+      if (rounded > 0 || refreshing) root.dataset.kgPull = '1';
       if (interactive) root.dataset.kgPulling = '1';
       else delete root.dataset.kgPulling;
-      root.style.setProperty('--kg-pull', `${next}px`);
-      const opacity = refreshing ? 1 : Math.min(1, Math.max(0, (next - 8) / 48));
+      root.style.setProperty('--kg-pull', `${rounded}px`);
+      const opacity = refreshing ? 1 : Math.min(1, Math.max(0, (rounded - 8) / 36));
       root.style.setProperty('--kg-pull-p', opacity.toFixed(3));
-      if (next === 0 && !refreshing) {
+      if (rounded === 0 && !refreshing) {
         clearTimer = window.setTimeout(() => {
           if (distance > 0 || refreshing) return;
           delete root.dataset.kgPull;
           delete root.dataset.kgPulling;
           root.style.removeProperty('--kg-pull');
           root.style.setProperty('--kg-pull-p', '0');
-        }, 460);
+        }, 300);
       }
+    };
+
+    const schedulePaint = (next: number, interactive: boolean) => {
+      queued = { next, interactive };
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        const job = queued;
+        queued = null;
+        if (job) paint(job.next, job.interactive);
+      });
+    };
+
+    const flushPaint = (next: number, interactive: boolean) => {
+      if (raf) {
+        window.cancelAnimationFrame(raf);
+        raf = 0;
+        queued = null;
+      }
+      paint(next, interactive);
     };
 
     const onStart = (event: TouchEvent) => {
@@ -127,27 +153,27 @@ export function NativePullRefresh(): React.JSX.Element | null {
       const dy = touch.clientY - start.y;
       if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
         start.armed = false;
-        paint(0, false);
+        flushPaint(0, false);
         return;
       }
-      if (dy <= 0 || scrolledAway(event.target)) {
-        if (distance > 0) paint(0, true);
+      if (dy <= 0 || (window.scrollY || document.documentElement.scrollTop || 0) > 2) {
+        if (distance > 0) schedulePaint(0, true);
         return;
       }
       if (event.cancelable) event.preventDefault();
-      paint(rubberBand(dy), true);
+      schedulePaint(rubberBand(dy), true);
     };
 
     const onEnd = () => {
-      const pulled = distance;
+      const pulled = queued?.next ?? distance;
       tracking = null;
       if (refreshing) return;
       if (pulled < TRIGGER) {
-        paint(0, false);
+        flushPaint(0, false);
         return;
       }
       refreshing = true;
-      paint(HOLD, false);
+      flushPaint(HOLD, false);
       const started = Date.now();
       void runActiveTabRefresh()
         .catch(() => undefined)
@@ -170,6 +196,7 @@ export function NativePullRefresh(): React.JSX.Element | null {
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onEnd);
       window.clearTimeout(clearTimer);
+      if (raf) window.cancelAnimationFrame(raf);
       delete root.dataset.kgPull;
       delete root.dataset.kgPulling;
       root.style.removeProperty('--kg-pull');

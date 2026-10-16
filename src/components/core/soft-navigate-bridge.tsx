@@ -127,14 +127,10 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
     registerAppRouterNavigation(
       (href) => {
         beginPendingNavigation(href);
-        React.startTransition(() => {
-          router.push(href);
-        });
+        router.push(href);
       },
       () => {
-        React.startTransition(() => {
-          router.refresh();
-        });
+        router.refresh();
       },
     );
     return () => {
@@ -193,19 +189,18 @@ export function SoftNavigateBridge({ children }: { children: React.ReactNode }) 
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
-    let frame = 0;
+    let timer = 0;
     const saveOnScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
         if (scrollEntryKeyRef.current) saveScrollPosition(scrollEntryKeyRef.current);
-      });
+      }, 160);
     };
 
     window.addEventListener('scroll', saveOnScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', saveOnScroll);
-      if (frame) window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
     };
   }, []);
 

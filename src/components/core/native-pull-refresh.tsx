@@ -70,8 +70,8 @@ function installNativeRefreshBridge(): () => void {
 
 /**
  * Pull-down refresh for the iOS shell.
- * A rebuilt app draws the real UIActivityIndicatorView and rubber-band.
- * Until that binary is installed, this draws the same spinner and slides the page with the finger.
+ * The scroll view owns the rubber-band. This only draws the spinner.
+ * A rebuilt app draws UIActivityIndicatorView instead.
  */
 export function NativePullRefresh(): React.JSX.Element | null {
   const [webFallback, setWebFallback] = React.useState(false);
@@ -143,6 +143,7 @@ export function NativePullRefresh(): React.JSX.Element | null {
       }
       const touch = event.touches[0]!;
       tracking = { x: touch.clientX, y: touch.clientY, armed: true };
+      document.addEventListener('touchmove', onMove, { passive: true, capture: true });
     };
 
     const onMove = (event: TouchEvent) => {
@@ -153,18 +154,25 @@ export function NativePullRefresh(): React.JSX.Element | null {
       const dy = touch.clientY - start.y;
       if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
         start.armed = false;
+        releaseMove();
         flushPaint(0, false);
         return;
       }
       if (dy <= 0 || (window.scrollY || document.documentElement.scrollTop || 0) > 2) {
+        start.armed = false;
+        releaseMove();
         if (distance > 0) schedulePaint(0, true);
         return;
       }
-      if (event.cancelable) event.preventDefault();
       schedulePaint(rubberBand(dy), true);
     };
 
+    const releaseMove = () => {
+      document.removeEventListener('touchmove', onMove, true);
+    };
+
     const onEnd = () => {
+      releaseMove();
       const pulled = queued?.next ?? distance;
       tracking = null;
       if (refreshing) return;
@@ -187,12 +195,11 @@ export function NativePullRefresh(): React.JSX.Element | null {
     };
 
     document.addEventListener('touchstart', onStart, { passive: true });
-    document.addEventListener('touchmove', onMove, { passive: false, capture: true });
     document.addEventListener('touchend', onEnd);
     document.addEventListener('touchcancel', onEnd);
     return () => {
       document.removeEventListener('touchstart', onStart);
-      document.removeEventListener('touchmove', onMove, true);
+      releaseMove();
       document.removeEventListener('touchend', onEnd);
       document.removeEventListener('touchcancel', onEnd);
       window.clearTimeout(clearTimer);

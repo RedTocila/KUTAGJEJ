@@ -62,7 +62,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="sq-AL"
       className={`${DEFAULT_COLOR_SCHEME} ${brandWordmarkFont.variable}`}
-      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>

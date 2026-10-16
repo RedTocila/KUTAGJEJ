@@ -29,6 +29,7 @@ export const motionTransition = (
 export const PRESS_FEEDBACK = {
   transition: `background-color ${MOTION.fast} ${MOTION.ease}, color ${MOTION.fast} ${MOTION.ease}, border-color ${MOTION.fast} ${MOTION.ease}, box-shadow ${MOTION.fast} ${MOTION.ease}, opacity ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,
   '&:active': {
+    transform: 'scale(0.98)',
     transitionDuration: MOTION.press,
   },
   '@media (prefers-reduced-motion: reduce)': {

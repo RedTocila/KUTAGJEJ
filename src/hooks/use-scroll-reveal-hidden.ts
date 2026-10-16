@@ -24,7 +24,14 @@ export function useScrollRevealHidden(options?: {
   const alwaysShowBelowY = options?.alwaysShowBelowY ?? 56;
   const target = options?.target ?? null;
   const [hidden, setHidden] = React.useState(false);
+  const hiddenRef = React.useRef(false);
   const lastY = React.useRef(0);
+
+  const commitHidden = React.useCallback((next: boolean) => {
+    if (hiddenRef.current === next) return;
+    hiddenRef.current = next;
+    setHidden(next);
+  }, []);
 
   React.useEffect(() => {
     const root: ScrollRoot = target ?? window;
@@ -35,21 +42,21 @@ export function useScrollRevealHidden(options?: {
       lastY.current = y;
 
       if (y <= alwaysShowBelowY) {
-        setHidden(false);
+        commitHidden(false);
         return;
       }
       if (delta > deltaThreshold) {
-        setHidden(true);
+        commitHidden(true);
       } else if (delta < -deltaThreshold) {
-        setHidden(false);
+        commitHidden(false);
       }
     };
 
     lastY.current = readScrollY(root);
-    setHidden(false);
+    commitHidden(false);
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => root.removeEventListener('scroll', onScroll);
-  }, [alwaysShowBelowY, deltaThreshold, target]);
+  }, [alwaysShowBelowY, commitHidden, deltaThreshold, target]);
 
   return hidden;
 }

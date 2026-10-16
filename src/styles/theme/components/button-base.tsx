@@ -9,6 +9,9 @@ import type { Theme } from '../types';
  * Fab, Chip delete, ListItemButton, Tab, etc.).
  */
 export const MuiButtonBase = {
+  defaultProps: {
+    disableRipple: true,
+  },
   styleOverrides: {
     root: {
       WebkitTapHighlightColor: 'transparent',

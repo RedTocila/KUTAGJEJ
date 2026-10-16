@@ -13,12 +13,12 @@ export const MuiCssBaseline = {
       touchAction: 'manipulation',
     },
     // Instant press for native / unstyled controls that aren't MUI ButtonBase.
-    'button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
+    'a:active, button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
       transform: 'scale(0.98)',
       transitionDuration: '0ms',
     },
     '@media (prefers-reduced-motion: reduce)': {
-      'button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
+      'a:active, button:not(.MuiButtonBase-root):active, [role="button"]:not(.MuiButtonBase-root):active': {
         transform: 'none',
       },
     },

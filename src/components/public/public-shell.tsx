@@ -92,7 +92,7 @@ export function PublicShell({
       >
         <AppStoreDesktopPrompt />
         {header}
-        <Box className={hostedTabs ? undefined : 'kutagjej-fade'}>{children}</Box>
+        <Box className="kutagjej-fade">{children}</Box>
       </Box>
       {showFooter ? <PublicFooter /> : null}
       {showMobileNav ? <MobileBottomNav /> : null}

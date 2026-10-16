@@ -65,7 +65,6 @@ private final class PagePullRefresh: NSObject {
     private weak var host: BridgeViewController?
     private var observation: NSKeyValueObservation?
     private var phase: Phase = .idle
-    private var pullAllowed = true
     private var finishToken = 0
     private let hold: CGFloat = 64
     private let trigger: CGFloat = 72
@@ -105,7 +104,7 @@ private final class PagePullRefresh: NSObject {
     }
 
     func layout(_ scroll: UIScrollView) {
-        guard let host = host else { return }
+        guard phase != .closing, let host = host else { return }
         let pulled = max(0, -scroll.contentOffset.y)
         let safeTop = host.view.safeAreaInsets.top
         let shown = phase == .holding ? max(pulled, hold) : pulled
@@ -121,31 +120,20 @@ private final class PagePullRefresh: NSObject {
     }
 
     @objc private func handlePan(_ pan: UIPanGestureRecognizer) {
+        guard phase == .idle, pan.state == .ended else { return }
         guard let webView = host?.webView else { return }
-        if pan.state == .began {
-            webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
-                guard let self = self else { return }
-                let allowed = Self.isTrue(result)
-                self.pullAllowed = allowed
-                if !allowed, self.phase == .holding {
-                    self.end()
-                }
-            }
-            return
-        }
-        guard phase == .idle, pullAllowed, pan.state == .ended || pan.state == .cancelled else { return }
         let pulled = max(0, -webView.scrollView.contentOffset.y)
         guard pulled >= trigger else { return }
-        begin(webView)
+        webView.evaluateJavaScript(Self.canRefreshScript) { [weak self] result, _ in
+            guard let self = self, self.phase == .idle, Self.isTrue(result) else { return }
+            self.begin(webView)
+        }
     }
 
     private func begin(_ webView: WKWebView) {
         phase = .holding
         finishToken += 1
         let token = finishToken
-        UIView.animate(withDuration: 0.32, delay: 0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState]) {
-            webView.scrollView.contentInset.top = self.hold
-        }
         layout(webView.scrollView)
         webView.evaluateJavaScript(Self.startRefreshScript) { [weak self] result, _ in
             guard let self = self, self.finishToken == token, self.phase == .holding else { return }
@@ -163,8 +151,8 @@ private final class PagePullRefresh: NSObject {
         guard phase == .holding, let scroll = host?.webView?.scrollView else { return }
         phase = .closing
         finishToken += 1
-        UIView.animate(withDuration: 0.42, delay: 0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState]) {
-            scroll.contentInset.top = 0
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut, .beginFromCurrentState]) {
+            self.indicator.alpha = 0
         } completion: { [weak self] _ in
             guard let self = self else { return }
             self.phase = .idle

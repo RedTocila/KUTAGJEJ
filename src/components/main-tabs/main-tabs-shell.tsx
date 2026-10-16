@@ -116,9 +116,11 @@ function useMobileTabsMq(): boolean {
   return mobile;
 }
 
-function shouldMountPane(index: number, current: number, visited: ReadonlySet<number>): boolean {
-  if (index === 0) return true;
-  return index === current || Math.abs(index - current) <= 1 || visited.has(index);
+/** Current tab, its neighbors, and every pane the slide is still crossing. */
+function shouldMountPane(pane: number, current: number, layout: number): boolean {
+  const lo = Math.min(current, layout) - 1;
+  const hi = Math.max(current, layout) + 1;
+  return pane >= lo && pane <= hi;
 }
 
 function MainTabPane({
@@ -239,17 +241,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const pagerEligible = Boolean(mobile && displayTab);
   const pagerActive = pagerEligible && !threadOpen;
   const hosted = Boolean(mobile && displayTab);
-
-  const [visited, setVisited] = React.useState<Set<number>>(() => new Set([displayTab?.index ?? 0]));
-  React.useEffect(() => {
-    if (displayTab == null) return;
-    setVisited((prev) => {
-      if (prev.has(displayTab.index)) return prev;
-      const next = new Set(prev);
-      next.add(displayTab.index);
-      return next;
-    });
-  }, [displayTab]);
 
   const index = displayTab?.index ?? 0;
   const indexRef = React.useRef(index);
@@ -403,21 +394,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   }, [index, layoutIndex]);
 
   React.useEffect(() => {
-    if (!hosted) return;
-    const win = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    const warm = () => setVisited(new Set([0, 1, 2, 3, 4]));
-    if (typeof win.requestIdleCallback === 'function') {
-      const id = win.requestIdleCallback(warm, { timeout: 900 });
-      return () => win.cancelIdleCallback?.(id);
-    }
-    const timer = window.setTimeout(warm, 400);
-    return () => window.clearTimeout(timer);
-  }, [hosted]);
-
-  React.useEffect(() => {
     if (!pagerActive) return;
     const el = viewportRef.current;
     if (!el) return;
@@ -450,7 +426,6 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
         applyTransform(appliedIndexRef.current, 0, false);
       }
       if (!start.locked) return;
-      event.preventDefault();
       const width = el.clientWidth || window.innerWidth;
       const current = appliedIndexRef.current;
       let next = dx;
@@ -497,7 +472,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     };
 
     el.addEventListener('touchstart', onStart, { passive: true });
-    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchmove', onMove, { passive: true });
     el.addEventListener('touchend', onEnd);
     el.addEventListener('touchcancel', onEnd);
     const track = trackRef.current;
@@ -584,7 +559,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 0}
               onPaneRef={setPaneRef}
             >
-              {routeTab?.id === 'home' ? children : <MainTabsHomePreview />}
+              {shouldMountPane(0, index, layoutIndex) ? (routeTab?.id === 'home' ? children : <MainTabsHomePreview />) : null}
             </MainTabPane>
             <MainTabPane
               paneIndex={1}
@@ -593,7 +568,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(1, index, visited) ? (
+              {shouldMountPane(1, index, layoutIndex) ? (
                 authed ? (
                   <SavedListingsView />
                 ) : (
@@ -607,7 +582,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 2}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(2, index, visited) ? (
+              {shouldMountPane(2, index, layoutIndex) ? (
                 <React.Suspense fallback={null}>
                   <SearchPageView active={index === 2} />
                 </React.Suspense>
@@ -621,7 +596,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(3, index, visited) ? (
+              {shouldMountPane(3, index, layoutIndex) ? (
                 authed ? (
                   <UserMessagesView />
                 ) : (
@@ -645,7 +620,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(4, index, visited) ? (
+              {shouldMountPane(4, index, layoutIndex) ? (
                 authed ? (
                   <React.Suspense fallback={null}>
                     <UserDashboardHome />

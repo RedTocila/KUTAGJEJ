@@ -202,6 +202,8 @@ export function NativeEdgeBack(): null {
       startY = touch.clientY;
       lastX = 0;
       lastT = performance.now();
+      // Only this gesture may block scrolling. Ordinary flicks stay on the compositor.
+      window.addEventListener('touchmove', onMove, { capture: true, passive: false });
       // Don't let the tab pager treat an edge swipe as a tab change.
       event.stopPropagation();
     };
@@ -249,16 +251,24 @@ export function NativeEdgeBack(): null {
       reset();
     };
 
-    const onEnd = () => finishGesture(true);
-    const onCancel = () => finishGesture(false);
+    const releaseMove = () => {
+      window.removeEventListener('touchmove', onMove, { capture: true });
+    };
+    const onEnd = () => {
+      releaseMove();
+      finishGesture(true);
+    };
+    const onCancel = () => {
+      releaseMove();
+      finishGesture(false);
+    };
 
     window.addEventListener('touchstart', onStart, { capture: true, passive: true });
-    window.addEventListener('touchmove', onMove, { capture: true, passive: false });
     window.addEventListener('touchend', onEnd, { capture: true });
     window.addEventListener('touchcancel', onCancel, { capture: true });
     return () => {
       window.removeEventListener('touchstart', onStart, { capture: true });
-      window.removeEventListener('touchmove', onMove, { capture: true });
+      releaseMove();
       window.removeEventListener('touchend', onEnd, { capture: true });
       window.removeEventListener('touchcancel', onCancel, { capture: true });
       clearEdgeStyles();

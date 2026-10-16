@@ -117,9 +117,10 @@ function useMobileTabsMq(): boolean {
 }
 
 /** Current tab, its neighbors, and every pane the slide is still crossing. */
-function shouldMountPane(pane: number, current: number, layout: number): boolean {
-  const lo = Math.min(current, layout) - 1;
-  const hi = Math.max(current, layout) + 1;
+function shouldMountPane(pane: number, current: number, layout: number, preview: number | null): boolean {
+  const anchors = preview == null ? [current, layout] : [current, layout, preview];
+  const lo = Math.min(...anchors) - 1;
+  const hi = Math.max(...anchors) + 1;
   return pane >= lo && pane <= hi;
 }
 
@@ -259,8 +260,12 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const dragXRef = React.useRef(0);
   const draggingRef = React.useRef(false);
   const appliedIndexRef = React.useRef(index);
+  /** Touch preview can run ahead of the route. Don't pull the track back until the route catches up. */
+  const previewLockRef = React.useRef<number | null>(null);
   const reduceMotionRef = React.useRef(false);
   const [layoutIndex, setLayoutIndex] = React.useState(index);
+  const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
+  const previewMountFrameRef = React.useRef(0);
   const startRef = React.useRef<{
     x: number;
     y: number;
@@ -364,18 +369,30 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     registerMainTabPagerPreview((nextIndex, animate) => {
       if (draggingRef.current) return;
-      if (appliedIndexRef.current === nextIndex && dragXRef.current === 0) return;
-      dragXRef.current = 0;
-      applyTransform(nextIndex, 0, animate);
-      if (!animate || reduceMotionRef.current) setLayoutIndex(nextIndex);
+      previewLockRef.current = nextIndex;
+      const alreadyThere = appliedIndexRef.current === nextIndex && dragXRef.current === 0;
+      if (!alreadyThere) {
+        dragXRef.current = 0;
+        applyTransform(nextIndex, 0, animate);
+        if (!animate || reduceMotionRef.current) setLayoutIndex(nextIndex);
+      }
+      // Mount the destination on the next frame so this turn can paint the slide first.
+      if (previewMountFrameRef.current) window.cancelAnimationFrame(previewMountFrameRef.current);
+      previewMountFrameRef.current = window.requestAnimationFrame(() => {
+        previewMountFrameRef.current = 0;
+        setPreviewIndex(nextIndex);
+      });
     });
     return () => {
+      if (previewMountFrameRef.current) window.cancelAnimationFrame(previewMountFrameRef.current);
       registerMainTabPagerPreview(null);
     };
   }, [applyTransform]);
 
   React.useLayoutEffect(() => {
     if (!hosted || draggingRef.current) return;
+    if (previewLockRef.current != null && previewLockRef.current !== index) return;
+    previewLockRef.current = null;
     if (appliedIndexRef.current === index && dragXRef.current === 0) return;
     dragXRef.current = 0;
     applyTransform(index, 0, true);
@@ -559,7 +576,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 0}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(0, index, layoutIndex) ? (routeTab?.id === 'home' ? children : <MainTabsHomePreview />) : null}
+              {shouldMountPane(0, index, layoutIndex, previewIndex) ? (routeTab?.id === 'home' ? children : <MainTabsHomePreview />) : null}
             </MainTabPane>
             <MainTabPane
               paneIndex={1}
@@ -568,7 +585,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(1, index, layoutIndex) ? (
+              {shouldMountPane(1, index, layoutIndex, previewIndex) ? (
                 authed ? (
                   <SavedListingsView />
                 ) : (
@@ -582,7 +599,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               layoutActive={layoutIndex === 2}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(2, index, layoutIndex) ? (
+              {shouldMountPane(2, index, layoutIndex, previewIndex) ? (
                 <React.Suspense fallback={null}>
                   <SearchPageView active={index === 2} />
                 </React.Suspense>
@@ -596,7 +613,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(3, index, layoutIndex) ? (
+              {shouldMountPane(3, index, layoutIndex, previewIndex) ? (
                 authed ? (
                   <UserMessagesView />
                 ) : (
@@ -620,7 +637,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
               }}
               onPaneRef={setPaneRef}
             >
-              {shouldMountPane(4, index, layoutIndex) ? (
+              {shouldMountPane(4, index, layoutIndex, previewIndex) ? (
                 authed ? (
                   <React.Suspense fallback={null}>
                     <UserDashboardHome />

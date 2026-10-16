@@ -199,6 +199,16 @@ body {
   transition: transform var(--motion-enter) var(--motion-ease);
 }
 
+/* Carousel tracks slide. Press-scale on a card inside one fights that gesture. */
+[data-kg-slider] :is(a, .kutagjej-card-enter):active {
+  transform: none !important;
+}
+
+/* Bottom-nav feedback is the pill slide, which starts on touch. */
+[data-kg-bottom-nav] :is(a, button):active {
+  transform: none !important;
+}
+
 @keyframes kutagjejTimerPulse {
   0%,
   100% {

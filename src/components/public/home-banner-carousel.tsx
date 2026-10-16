@@ -14,7 +14,7 @@ export interface HomeBannerCarouselProps {
   banners?: HomeBannerDto[];
 }
 
-const SLIDE_MS = 320;
+const SLIDE_MS = 380;
 
 function slideHref(slide: HomeBannerDto): string | null {
   const href = slide.ctaHref?.trim();

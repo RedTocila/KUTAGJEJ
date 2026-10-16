@@ -5,6 +5,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { config } from '@/config';
 import { paths, pathsPublicVerticalListingDetail } from '@/paths';
 import { publicListingJsonLd } from '@/lib/public-listing-jsonld';
+import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
 import { loadPublicProfessionalListingById } from '@/lib/public-listings-client';
 import { loadSeoLandingRoute, seoLandingMetadata } from '@/lib/public-seo';
 import { buildVerticalListingDetailMetadata } from '@/lib/public-vertical-listing-metadata';
@@ -14,7 +15,8 @@ import { PublicShell } from '@/components/public/public-shell';
 import { renderSeoLandingPage } from '@/components/public/seo-landing-page';
 import { similarListingsSlot } from '@/components/public/similar-listings-section';
 
-export const revalidate = 0;
+/** One minute. A timeout must not be cached — see skipIsrOnFailedBrowse below. */
+export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ permalink: string }>;
@@ -40,6 +42,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     );
   }
   const { data: listing, unavailable } = await loadPublicProfessionalListingById(id);
+  skipIsrOnFailedBrowse(!unavailable);
   if (unavailable) {
     notFound();
   }
@@ -70,6 +73,7 @@ export default async function ProfessionalListingPage({ params, searchParams }: 
   }
 
   const loaded = await loadPublicProfessionalListingById(id);
+  skipIsrOnFailedBrowse(!loaded.unavailable);
   if (loaded.unavailable) {
     notFound();
   }

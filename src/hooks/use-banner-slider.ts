@@ -4,7 +4,7 @@ import * as React from 'react';
 
 import { MOTION } from '@/styles/motion';
 
-const DEFAULT_SLIDE_MS = 320;
+const DEFAULT_SLIDE_MS = 380;
 const DEFAULT_SWIPE_THRESHOLD = 48;
 const DEFAULT_AUTOPLAY_MS = 5000;
 const EDGE_FADE_PX = 24;
@@ -63,11 +63,11 @@ export function useBannerSlider({
   const reduceMotionRef = React.useRef(false);
   const slideCountRef = React.useRef(slideCount);
   const slideBasisRef = React.useRef(slideCount > 0 ? 100 / slideCount : 100);
-  const transitionCssRef = React.useRef(`transform ${slideMs}ms ${MOTION.ease}`);
+  const transitionCssRef = React.useRef(`transform ${slideMs}ms ${MOTION.easeIos}`);
 
   slideCountRef.current = slideCount;
   slideBasisRef.current = slideCount > 0 ? 100 / slideCount : 100;
-  transitionCssRef.current = `transform ${slideMs}ms ${MOTION.ease}`;
+  transitionCssRef.current = `transform ${slideMs}ms ${MOTION.easeIos}`;
 
   const flushFirstSlideRef = React.useRef(flushFirstSlide);
   flushFirstSlideRef.current = flushFirstSlide;

@@ -23,7 +23,8 @@ import {
   MOBILE_BOTTOM_NAV_FLOAT_INSET_PX,
   SAFE_AREA_BOTTOM,
 } from '@/lib/mobile-layout';
-import { MAIN_TAB_SLIDE_MS, registerMainTabNavProgress } from '@/lib/main-tab-pager';
+import { previewMainTabIndex, MAIN_TAB_SLIDE_MS, registerMainTabNavProgress } from '@/lib/main-tab-pager';
+import { mainTabFromPath } from '@/lib/main-tabs';
 import { beginPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
@@ -128,6 +129,8 @@ export function MobileBottomNav() {
   const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
   const [transitionReady, setTransitionReady] = React.useState(false);
   const pillRef = React.useRef<HTMLDivElement | null>(null);
+  /** Set on touch, before the route (and activeIndex) catches up. */
+  const touchPreviewRef = React.useRef<number | null>(null);
 
   const paintPill = React.useCallback((fraction: number, animate: boolean) => {
     const el = pillRef.current;
@@ -136,8 +139,10 @@ export function MobileBottomNav() {
       animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}`
         : 'none';
+    const next = `translate3d(${fraction * 100}%, 0, 0)`;
+    if (el.style.transform === next && el.style.transition === motion) return;
     el.style.transition = motion;
-    el.style.transform = `translate3d(${fraction * 100}%, 0, 0)`;
+    el.style.transform = next;
   }, []);
 
   React.useLayoutEffect(() => {
@@ -151,7 +156,9 @@ export function MobileBottomNav() {
 
   React.useLayoutEffect(() => {
     if (activeIndex < 0) return undefined;
+    if (touchPreviewRef.current != null && touchPreviewRef.current !== activeIndex) return undefined;
 
+    touchPreviewRef.current = null;
     const target = activeIndex;
 
     if (transitionReady) {
@@ -182,15 +189,53 @@ export function MobileBottomNav() {
     };
   }, [activeIndex, transitionReady]);
 
-  const moveIndicatorTo = (index: number) => {
-    persistedFromIndex = indicatorIndex;
+  const slideTabTo = (index: number, item: NavItem) => {
+    // Write the pill and the page track in this event, before React renders.
+    // Only lock while the highlight is ahead of the route — a retap of the
+    // current tab must not block later swipe updates.
+    touchPreviewRef.current = index === activeIndex ? null : index;
+    paintPill(index, true);
+    persistedFromIndex = index;
     setTransitionReady(true);
     setIndicatorIndex(index);
+
+    const href = item.kind === 'search' ? paths.public.search : item.href;
+    const tab = href ? mainTabFromPath(hrefPath(href)) : null;
+    if (tab) previewMainTabIndex(tab.index, true);
+  };
+
+  const revertTabSlide = () => {
+    touchPreviewRef.current = null;
+    const back = activeIndex >= 0 ? activeIndex : persistedFromIndex;
+    paintPill(back, true);
+    persistedFromIndex = back;
+    setIndicatorIndex(back);
+    const item = items[back];
+    if (!item) return;
+    const href = item.kind === 'search' ? paths.public.search : item.href;
+    const tab = href ? mainTabFromPath(hrefPath(href)) : null;
+    if (tab) previewMainTabIndex(tab.index, true);
+  };
+
+  const handleTabPointerDown = (event: React.PointerEvent, item: NavItem, index: number) => {
+    if (event.button !== 0) return;
+    slideTabTo(index, item);
+  };
+
+  const handleTabPointerUp = (event: React.PointerEvent, index: number) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const inside =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    if (!inside) revertTabSlide();
+    else persistedFromIndex = index;
   };
 
   const handleSearchClick = (event: React.MouseEvent, index: number) => {
     event.preventDefault();
-    moveIndicatorTo(index);
+    slideTabTo(index, items[index]!);
     if (searchOverlay?.open) {
       searchOverlay.closeSearch({ immediate: true, replaceHistory: true });
     }
@@ -210,7 +255,7 @@ export function MobileBottomNav() {
     if (searchOverlay?.open) {
       searchOverlay.closeSearch({ immediate: true, replaceHistory: true });
     }
-    moveIndicatorTo(index);
+    slideTabTo(index, item);
     if (!item.activeWhen(pathname)) return;
     if (!item.href) return;
 
@@ -328,12 +373,9 @@ export function MobileBottomNav() {
                 WebkitAppearance: 'none',
                 bgcolor: 'transparent',
                 cursor: 'pointer',
-                transition: 'transform 160ms cubic-bezier(0.22, 1, 0.36, 1)',
                 '&:link, &:visited, &:hover, &:active': {
                   color: 'inherit',
-                },
-                '&:active': {
-                  transform: 'scale(0.94)',
+                  transform: 'none',
                 },
               } as const;
 
@@ -375,6 +417,9 @@ export function MobileBottomNav() {
                     aria-haspopup="dialog"
                     aria-expanded={Boolean(searchOverlay?.open)}
                     aria-current={active ? 'page' : undefined}
+                    onPointerDown={(event) => handleTabPointerDown(event, item, index)}
+                    onPointerUp={(event) => handleTabPointerUp(event, index)}
+                    onPointerCancel={revertTabSlide}
                     onClick={(event) => handleTabClick(event, item, index)}
                     sx={sharedSx}
                   >
@@ -390,6 +435,9 @@ export function MobileBottomNav() {
                   href={item.href || paths.home}
                   aria-label={item.ariaLabel}
                   aria-current={active ? 'page' : undefined}
+                  onPointerDown={(event) => handleTabPointerDown(event, item, index)}
+                  onPointerUp={(event) => handleTabPointerUp(event, index)}
+                  onPointerCancel={revertTabSlide}
                   onClick={(event) => handleTabClick(event, item, index)}
                   sx={sharedSx}
                 >

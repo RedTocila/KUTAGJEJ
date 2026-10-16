@@ -20,6 +20,7 @@ import {
 import { Bell as BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 
 import { listAdminNotifications, markAllAdminNotificationsRead } from '@/lib/admin-notifications-client';
+import { runWhileVisible } from '@/lib/run-while-visible';
 import { paths } from '@/paths';
 import { useUser } from '@/hooks/use-user';
 
@@ -52,9 +53,10 @@ export function AdminNotificationsMenu() {
   }, [isPlatformAdmin]);
 
   React.useEffect(() => {
-    void refresh();
-    const id = window.setInterval(() => void refresh(), 90_000);
-    return () => window.clearInterval(id);
+    if (document.visibilityState !== 'hidden') void refresh();
+    return runWhileVisible(() => {
+      void refresh();
+    }, 90_000);
   }, [refresh]);
 
   if (!isPlatformAdmin) return null;

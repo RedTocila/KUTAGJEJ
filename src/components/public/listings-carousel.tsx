@@ -253,6 +253,7 @@ export function ListingsCarousel({
     <Box sx={{ position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       <Box
         ref={scrollRef}
+        data-kg-slider=""
         data-no-tab-swipe
         sx={{
           display: 'flex',

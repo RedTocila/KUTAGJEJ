@@ -6,6 +6,7 @@ import {
   listUserNotifications,
   type UserNotification,
 } from '@/lib/user-notifications-client';
+import { runWhileVisible } from '@/lib/run-while-visible';
 import { useUser } from '@/hooks/use-user';
 
 /** Shared inbox poller — Menu + FAB used to each hit `/user-notifications` on their own timer. */
@@ -19,7 +20,7 @@ type InboxSnapshot = {
 
 let snapshot: InboxSnapshot = { unread: 0, items: [], loading: false };
 const listeners = new Set<(next: InboxSnapshot) => void>();
-let pollTimer: number | null = null;
+let stopPolling: (() => void) | null = null;
 let inFlight: Promise<void> | null = null;
 let pollStarted = false;
 let activeSubscribers = 0;
@@ -61,9 +62,10 @@ async function loadInboxOnce(): Promise<void> {
 function ensurePoller(pollMs: number) {
   if (pollStarted) return;
   pollStarted = true;
-  void loadInboxOnce();
-  if (pollTimer != null) window.clearInterval(pollTimer);
-  pollTimer = window.setInterval(() => {
+  if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+    void loadInboxOnce();
+  }
+  stopPolling = runWhileVisible(() => {
     void loadInboxOnce();
   }, pollMs);
 }
@@ -71,10 +73,8 @@ function ensurePoller(pollMs: number) {
 function stopPollerIfIdle() {
   if (activeSubscribers > 0) return;
   pollStarted = false;
-  if (pollTimer != null) {
-    window.clearInterval(pollTimer);
-    pollTimer = null;
-  }
+  stopPolling?.();
+  stopPolling = null;
 }
 
 export function useUserNotificationsInbox(pollMs = DEFAULT_POLL_MS): {

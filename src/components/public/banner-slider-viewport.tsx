@@ -50,6 +50,7 @@ export function BannerSliderViewport({
 
   return (
     <Box
+      data-kg-slider=""
       data-no-tab-swipe
       {...touchHandlers}
       sx={{

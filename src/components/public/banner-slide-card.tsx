@@ -166,11 +166,10 @@ export function BannerSlideCard({
             '0%,100%': { opacity: 0.36 },
             '50%': { opacity: 0.66 },
           },
-          transition: `transform ${MOTION.fast} ${MOTION.ease}, filter ${MOTION.fast} ${MOTION.ease}`,
+          transition: `filter ${MOTION.fast} ${MOTION.ease}`,
           ...(href
             ? {
                 '&:hover': { filter: 'brightness(1.04)' },
-                '&:active': { transform: 'scale(0.992)' },
               }
             : null),
         })}

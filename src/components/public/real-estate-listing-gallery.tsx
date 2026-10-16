@@ -36,8 +36,8 @@ export type { ListingGalleryPlaceholderKey };
 /** @deprecated Use `ListingGalleryPlaceholderKey`. */
 export type ListingGalleryPlaceholderIcon = Extract<ListingGalleryPlaceholderKey, 'house' | 'buildings'>;
 
-const SLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const SLIDE_DURATION_MS = 320;
+const SLIDE_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const SLIDE_DURATION_MS = 380;
 const SWIPE_COMMIT_RATIO = 0.18;
 const SWIPE_COMMIT_MIN_PX = 56;
 const TAP_MAX_PX = 12;
@@ -504,6 +504,7 @@ export function RealEstateListingGallery(props: {
     >
       <Box
         ref={viewportRef}
+        data-kg-slider=""
         role={!showPlaceholder ? 'group' : undefined}
         aria-roledescription={hasMultipleImages ? 'carousel' : undefined}
         aria-label={

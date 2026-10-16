@@ -218,7 +218,7 @@ function draftImageUrls(draft: AiImportDraftResult | AiListingDraft): string[] {
 
 const DRAFT_THUMB_GAP_PX = 8;
 const SLIDE_LOCK_PX = 10;
-const SLIDE_SNAP_MS = 180;
+const SLIDE_SNAP_MS = 380;
 
 function clampOffset(value: number, max: number) {
   return Math.min(max, Math.max(0, value));
@@ -248,7 +248,7 @@ function ImageStripSlider({ children }: { children: React.ReactNode }) {
     if (!track) return;
     const clamped = clampOffset(next, maxOffsetRef.current);
     offsetRef.current = clamped;
-    track.style.transition = animate ? `transform ${SLIDE_SNAP_MS}ms ${MOTION.ease}` : 'none';
+    track.style.transition = animate ? `transform ${SLIDE_SNAP_MS}ms ${MOTION.easeIos}` : 'none';
     track.style.transform = `translate3d(${-clamped}px, 0, 0)`;
     setCanSlidePrev(clamped > 1);
     setCanSlideNext(clamped < maxOffsetRef.current - 1);
@@ -331,6 +331,7 @@ function ImageStripSlider({ children }: { children: React.ReactNode }) {
   return (
     <Box
       ref={viewportRef}
+      data-kg-slider=""
       data-no-tab-swipe
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

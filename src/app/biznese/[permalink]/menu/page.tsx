@@ -7,10 +7,12 @@ import { PublicShell } from '@/components/public/public-shell';
 import { BusinessMenuFullPage } from '@/components/public/business-menu-section';
 import { config } from '@/config';
 import { mongoIdFromPublicListingSegment, normalizeListingPermalinkSegment } from '@/lib/real-estate-permalink';
+import { skipIsrOnFailedBrowse } from '@/lib/browse-ssr';
 import { loadPublicBusinessListingById } from '@/lib/public-listings-client';
 import { listingBusinessMenuHref, paths, pathsPublicVerticalListingDetail } from '@/paths';
 
-export const revalidate = 0;
+/** One minute. A timeout must not be cached — see skipIsrOnFailedBrowse below. */
+export const revalidate = 60;
 
 type PageProps = { params: Promise<{ permalink: string }> };
 
@@ -21,6 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Menu e padisponueshme', robots: { index: false, follow: true } };
   }
   const { data: listing, unavailable } = await loadPublicBusinessListingById(id);
+  skipIsrOnFailedBrowse(!unavailable);
   if (unavailable) {
     return { title: 'Duke ngarkuar menunë', robots: { index: false, follow: true } };
   }
@@ -42,6 +45,7 @@ export default async function BusinessMenuPage({ params }: PageProps): Promise<R
   if (!id) notFound();
 
   const loaded = await loadPublicBusinessListingById(id);
+  skipIsrOnFailedBrowse(!loaded.unavailable);
   if (loaded.unavailable) {
     return (
       <PublicShell hideHeaderBelowMd>

@@ -728,9 +728,12 @@ export const loadPublicBusinessListingById = cache(async function loadPublicBusi
   return loadPublicEntity<PublicDirectoryListingDetail>(
     `/public/listings/businesses/${encodeURIComponent(raw)}`,
     pickListing<PublicDirectoryListingDetail>,
-    {
-      cache: 'no-store',
-    }
+    typeof window === 'undefined'
+      ? {
+          // Keep in sync with `revalidate` on the business detail and menu pages.
+          next: { revalidate: 60 },
+        }
+      : { cache: 'no-store' }
   );
 });
 
@@ -746,9 +749,12 @@ export const loadPublicProfessionalListingById = cache(async function loadPublic
   return loadPublicEntity<PublicDirectoryListingDetail>(
     `/public/listings/professionals/${encodeURIComponent(raw)}`,
     pickListing<PublicDirectoryListingDetail>,
-    {
-      cache: 'no-store',
-    }
+    typeof window === 'undefined'
+      ? {
+          // Keep in sync with `revalidate` on the professional detail page.
+          next: { revalidate: 60 },
+        }
+      : { cache: 'no-store' }
   );
 });
 

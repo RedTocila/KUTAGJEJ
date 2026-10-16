@@ -38,12 +38,6 @@ export function resolveAccent(theme: Theme, accent: PlanAccent = 'primary'): str
   return accent;
 }
 
-export function packageAccentWash(theme: Theme, accent: PlanAccent, highlighted = false) {
-  const a = resolveAccent(theme, accent);
-  // Keep wash subtle; do not gate on palette.mode (unreliable under CssVars).
-  return `linear-gradient(135deg, ${alpha(a, highlighted ? 0.14 : 0.08)} 0%, transparent 58%)`;
-}
-
 /**
  * Borderless elevated surface.
  * Uses `.dark &` — `theme.palette.mode` stays on the default scheme with CssVars
@@ -738,7 +732,7 @@ export function PackageOfferRow({
 
 /**
  * Package card — icon + title/features on the left, large price on the right.
- * No section divider; selected plan gets an accent border, glow, and corner check.
+ * Flat panel, same surface as profile dashboard cards. Selected plan gets a corner check.
  */
 export function PackageCheckoutCard({
   title,
@@ -837,16 +831,6 @@ export function PackageCheckoutCard({
       </Stack>
     </Box>
   );
-
-  const interactiveSx = {
-    bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.12),
-  };
-
-  const selectedSx = selected
-    ? {
-        bgcolor: (t: Theme) => alpha(resolveAccent(t, accent), 0.14),
-      }
-    : null;
 
   const priceColumn = (
     <Box sx={{ flexShrink: 0, textAlign: 'right', minWidth: 0 }}>
@@ -954,37 +938,23 @@ export function PackageCheckoutCard({
         transition: 'box-shadow 0.15s ease, background-color 0.15s ease, transform 0.15s ease',
         cursor: onClick ? 'pointer' : undefined,
         ...packageAccentSurfaceSx(accent, selected),
-        ...selectedSx,
         ...(onClick || actions
           ? {
               '&:hover': selected
                 ? undefined
                 : {
-                    ...interactiveSx,
                     transform: 'translateY(-1px)',
                     boxShadow: PANEL_SHADOW_LIGHT_HOVER,
                   },
               '.dark &:hover': selected
                 ? undefined
                 : {
-                    ...interactiveSx,
                     boxShadow: PANEL_SHADOW_DARK_HOVER,
                   },
-              '&:has(:active)': selected ? undefined : interactiveSx,
-              '&:has(.Mui-focusVisible)': selected ? undefined : interactiveSx,
             }
           : null),
       }}
     >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
-          background: (t) => packageAccentWash(t, accent, selected),
-        }}
-      />
       {selected ? (
         <Box
           sx={{
@@ -1142,17 +1112,7 @@ export function ExtraPackageCard({
         ...packageAccentSurfaceSx(accent, highlighted),
       }}
     >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
-          background: (t) => packageAccentWash(t, accent, highlighted),
-        }}
-      />
-
-      <Box sx={{ position: 'relative', px: padX, pt: { xs: 1.65, sm: 1.85 }, pb: 1.15 }}>
+      <Box sx={{ px: padX, pt: { xs: 1.65, sm: 1.85 }, pb: 1.15 }}>
         <Box
           sx={{
             display: 'flex',

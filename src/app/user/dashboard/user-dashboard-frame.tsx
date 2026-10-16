@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, GlobalStyles, Stack } from '@mui/material';
 
 import { paths } from '@/paths';
-import { MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
+import { APP_VIEWPORT_HEIGHT, MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
 import { MessagesThreadChromeProvider } from '@/contexts/messages-thread-chrome-context';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
@@ -196,9 +196,10 @@ function UserDashboardFrameInner({
           },
           ...(isPackagesHub
             ? {
-                minHeight: '100dvh',
-                height: { xs: 'auto', md: '100dvh' },
-                overflow: { xs: 'visible', md: 'hidden' },
+                minHeight: 0,
+                height: APP_VIEWPORT_HEIGHT,
+                maxHeight: APP_VIEWPORT_HEIGHT,
+                overflow: 'hidden',
               }
             : isMessages
               ? {
@@ -218,7 +219,7 @@ function UserDashboardFrameInner({
             pl: { lg: 'var(--SideNav-width)' },
             minHeight: 0,
             ...(isPackagesHub
-              ? { height: { xs: 'auto', md: '100%' } }
+              ? { height: '100%', minHeight: 0, overflow: 'hidden' }
               : isMessages
                 ? { height: { xs: '100%', md: 'auto' } }
                 : null),

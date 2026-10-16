@@ -661,20 +661,10 @@ function ConvertListingSection() {
         borderRadius: 3,
         scrollMarginTop: { xs: 96, md: 112 },
         overflow: 'hidden',
-        position: 'relative',
         ...packageAccentSurfaceSx('warning'),
       }}
     >
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background: (theme) =>
-            `linear-gradient(135deg, ${alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.1 : 0.05)} 0%, transparent 58%)`,
-        }}
-      />
-      <Stack direction="row" spacing={1.25} sx={{ position: 'relative', alignItems: 'flex-start', mb: 0.5 }}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', mb: 0.5 }}>
         <Box
           sx={{
             width: { xs: 44, sm: 52 },

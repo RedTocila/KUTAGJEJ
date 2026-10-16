@@ -41,6 +41,7 @@ function categoryCardSx(accent: PlanAccent = 'primary') {
     p: { xs: 1.5, sm: 1.75 },
     gap: { xs: 1.5, sm: 2 },
     cursor: 'pointer',
+    overflow: 'hidden',
     WebkitTapHighlightColor: 'transparent',
     transition: 'box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 140ms cubic-bezier(0.22, 1, 0.36, 1)',
     '&:hover': {
@@ -244,12 +245,12 @@ export default function UserPackagesPage() {
       sx={{
         flex: 1,
         minHeight: 0,
-        height: { xs: 'auto', md: '100%' },
-        overflow: { xs: 'visible', md: 'hidden' },
+        height: '100%',
+        overflow: 'hidden',
       }}
     >
       <UserPageHeader icon={<PackageIcon size={20} weight="duotone" />} title={t.nav.packages} sx={{ flexShrink: 0 }} />
-      <Stack spacing={1.35} sx={{ flex: 1, minHeight: 0, overflow: { xs: 'visible', md: 'hidden' } }}>
+      <Stack spacing={1.15} sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <CategoryCard
           href={paths.user.packagesMain}
           accent="primary"

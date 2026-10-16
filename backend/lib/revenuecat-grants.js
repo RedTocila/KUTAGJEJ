@@ -1,8 +1,11 @@
 'use strict';
 
+const crypto = require('crypto');
 const { getSupabaseAdmin } = require('./supabase');
-const { addBoostCredits } = require('./apply-payment');
+const { applyProfileCounterOnce, isUniqueViolation } = require('./apply-payment');
 const { getProductSpec } = require('./revenuecat-products');
+
+const CLAIM_STALE_SECONDS = 45;
 
 /**
  * Grant entitlements from a RevenueCat / App Store purchase.
@@ -35,34 +38,135 @@ async function grantRevenueCatPurchase(params) {
   }
 
   const sb = getSupabaseAdmin();
+  const token = crypto.randomBytes(16).toString('hex');
+  const { data: claimData, error: claimErr } = await sb.rpc('claim_iap_event', {
+    p_event_id: eventId,
+    p_user_id: appUserId,
+    p_product_id: productId,
+    p_event_type: eventType,
+    p_token: token,
+    p_stale_seconds: CLAIM_STALE_SECONDS,
+  });
+  if (claimErr) throw claimErr;
+  const claim = Array.isArray(claimData) ? claimData[0] : claimData;
+  if (!claim?.claimed) {
+    if (claim?.status === 'processing') {
+      return { ok: false, status: 409, message: 'Event is already being processed.' };
+    }
+    return {
+      ok: true,
+      duplicate: true,
+      paymentId: claim?.payment_id || null,
+    };
+  }
 
-  // Already processed — idempotent success.
-  const { data: existing, error: exErr } = await sb
+  try {
+    const { data: profile, error: pErr } = await sb
+      .from('profiles')
+      .select('id, email, first_name, last_name, account_type, role')
+      .eq('id', appUserId)
+      .maybeSingle();
+    if (pErr) throw pErr;
+    if (!profile) {
+      await releaseIapClaim(sb, eventId, token);
+      return { ok: false, status: 404, message: `No profile for app_user_id ${appUserId}` };
+    }
+
+    const payment = await findOrCreateIapPayment(sb, {
+      profile,
+      spec,
+      eventId,
+      eventType,
+      productId,
+      transactionId: params.transactionId || null,
+      price: params.price,
+      currency: params.currency,
+    });
+
+    if (!payment.granted) {
+      if (spec.kind === 'subscription') {
+        await grantAppleSubscription(profile, spec, payment, params.expirationAtMs);
+      } else if (spec.kind === 'credits') {
+        const credits = Number(spec.credits) || 0;
+        await applyProfileCounterOnce(sb, {
+          userId: profile.id,
+          paymentId: payment.id,
+          effectKey: 'boost_credits',
+          column: 'boost_credits',
+          amount: credits,
+        });
+        payment.metadata.credits = credits;
+      } else if (spec.kind === 'premium') {
+        await grantApplePremium(profile.id, spec, payment.id);
+      } else if (spec.kind === 'okazion') {
+        await grantAppleOkazion(profile.id, spec, payment.id);
+      } else if (spec.kind === 'auto-refresh') {
+        await applyProfileCounterOnce(sb, {
+          userId: profile.id,
+          paymentId: payment.id,
+          effectKey: 'auto_refresh_slots',
+          column: 'auto_refresh_slots',
+          amount: Number(spec.autoRefreshSlots) || 0,
+        });
+      }
+
+      const { error: markErr } = await sb
+        .from('payments')
+        .update({
+          granted: true,
+          metadata: payment.metadata,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', payment.id);
+      if (markErr) throw markErr;
+    }
+
+    const { error: doneErr } = await sb
+      .from('iap_processed_events')
+      .update({
+        status: 'done',
+        payment_id: payment.id,
+        claim_token: null,
+        user_id: profile.id,
+        product_id: productId,
+        event_type: eventType,
+      })
+      .eq('event_id', eventId)
+      .eq('claim_token', token);
+    if (doneErr) throw doneErr;
+
+    return { ok: true, paymentId: payment.id, kind: spec.kind };
+  } catch (err) {
+    await releaseIapClaim(sb, eventId, token).catch((releaseErr) => {
+      console.error('[iap] release claim', releaseErr?.message || releaseErr);
+    });
+    console.error('[iap] grant failed', eventId, err?.message || err);
+    throw err;
+  }
+}
+
+async function releaseIapClaim(sb, eventId, token) {
+  const { error } = await sb
     .from('iap_processed_events')
-    .select('event_id, payment_id')
+    .delete()
     .eq('event_id', eventId)
-    .maybeSingle();
-  if (exErr) throw exErr;
-  if (existing) {
-    return { ok: true, duplicate: true, paymentId: existing.payment_id };
-  }
+    .eq('claim_token', token)
+    .eq('status', 'processing');
+  if (error) throw error;
+}
 
-  const { data: profile, error: pErr } = await sb
-    .from('profiles')
-    .select('id, email, first_name, last_name, account_type, role')
-    .eq('id', appUserId)
+async function findOrCreateIapPayment(sb, { profile, spec, eventId, eventType, productId, transactionId, price, currency }) {
+  const { data: existing, error: existingErr } = await sb
+    .from('payments')
+    .select('*')
+    .contains('metadata', { revenueCatEventId: eventId })
     .maybeSingle();
-  if (pErr) throw pErr;
-  if (!profile) {
-    return { ok: false, status: 404, message: `No profile for app_user_id ${appUserId}` };
-  }
+  if (existingErr) throw existingErr;
+  if (existing) return existing;
 
   const amount =
-    params.price != null && Number.isFinite(Number(params.price))
-      ? Number(params.price)
-      : Number(spec.priceEur) || 0;
-  const currency = String(params.currency || 'EUR').toUpperCase() || 'EUR';
-
+    price != null && Number.isFinite(Number(price)) ? Number(price) : Number(spec.priceEur) || 0;
+  const currencyCode = String(currency || 'EUR').toUpperCase() || 'EUR';
   const paymentInsert = {
     payer_id: profile.id,
     payer_email: profile.email || '',
@@ -71,9 +175,9 @@ async function grantRevenueCatPurchase(params) {
     description: spec.description,
     amount_minor: Math.round(amount * 100),
     amount,
-    currency,
+    currency: currencyCode,
     pok_env: 'apple_iap',
-    pok_order_id: params.transactionId || null,
+    pok_order_id: transactionId,
     pok_status: eventType,
     status: 'paid',
     granted: false,
@@ -83,61 +187,48 @@ async function grantRevenueCatPurchase(params) {
       revenueCatEventId: eventId,
       revenueCatEventType: eventType,
       productId,
-      storeTransactionId: params.transactionId || null,
+      storeTransactionId: transactionId,
     },
     updated_at: new Date().toISOString(),
   };
 
-  const { data: payment, error: payErr } = await sb
-    .from('payments')
-    .insert(paymentInsert)
-    .select('*')
-    .single();
-  if (payErr) throw payErr;
-
-  try {
-    if (spec.kind === 'subscription') {
-      await grantAppleSubscription(profile, spec, payment, params.expirationAtMs);
-    } else if (spec.kind === 'credits') {
-      await addBoostCredits(profile.id, Number(spec.credits) || 0);
-      payment.metadata.credits = Number(spec.credits) || 0;
-    } else if (spec.kind === 'premium') {
-      await grantApplePremium(profile.id, spec, payment.id);
-    } else if (spec.kind === 'okazion') {
-      await grantAppleOkazion(profile.id, spec, payment.id);
-    } else if (spec.kind === 'auto-refresh') {
-      await grantAppleAutoRefresh(profile.id, Number(spec.autoRefreshSlots) || 0);
-    }
-
-    const { error: markErr } = await sb
+  const { data: payment, error: payErr } = await sb.from('payments').insert(paymentInsert).select('*').single();
+  if (payErr && isUniqueViolation(payErr)) {
+    const { data: won, error: wonErr } = await sb
       .from('payments')
-      .update({
-        granted: true,
-        metadata: payment.metadata,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', payment.id);
-    if (markErr) throw markErr;
-
-    const { error: evErr } = await sb.from('iap_processed_events').insert({
-      event_id: eventId,
-      user_id: profile.id,
-      product_id: productId,
-      event_type: eventType,
-      payment_id: payment.id,
-    });
-    // Unique race: another worker won — treat as success.
-    if (evErr && !/duplicate|unique/i.test(String(evErr.message || ''))) throw evErr;
-
-    return { ok: true, paymentId: payment.id, kind: spec.kind };
-  } catch (err) {
-    console.error('[iap] grant failed', eventId, err?.message || err);
-    throw err;
+      .select('*')
+      .contains('metadata', { revenueCatEventId: eventId })
+      .maybeSingle();
+    if (wonErr) throw wonErr;
+    if (won) return won;
   }
+  if (payErr) throw payErr;
+  return payment;
 }
 
 async function grantAppleSubscription(profile, spec, payment, expirationAtMs) {
   const sb = getSupabaseAdmin();
+  const { data: existingSub, error: existingErr } = await sb
+    .from('user_subscriptions')
+    .select('id, boost_credits_granted')
+    .eq('payment_id', payment.id)
+    .maybeSingle();
+  if (existingErr) throw existingErr;
+  if (existingSub) {
+    payment.metadata.subscriptionId = existingSub.id;
+    const existingBoost = Number(existingSub.boost_credits_granted) || 0;
+    if (existingBoost > 0) {
+      await applyProfileCounterOnce(sb, {
+        userId: profile.id,
+        paymentId: payment.id,
+        effectKey: 'boost_credits',
+        column: 'boost_credits',
+        amount: existingBoost,
+      });
+    }
+    return;
+  }
+
   const isBusiness =
     profile.account_type === 'business' || profile.role === 'business-user';
   const kind = isBusiness ? 'company' : 'agent';
@@ -225,6 +316,16 @@ async function grantAppleSubscription(profile, spec, payment, expirationAtMs) {
     } = insertRow;
     ({ data: sub, error: subErr } = await sb.from('user_subscriptions').insert(rest).select('id').single());
   }
+  if (subErr && isUniqueViolation(subErr)) {
+    const { data: won, error: wonErr } = await sb
+      .from('user_subscriptions')
+      .select('id')
+      .eq('payment_id', payment.id)
+      .maybeSingle();
+    if (wonErr) throw wonErr;
+    sub = won;
+    subErr = null;
+  }
   if (subErr) throw subErr;
 
   payment.metadata.subscriptionId = sub.id;
@@ -232,7 +333,13 @@ async function grantAppleSubscription(profile, spec, payment, expirationAtMs) {
   payment.metadata.planCode = contract.plan_code;
 
   if (boost > 0) {
-    await addBoostCredits(profile.id, boost);
+    await applyProfileCounterOnce(sb, {
+      userId: profile.id,
+      paymentId: payment.id,
+      effectKey: 'boost_credits',
+      column: 'boost_credits',
+      amount: boost,
+    });
   }
 }
 
@@ -261,33 +368,14 @@ async function grantAppleOkazion(userId, spec, paymentId) {
     source: 'card',
     paymentId,
     priceEur: spec.priceEur,
+    grantOrdinal: 0,
   });
   if (!created.ok) {
     const err = new Error(created.message || 'Okazion voucher failed');
     err.statusCode = created.status || 400;
     throw err;
   }
-  return qty;
-}
-
-async function grantAppleAutoRefresh(userId, slots) {
-  if (slots <= 0) return;
-  const sb = getSupabaseAdmin();
-  const { data: profile, error } = await sb
-    .from('profiles')
-    .select('auto_refresh_slots')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!profile) return;
-  const { error: updErr } = await sb
-    .from('profiles')
-    .update({
-      auto_refresh_slots: (Number(profile.auto_refresh_slots) || 0) + slots,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId);
-  if (updErr) throw updErr;
+    return qty;
 }
 
 /**

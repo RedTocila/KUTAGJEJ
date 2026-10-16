@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "dev:keep": "bash scripts/keep-api-alive.sh",
-    "create-admin": "node scripts/create-admin-direct.js"
+    "create-admin": "node scripts/create-admin-direct.js",
+    "test:payment-image-safety": "node scripts/test-payment-and-image-safety.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

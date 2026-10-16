@@ -173,18 +173,99 @@ async function getSdkOrder(orderId) {
   const order = extractOrder(body);
   const status = String(order?.status || order?.state || '').toUpperCase();
   const amount = Number(order?.amount);
-  const capturedAmount = Number(order?.capturedAmount);
-  const paidByStatus = PAID_STATUSES.has(status);
-  const paidByAmount =
-    Number.isFinite(capturedAmount) && Number.isFinite(amount) && amount > 0 && capturedAmount >= amount;
+  const capturedRaw = readCapturedRaw(order);
+  const currency = readOrderCurrency(order);
   return {
     id,
     status,
+    currency,
     amount: Number.isFinite(amount) ? amount : null,
-    capturedAmount: Number.isFinite(capturedAmount) ? capturedAmount : null,
-    paid: paidByStatus || paidByAmount,
+    capturedAmount: capturedRaw,
+    // Status alone is not enough to grant. confirmAndApplyPayment also checks
+    // captured amount and currency against the payment row.
+    paid: PAID_STATUSES.has(status),
     raw: order,
   };
+}
+
+function readOrderCurrency(order) {
+  const raw = order?.raw && typeof order.raw === 'object' ? order.raw : order || {};
+  return String(raw.currencyCode || raw.currency || raw.currency_code || order?.currency || '')
+    .trim()
+    .toUpperCase();
+}
+
+/** Captured total from the provider payload. An explicit 0 is kept (not replaced by `amount`). */
+function readCapturedRaw(order) {
+  const raw = order?.raw && typeof order.raw === 'object' ? order.raw : order || {};
+  const capturedKeys = ['capturedAmount', 'captured_amount', 'amountCaptured'];
+  for (const key of capturedKeys) {
+    if (raw[key] != null && raw[key] !== '') {
+      const n = Number(raw[key]);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  if (raw.finalAmount != null && raw.finalAmount !== '') {
+    const finalAmount = Number(raw.finalAmount);
+    if (Number.isFinite(finalAmount)) return finalAmount;
+  }
+  const amount = Number(raw.amount ?? order?.amount);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function expectedPaymentCents(payment) {
+  const minor = Number(payment?.amountMinor ?? payment?.amount_minor);
+  if (Number.isFinite(minor) && minor > 0) return Math.round(minor);
+  const major = Number(payment?.amount);
+  if (Number.isFinite(major) && major > 0) return Math.round(major * 100);
+  return null;
+}
+
+/**
+ * POK's live create-order API takes MAJOR units (45 = 45.00 EUR). Fetches of the
+ * same order usually echo that. Some payloads send integer minor units (4500).
+ * Fractional values are always major. Integers use major when that lands on the
+ * expected cents, otherwise minor when the integer itself is the expected cents.
+ */
+function centsFromProviderAmount(value, expectedCents) {
+  if (!Number.isFinite(value) || !Number.isFinite(expectedCents)) return null;
+  const asMajor = Math.round(value * 100);
+  const fractional = Math.abs(value - Math.trunc(value)) > 1e-8;
+  if (fractional) return asMajor;
+  if (Math.abs(asMajor - expectedCents) <= 1) return asMajor;
+  const asMinor = Math.round(value);
+  if (Math.abs(asMinor - expectedCents) <= 1) return asMinor;
+  return asMajor;
+}
+
+/**
+ * Authoritative check before any entitlement is granted.
+ * Requires a captured/paid status, the same currency, and a captured total
+ * within 1 cent of the payment row.
+ */
+function pokCaptureMatchesPayment(payment, order) {
+  const status = String(order?.status || order?.raw?.status || order?.raw?.state || '').toUpperCase();
+  if (!PAID_STATUSES.has(status)) {
+    return { ok: false, reason: 'status', status };
+  }
+  const currency = readOrderCurrency(order);
+  const expectedCurrency = String(payment?.currency || '').trim().toUpperCase();
+  if (!currency || !expectedCurrency || currency !== expectedCurrency) {
+    return { ok: false, reason: 'currency', currency, expectedCurrency };
+  }
+  const expected = expectedPaymentCents(payment);
+  const capturedRaw = readCapturedRaw(order);
+  const capturedCents = centsFromProviderAmount(capturedRaw, expected);
+  if (expected == null || capturedCents == null || Math.abs(capturedCents - expected) > 1) {
+    return {
+      ok: false,
+      reason: 'amount',
+      expectedCents: expected,
+      capturedCents,
+      capturedRaw,
+    };
+  }
+  return { ok: true, expectedCents: expected, capturedCents, currency };
 }
 
 module.exports = {
@@ -194,4 +275,7 @@ module.exports = {
   createSdkOrder,
   getSdkOrder,
   PAID_STATUSES,
+  pokCaptureMatchesPayment,
+  expectedPaymentCents,
+  centsFromProviderAmount,
 };

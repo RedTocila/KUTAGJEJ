@@ -4,6 +4,7 @@ const { imageUpload, MAX_IMAGES, MAX_IMAGE_BYTES } = require('../lib/image-uploa
 const {
   uploadBuffersToSupabase,
   mirrorRemoteImageUrls,
+  isSafeRemoteImageUrl,
 } = require('../lib/storage-uploads');
 
 const router = express.Router();
@@ -84,10 +85,14 @@ router.post(
 router.post('/from-urls', authMiddleware, requirePortalUser, async (req, res) => {
   try {
     const rawUrls = Array.isArray(req.body?.urls) ? req.body.urls : [];
-    const urls = rawUrls
+    const candidates = rawUrls
       .map((u) => String(u || '').trim())
       .filter((u) => /^https?:\/\//i.test(u))
       .slice(0, MAX_IMAGES);
+    const urls = [];
+    for (const candidate of candidates) {
+      if (await isSafeRemoteImageUrl(candidate)) urls.push(candidate);
+    }
 
     if (!urls.length) {
       return res.status(400).json({ message: 'Nuk u dërgua asnjë URL fotoje.' });

@@ -155,14 +155,14 @@ router.post('/webhook/pok', async (req, res) => {
     const paymentId =
       req.query.paymentId || req.body?.reference || req.body?.data?.reference || req.body?.metadata?.reference;
     if (paymentId && isUuid(String(paymentId))) {
-      await confirmAndApplyPayment(String(paymentId), pokClient).catch((e) =>
-        console.error('POK webhook apply error:', e?.message || e)
-      );
+      const payment = await confirmAndApplyPayment(String(paymentId), pokClient);
+      return res.json({ received: true, paid: payment.status === 'paid' });
     }
+    return res.json({ received: true });
   } catch (error) {
     console.error('POST /payments/webhook/pok:', error?.message || error);
+    return res.status(500).json({ message: 'Webhook handling failed.' });
   }
-  res.json({ received: true });
 });
 
 // Everything below requires an authenticated portal user (individual / business).

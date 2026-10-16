@@ -8,6 +8,12 @@ const { applyListingBump } = require('./listing-bump');
 const { hasBumpedAtColumn } = require('./ensure-bumped-at-schema');
 const { assertCanReactivateJobListing } = require('./listing-category-quota');
 
+function isUniqueViolation(error) {
+  const code = String(error?.code || '');
+  const msg = String(error?.message || '');
+  return code === '23505' || /duplicate key|unique constraint/i.test(msg);
+}
+
 /** Okazion slots included with Grow / Elite stay featured for 7 days. */
 const PLAN_OKAZION_PACKAGE_ID = 'plan-okazion';
 const PLAN_OKAZION_DAYS = 7;
@@ -38,6 +44,7 @@ async function createOkazionVoucher({
   priceBc = null,
   days = null,
   status = 'unused',
+  grantOrdinal = null,
 }) {
   if (!userId || !isUuid(String(userId))) {
     return { ok: false, status: 401, message: 'Auth required' };
@@ -65,20 +72,42 @@ async function createOkazionVoucher({
   }
 
   const sb = getSupabaseAdmin();
-  const { data, error } = await sb
-    .from('okazion_listing_vouchers')
-    .insert({
-      user_id: userId,
-      package_id: resolvedPackageId,
-      days: Number(resolvedDays) || PLAN_OKAZION_DAYS,
-      price_eur: resolvedEur != null ? Number(resolvedEur) : null,
-      price_bc: resolvedBc != null ? Number(resolvedBc) : null,
-      source,
-      payment_id: paymentId,
-      status,
-    })
-    .select('*')
-    .single();
+  if (paymentId != null && grantOrdinal != null) {
+    const { data: existing, error: existingErr } = await sb
+      .from('okazion_listing_vouchers')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .eq('grant_ordinal', grantOrdinal)
+      .limit(1);
+    if (existingErr) throw existingErr;
+    if (existing && existing.length) {
+      return { ok: true, voucher: mapVoucher(existing[0]) };
+    }
+  }
+
+  const insertRow = {
+    user_id: userId,
+    package_id: resolvedPackageId,
+    days: Number(resolvedDays) || PLAN_OKAZION_DAYS,
+    price_eur: resolvedEur != null ? Number(resolvedEur) : null,
+    price_bc: resolvedBc != null ? Number(resolvedBc) : null,
+    source,
+    payment_id: paymentId,
+    status,
+  };
+  if (grantOrdinal != null) insertRow.grant_ordinal = grantOrdinal;
+
+  const { data, error } = await sb.from('okazion_listing_vouchers').insert(insertRow).select('*').single();
+  if (error && paymentId != null && grantOrdinal != null && isUniqueViolation(error)) {
+    const { data: won, error: wonErr } = await sb
+      .from('okazion_listing_vouchers')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .eq('grant_ordinal', grantOrdinal)
+      .limit(1);
+    if (wonErr) throw wonErr;
+    if (won && won.length) return { ok: true, voucher: mapVoucher(won[0]) };
+  }
   if (error) throw error;
 
   return {

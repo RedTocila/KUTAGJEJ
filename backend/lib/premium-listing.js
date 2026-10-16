@@ -21,6 +21,12 @@ function premiumFieldsFromDoc(doc) {
   };
 }
 
+function isUniqueViolation(error) {
+  const code = String(error?.code || '');
+  const msg = String(error?.message || '');
+  return code === '23505' || /duplicate key|unique constraint/i.test(msg);
+}
+
 async function createPremiumVoucher({
   userId,
   packageId,
@@ -57,6 +63,18 @@ async function createPremiumVoucher({
   }
 
   const sb = getSupabaseAdmin();
+  if (paymentId) {
+    const { data: existing, error: existingErr } = await sb
+      .from('premium_listing_vouchers')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .limit(1);
+    if (existingErr) throw existingErr;
+    if (existing && existing.length) {
+      return { ok: true, voucher: mapVoucher(existing[0]) };
+    }
+  }
+
   const { data, error } = await sb
     .from('premium_listing_vouchers')
     .insert({
@@ -71,6 +89,15 @@ async function createPremiumVoucher({
     })
     .select('*')
     .single();
+  if (error && paymentId && isUniqueViolation(error)) {
+    const { data: won, error: wonErr } = await sb
+      .from('premium_listing_vouchers')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .limit(1);
+    if (wonErr) throw wonErr;
+    if (won && won.length) return { ok: true, voucher: mapVoucher(won[0]) };
+  }
   if (error) throw error;
 
   return {

@@ -14,8 +14,6 @@ import {
   Stack,
   TextField,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material';
 import { MagnifyingGlass as MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr/MagnifyingGlass';
 import { Sparkle as SparkleIcon } from '@phosphor-icons/react/dist/ssr/Sparkle';
@@ -37,6 +35,7 @@ import {
   type SearchCategoryId,
 } from '@/lib/home-categories';
 import { buildBrowseUrlQuery, type BrowseFilters } from '@/lib/listing-filters';
+import { MAIN_TABS_MOBILE_MQ } from '@/lib/main-tabs';
 import {
   MOBILE_CONTENT_BOTTOM_PADDING,
   MOBILE_SEARCH_BAR_HEIGHT_PX,
@@ -153,15 +152,21 @@ async function fetchVerticalResults(
 
 /** Pins the /kerko dock to `document.body` on mobile so listing cards cannot paint over it. */
 function SearchDockLayer({ children, portaled = true }: { children: React.ReactNode; portaled?: boolean }) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [host, setHost] = React.useState<HTMLElement | null>(null);
 
-  React.useEffect(() => {
-    setHost(document.body);
-  }, []);
+  React.useLayoutEffect(() => {
+    if (!portaled) {
+      setHost(null);
+      return undefined;
+    }
+    const mq = window.matchMedia(MAIN_TABS_MOBILE_MQ);
+    const sync = () => setHost(mq.matches ? document.body : null);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [portaled]);
 
-  if (portaled && isMobile && host) return createPortal(children, host);
+  if (host) return createPortal(children, host);
   return children;
 }
 
@@ -240,7 +245,6 @@ export function SearchPageView({
   const [total, setTotal] = React.useState(0);
   const [aiReply, setAiReply] = React.useState<string | null>(null);
   const [inputExpanded, setInputExpanded] = React.useState(false);
-  const [entered, setEntered] = React.useState(isOverlay);
   const categoriesHidden = useScrollRevealHidden({ alwaysShowBelowY: 24 });
   const skipFirstLive = React.useRef(isLiveSearchCategory(initialCategory));
   const searchGeneration = React.useRef(0);
@@ -251,26 +255,6 @@ export function SearchPageView({
   const activeCategory = categoryId ? (localizedCategories.find((v) => v.id === categoryId) ?? null) : null;
   const isAi = categoryId === 'ai';
   const isProfiles = categoryId === 'profiles';
-
-  React.useEffect(() => {
-    if (isOverlay) {
-      setEntered(true);
-      return;
-    }
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduceMotion) {
-      setEntered(true);
-      return;
-    }
-    let frame2 = 0;
-    const frame1 = requestAnimationFrame(() => {
-      frame2 = requestAnimationFrame(() => setEntered(true));
-    });
-    return () => {
-      cancelAnimationFrame(frame1);
-      cancelAnimationFrame(frame2);
-    };
-  }, [isOverlay]);
 
   React.useLayoutEffect(() => {
     const el = inputRef.current;
@@ -548,11 +532,8 @@ export function SearchPageView({
             pb: { xs: 1.25, lg: 0 },
             alignItems: { xs: 'center', lg: 'stretch' },
             bgcolor: { xs: 'background.default', lg: 'transparent' },
-            transform: {
-              xs: entered ? 'translate3d(0, 0, 0)' : 'translate3d(0, -12%, 0)',
-              lg: 'none',
-            },
-            opacity: { xs: entered ? 1 : 0, lg: 1 },
+            transform: 'none',
+            opacity: 1,
             transition: {
               xs: `transform ${MOTION.enter} ${MOTION.ease}, opacity ${MOTION.enter} ${MOTION.ease}, gap ${MOTION.base} ${MOTION.ease}, padding-top ${MOTION.base} ${MOTION.ease}`,
               lg: 'none',

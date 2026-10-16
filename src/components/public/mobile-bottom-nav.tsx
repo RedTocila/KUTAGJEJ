@@ -25,7 +25,7 @@ import {
 } from '@/lib/mobile-layout';
 import { previewMainTabIndex, MAIN_TAB_SLIDE_MS, registerMainTabNavProgress } from '@/lib/main-tab-pager';
 import { mainTabFromPath } from '@/lib/main-tabs';
-import { beginPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
+import { beginPendingNavigation, clearPendingNavigation, normalizeNavPath } from '@/lib/navigation-pending';
 import { isPublicBrowsePath } from '@/lib/public-browse-path';
 import { paths } from '@/paths';
 import { MOTION } from '@/styles/motion';
@@ -129,25 +129,53 @@ export function MobileBottomNav() {
   const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
   const [transitionReady, setTransitionReady] = React.useState(false);
   const pillRef = React.useRef<HTMLDivElement | null>(null);
+  const iconSlotsRef = React.useRef<Array<HTMLElement | null>>([]);
+  const hasActiveTabRef = React.useRef(hasActiveTab);
+  hasActiveTabRef.current = hasActiveTab;
   /** Set on touch, before the route (and activeIndex) catches up. */
   const touchPreviewRef = React.useRef<number | null>(null);
+  /** pointerup already handled this tap — the click that follows must not navigate again. */
+  const gestureRef = React.useRef<'idle' | 'pending' | 'commit' | 'cancel'>('idle');
 
   const paintPill = React.useCallback((fraction: number, animate: boolean) => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const el = pillRef.current;
-    if (!el) return;
-    const motion =
-      animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}`
-        : 'none';
-    const next = `translate3d(${fraction * 100}%, 0, 0)`;
-    if (el.style.transform === next && el.style.transition === motion) return;
-    el.style.transition = motion;
-    el.style.transform = next;
+    if (el) {
+      const motion = animate && !reduced ? `transform ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}` : 'none';
+      const next = `translate3d(${fraction * 100}%, 0, 0)`;
+      if (el.style.transform !== next || el.style.transition !== motion) {
+        el.style.transition = motion;
+        el.style.transform = next;
+      }
+    }
+
+    const iconMotion = animate && !reduced ? `opacity ${MAIN_TAB_SLIDE_MS}ms ${MOTION.easeIos}` : 'none';
+    const fillEnabled = hasActiveTabRef.current || fraction >= 0;
+    iconSlotsRef.current.forEach((slot) => {
+      if (!slot) return;
+      const index = Number(slot.dataset.index);
+      const amount =
+        fillEnabled && Number.isFinite(index) ? Math.max(0, Math.min(1, 1 - Math.abs(fraction - index))) : 0;
+      const fill = slot.querySelector<HTMLElement>('[data-nav-fill]');
+      const regular = slot.querySelector<HTMLElement>('[data-nav-regular]');
+      const fillOpacity = String(amount);
+      const regularOpacity = String(1 - amount);
+      if (fill && (fill.style.opacity !== fillOpacity || fill.style.transition !== iconMotion)) {
+        fill.style.transition = iconMotion;
+        fill.style.opacity = fillOpacity;
+      }
+      if (regular && (regular.style.opacity !== regularOpacity || regular.style.transition !== iconMotion)) {
+        regular.style.transition = iconMotion;
+        regular.style.opacity = regularOpacity;
+      }
+    });
   }, []);
 
   React.useLayoutEffect(() => {
-    paintPill(indicatorIndex, transitionReady);
-  }, [indicatorIndex, paintPill, transitionReady]);
+    // A touch preview paints ahead of this state. Don't snap the icon back to the old tab.
+    if (touchPreviewRef.current != null && touchPreviewRef.current !== indicatorIndex) return;
+    paintPill(hasActiveTab ? indicatorIndex : -1, transitionReady);
+  }, [hasActiveTab, indicatorIndex, paintPill, transitionReady]);
 
   React.useEffect(() => {
     registerMainTabNavProgress(paintPill);
@@ -178,6 +206,7 @@ export function MobileBottomNav() {
     const frame1 = requestAnimationFrame(() => {
       setTransitionReady(true);
       frame2 = requestAnimationFrame(() => {
+        if (touchPreviewRef.current != null) return;
         setIndicatorIndex(target);
         persistedFromIndex = target;
       });
@@ -190,14 +219,13 @@ export function MobileBottomNav() {
   }, [activeIndex, transitionReady]);
 
   const slideTabTo = (index: number, item: NavItem) => {
-    // Write the pill and the page track in this event, before React renders.
-    // Only lock while the highlight is ahead of the route — a retap of the
-    // current tab must not block later swipe updates.
+    // Paint the pill and the filled icon in this event, before React renders.
+    // A setState here re-renders the button and iOS drops the click, so the
+    // page slides but the route (and the search bar) stay one tap behind.
     touchPreviewRef.current = index === activeIndex ? null : index;
+    hasActiveTabRef.current = true;
     paintPill(index, true);
     persistedFromIndex = index;
-    setTransitionReady(true);
-    setIndicatorIndex(index);
 
     const href = item.kind === 'search' ? paths.public.search : item.href;
     const tab = href ? mainTabFromPath(hrefPath(href)) : null;
@@ -219,21 +247,43 @@ export function MobileBottomNav() {
 
   const handleTabPointerDown = (event: React.PointerEvent, item: NavItem, index: number) => {
     if (event.button !== 0) return;
+    gestureRef.current = 'pending';
+    if (event.currentTarget instanceof Element) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer can already be gone on a very fast tap.
+      }
+    }
     slideTabTo(index, item);
   };
 
-  const handleTabPointerUp = (event: React.PointerEvent, index: number) => {
+  const finishGesture = (event: React.PointerEvent, item: NavItem, index: number) => {
+    if (gestureRef.current !== 'pending') return;
+    if (event.currentTarget instanceof Element && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Already released.
+      }
+    }
     const rect = event.currentTarget.getBoundingClientRect();
     const inside =
       event.clientX >= rect.left &&
       event.clientX <= rect.right &&
       event.clientY >= rect.top &&
       event.clientY <= rect.bottom;
-    if (!inside) revertTabSlide();
-    else persistedFromIndex = index;
+    if (!inside) {
+      gestureRef.current = 'cancel';
+      revertTabSlide();
+      return;
+    }
+    gestureRef.current = 'commit';
+    persistedFromIndex = index;
+    activateTab(event, item, index);
   };
 
-  const handleSearchClick = (event: React.MouseEvent, index: number) => {
+  const handleSearchClick = (event: { preventDefault(): void }, index: number) => {
     event.preventDefault();
     slideTabTo(index, items[index]!);
     if (searchOverlay?.open) {
@@ -247,17 +297,24 @@ export function MobileBottomNav() {
     hardNavigate(paths.public.search, event);
   };
 
-  const handleTabClick = (event: React.MouseEvent, item: NavItem, index: number) => {
+  const activateTab = (event: { preventDefault(): void }, item: NavItem, index: number) => {
     if (item.kind === 'search') {
       handleSearchClick(event, index);
       return;
     }
+    event.preventDefault();
     if (searchOverlay?.open) {
       searchOverlay.closeSearch({ immediate: true, replaceHistory: true });
     }
     slideTabTo(index, item);
-    if (!item.activeWhen(pathname)) return;
     if (!item.href) return;
+
+    // Not on this tab yet → go there. Don't rely on the Link click; iOS drops it
+    // after the touch-start slide.
+    if (!item.activeWhen(pathname)) {
+      hardNavigate(item.href, event);
+      return;
+    }
 
     // Already on this tab's root → scroll to top + soft refresh.
     // Active on a nested route (e.g. settings under Profile) → go to tab root.
@@ -277,6 +334,28 @@ export function MobileBottomNav() {
       return;
     }
     hardNavigate(item.href, event);
+  };
+
+  const handleTabClick = (event: React.MouseEvent, item: NavItem, index: number) => {
+    if (gestureRef.current === 'commit') {
+      event.preventDefault();
+      gestureRef.current = 'idle';
+      return;
+    }
+    if (gestureRef.current === 'cancel') {
+      event.preventDefault();
+      gestureRef.current = 'idle';
+      clearPendingNavigation();
+      revertTabSlide();
+      return;
+    }
+    gestureRef.current = 'idle';
+    activateTab(event, item, index);
+  };
+
+  const handlePointerCancel = () => {
+    if (gestureRef.current === 'pending') gestureRef.current = 'cancel';
+    revertTabSlide();
   };
 
   const nav = (
@@ -355,9 +434,6 @@ export function MobileBottomNav() {
               const Icon = item.icon;
               const active = item.activeWhen(displayPathname);
               const isMessages = item.id === 'messages';
-              const iconColor = active
-                ? 'var(--mui-palette-primary-main)'
-                : 'var(--mui-palette-text-secondary)';
               const sharedSx = {
                 minWidth: 0,
                 height: '100%',
@@ -388,21 +464,47 @@ export function MobileBottomNav() {
                 >
                   <Box
                     component="span"
+                    data-index={index}
+                    ref={(node: HTMLElement | null) => {
+                      iconSlotsRef.current[index] = node;
+                    }}
+                    aria-hidden
                     sx={{
+                      position: 'relative',
+                      width: 24,
+                      height: 24,
                       display: 'inline-flex',
-                      color: iconColor,
-                      '& svg': {
-                        color: iconColor,
-                        fill: iconColor,
-                      },
                     }}
                   >
-                    <Icon
-                      key={active ? 'fill' : 'regular'}
-                      size={24}
-                      weight={active ? 'fill' : 'regular'}
-                      color={iconColor}
-                    />
+                    <Box
+                      component="span"
+                      data-nav-regular=""
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--mui-palette-text-secondary)',
+                      }}
+                    >
+                      <Icon size={24} weight="regular" color="currentColor" />
+                    </Box>
+                    <Box
+                      component="span"
+                      data-nav-fill=""
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--mui-palette-primary-main)',
+                        opacity: 0,
+                      }}
+                    >
+                      <Icon size={24} weight="fill" color="currentColor" />
+                    </Box>
                   </Box>
                 </Badge>
               );
@@ -418,8 +520,8 @@ export function MobileBottomNav() {
                     aria-expanded={Boolean(searchOverlay?.open)}
                     aria-current={active ? 'page' : undefined}
                     onPointerDown={(event) => handleTabPointerDown(event, item, index)}
-                    onPointerUp={(event) => handleTabPointerUp(event, index)}
-                    onPointerCancel={revertTabSlide}
+                    onPointerUp={(event) => finishGesture(event, item, index)}
+                    onPointerCancel={handlePointerCancel}
                     onClick={(event) => handleTabClick(event, item, index)}
                     sx={sharedSx}
                   >
@@ -436,8 +538,8 @@ export function MobileBottomNav() {
                   aria-label={item.ariaLabel}
                   aria-current={active ? 'page' : undefined}
                   onPointerDown={(event) => handleTabPointerDown(event, item, index)}
-                  onPointerUp={(event) => handleTabPointerUp(event, index)}
-                  onPointerCancel={revertTabSlide}
+                  onPointerUp={(event) => finishGesture(event, item, index)}
+                  onPointerCancel={handlePointerCancel}
                   onClick={(event) => handleTabClick(event, item, index)}
                   sx={sharedSx}
                 >

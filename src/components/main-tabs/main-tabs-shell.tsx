@@ -265,6 +265,8 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
   const reduceMotionRef = React.useRef(false);
   const [layoutIndex, setLayoutIndex] = React.useState(index);
   const [previewIndex, setPreviewIndex] = React.useState<number | null>(null);
+  /** Tab the pager is showing. Preview runs ahead of the route so chrome can move on touch. */
+  const visibleTabIndex = previewIndex ?? index;
   const previewMountFrameRef = React.useRef(0);
   const startRef = React.useRef<{
     x: number;
@@ -393,6 +395,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
     if (!hosted || draggingRef.current) return;
     if (previewLockRef.current != null && previewLockRef.current !== index) return;
     previewLockRef.current = null;
+    setPreviewIndex((current) => (current == null ? current : null));
     if (appliedIndexRef.current === index && dragXRef.current === 0) return;
     dragXRef.current = 0;
     applyTransform(index, 0, true);
@@ -572,7 +575,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
           >
             <MainTabPane
               paneIndex={0}
-              active={index === 0}
+              active={visibleTabIndex === 0}
               layoutActive={layoutIndex === 0}
               onPaneRef={setPaneRef}
             >
@@ -580,7 +583,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={1}
-              active={index === 1}
+              active={visibleTabIndex === 1}
               layoutActive={layoutIndex === 1}
               contentSx={{ px: 2, pt: 3, pb: MOBILE_CONTENT_BOTTOM_PADDING }}
               onPaneRef={setPaneRef}
@@ -595,19 +598,19 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={2}
-              active={index === 2}
+              active={visibleTabIndex === 2}
               layoutActive={layoutIndex === 2}
               onPaneRef={setPaneRef}
             >
               {shouldMountPane(2, index, layoutIndex, previewIndex) ? (
                 <React.Suspense fallback={null}>
-                  <SearchPageView active={index === 2} />
+                  <SearchPageView active={visibleTabIndex === 2} />
                 </React.Suspense>
               ) : null}
             </MainTabPane>
             <MainTabPane
               paneIndex={3}
-              active={index === 3}
+              active={visibleTabIndex === 3}
               layoutActive={layoutIndex === 3}
               fill
               contentSx={{ pb: threadOpen ? 0 : MOBILE_CONTENT_BOTTOM_PADDING }}
@@ -623,7 +626,7 @@ function MainTabsShellInner({ children }: { children: React.ReactNode }) {
             </MainTabPane>
             <MainTabPane
               paneIndex={4}
-              active={index === 4}
+              active={visibleTabIndex === 4}
               layoutActive={layoutIndex === 4}
               contentSx={{
                 px: 2,

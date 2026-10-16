@@ -183,8 +183,11 @@ body {
   animation: kutagjejEnter var(--motion-enter) var(--motion-ease) both;
 }
 
+/* Opacity only. A transform here (even translate3d(0,0,0)) becomes the
+   containing block for fixed children, so category headers pick up the
+   status-bar offset twice. */
 .kutagjej-fade {
-  animation: kutagjejEnter var(--motion-enter) var(--motion-ease) both;
+  animation: kutagjejFadeIn var(--motion-enter) var(--motion-ease) both;
 }
 
 .kutagjej-card-enter {

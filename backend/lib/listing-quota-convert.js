@@ -77,15 +77,22 @@ function categoryUsageFromSubscription(sub) {
   return { max, used, available };
 }
 
-async function countPosterListings(userId, kind) {
+/**
+ * Count a poster's listings.
+ * `since` limits the count to the current package period. Rows are never deleted here.
+ * Without `since`, jobs stay on the live visibility window used by older callers.
+ */
+async function countPosterListings(userId, kind, options = {}) {
   const cfg = LISTING_TABLE[kind];
   if (!cfg) return 0;
+  const since = options.since || null;
   let q = getSupabaseAdmin()
     .from(cfg.table)
     .select('id', { count: 'exact', head: true })
     .eq('poster_id', userId);
   if (cfg.vertical) q = q.eq('vertical', cfg.vertical);
-  if (kind === 'job') q = applyFilterSpec(q, activeJobCreatedAtFilter());
+  if (since) q = q.gte('created_at', since);
+  else if (kind === 'job') q = applyFilterSpec(q, activeJobCreatedAtFilter());
   const { count, error } = await q;
   if (error) throw error;
   return count || 0;
@@ -108,7 +115,8 @@ async function loadActivePaidSubscription(userId) {
 
 /**
  * Atomically consume one package slot for the active paid subscription.
- * Used stays until the next subscription purchase (new row starts at 0).
+ * Counters belong to this package row. A new package (including after cancel)
+ * is inserted at 0. Listings are not deleted.
  */
 async function consumeSubscriptionSlot(userId, kind) {
   const cols = SLOT_COLUMNS[kind];
@@ -130,7 +138,7 @@ async function consumeSubscriptionSlot(userId, kind) {
     return {
       ok: false,
       status: 403,
-      message: `Keni arritur limitin (${used}/${max}).`,
+      message: `Keni arritur limitin e kësaj pakete (${used}/${max}). Kuota fillon nga 0 kur merrni paketën përsëri.`,
       used,
       max,
       remaining: 0,

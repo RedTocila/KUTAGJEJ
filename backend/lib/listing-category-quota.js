@@ -8,6 +8,7 @@ const {
 } = require('./listing-quota-convert');
 const { getSupabaseAdmin } = require('./supabase');
 const { isJobListingActive } = require('./public-listings/query-helpers');
+const { packagePeriodStart } = require('./package-period');
 
 /** Matches seeded FREE plan when contracts row is missing. */
 const FREE_FALLBACK_MAX = {
@@ -57,10 +58,60 @@ async function loadFreePlanMax() {
   };
 }
 
+function packageQuotaReachedMessage(label, used, max) {
+  return `Keni arritur limitin e njoftimeve për «${label}» në këtë paketë (${used}/${max}). Kuota fillon nga 0 kur fillon paketa tjetër.`;
+}
+
 /**
- * Caps used when posting category listings (paid sub consumption or FREE live count).
- * Paid plans: used is period consumption and does not free on delete.
- * Free plan: still concurrent live listing count.
+ * When the free package became the current package.
+ * After a paid package ends or is canceled, that moment is the new start.
+ * Otherwise the account creation date is the start. Periods then follow that
+ * instant month by month, not the 1st. Listings from earlier periods stay up.
+ */
+async function freePackagePeriodStart(userId, now = new Date()) {
+  const sb = getSupabaseAdmin();
+  const { data: subs, error } = await sb
+    .from('user_subscriptions')
+    .select('expires_at, status, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (error) throw error;
+
+  let anchor = null;
+  for (const sub of subs || []) {
+    const end = sub.expires_at ? new Date(sub.expires_at) : null;
+    const endMs = end && !Number.isNaN(end.getTime()) ? end.getTime() : NaN;
+    const ended =
+      sub.status === 'canceled' ||
+      sub.status === 'expired' ||
+      (Number.isFinite(endMs) && endMs <= now.getTime());
+    if (ended && Number.isFinite(endMs)) {
+      anchor = end;
+      break;
+    }
+  }
+
+  if (!anchor) {
+    const { data: profile, error: profileErr } = await sb
+      .from('profiles')
+      .select('created_at')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profileErr) throw profileErr;
+    const created = profile?.created_at ? new Date(profile.created_at) : now;
+    anchor = Number.isNaN(created.getTime()) ? now : created;
+  }
+
+  return packagePeriodStart(anchor, now);
+}
+
+/**
+ * Caps used when posting category listings.
+ * Paid plans: counters on that subscription. They start at 0 when the package
+ * is granted again, including after a cancel. They do not reset on the 1st.
+ * Free plan: listings created in the current free-package period.
+ * Listings are never deleted when a package starts.
  */
 async function getPostingQuotaSnapshot(userId) {
   const sub = await loadActivePaidSubscription(userId);
@@ -76,11 +127,12 @@ async function getPostingQuotaSnapshot(userId) {
   }
 
   const max = await loadFreePlanMax();
+  const since = await freePackagePeriodStart(userId);
   const [usedCar, usedProduct, usedApartment, usedJob] = await Promise.all([
-    countPosterListings(userId, 'car'),
-    countPosterListings(userId, 'product'),
-    countPosterListings(userId, 'apartment'),
-    countPosterListings(userId, 'job'),
+    countPosterListings(userId, 'car', { since }),
+    countPosterListings(userId, 'product', { since }),
+    countPosterListings(userId, 'apartment', { since }),
+    countPosterListings(userId, 'job', { since }),
   ]);
 
   const used = {
@@ -132,7 +184,7 @@ async function assertCanCreateCategoryListing(userId, kind) {
     return {
       ok: false,
       status: 403,
-      message: `Keni arritur limitin e njoftimeve për «${label}» (${used}/${max}).`,
+      message: packageQuotaReachedMessage(label, used, max),
       snapshot,
     };
   }
@@ -141,8 +193,8 @@ async function assertCanCreateCategoryListing(userId, kind) {
 }
 
 /**
- * After a successful listing create: consume one paid-plan slot for the period.
- * Free plan has no consumption counter (live count is enough).
+ * After a successful listing create: consume one slot on the active paid package.
+ * Free plan has no consumption counter (listings in the current package period are enough).
  */
 async function recordCategoryListingSlotUse(userId, kind) {
   if (!isQuotaKind(kind)) {
@@ -158,7 +210,7 @@ async function recordCategoryListingSlotUse(userId, kind) {
       ...result,
       message:
         result.message ||
-        `Keni arritur limitin e njoftimeve për «${label}» (${result.used}/${result.max}).`,
+        packageQuotaReachedMessage(label, result.used, result.max),
     };
   }
   return result;

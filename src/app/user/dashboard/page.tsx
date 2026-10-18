@@ -611,9 +611,14 @@ export function UserDashboardHome() {
               {subscriptionLoading ? (
                 <Skeleton variant="text" width={160} height={20} />
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
-                  {t.quotasHint(activePlanLabel, categoryLabel)}
-                </Typography>
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                    {t.quotasHint(activePlanLabel, categoryLabel)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.35 }}>
+                    {t.quotaResetsMonthly}
+                  </Typography>
+                </>
               )}
             </Stack>
             <Button

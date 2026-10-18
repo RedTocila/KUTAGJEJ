@@ -1,0 +1,6 @@
+---
+description: Keep small code changes focused
+alwaysApply: true
+---
+
+For small changes, search for the named component or text first and inspect only the files needed to complete the request. Make the smallest targeted edit. Do not refactor, inspect unrelated files, or run tests, lint, or builds unless I ask or the change requires it. If the target is unclear, ask me before exploring broadly.

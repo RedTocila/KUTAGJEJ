@@ -119,10 +119,11 @@ export function NativeAppBoot(): React.JSX.Element {
       }
 
       if (!cancelled) {
-        const token = await registerNativePush();
-        if (token && !cancelled) {
-          rememberNativePushToken(token);
-          setPushToken(token);
+        // Already-granted installs keep receiving pushes. This does not prompt.
+        const registration = await registerNativePush({ requestPermission: false });
+        if (registration.status === 'token' && !cancelled) {
+          rememberNativePushToken(registration.token);
+          setPushToken(registration.token);
         }
       }
     })();

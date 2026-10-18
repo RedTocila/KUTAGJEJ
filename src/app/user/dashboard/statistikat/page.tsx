@@ -541,7 +541,6 @@ export default function UserStatisticsPage() {
                         }}
                       >
                         {row.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={row.imageUrl}
                             alt=""

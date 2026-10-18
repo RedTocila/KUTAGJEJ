@@ -133,28 +133,94 @@ export async function shareNative(opts: {
   }
 }
 
-/** Register for push when native + plugin configured. No-ops on web / missing Firebase. */
-export async function registerNativePush(): Promise<string | null> {
-  if (!isNativeApp()) return null;
+export type NativePushPermission = 'granted' | 'denied' | 'prompt' | 'unavailable';
+
+export type NativePushRegistration =
+  | { status: 'token'; token: string }
+  | { status: 'denied' }
+  | { status: 'unavailable' }
+  | { status: 'skipped' };
+
+type PushListenerHandle = { remove: () => Promise<void> };
+
+/** Reads the current permission. Does not prompt. */
+export async function readNativePushPermission(): Promise<NativePushPermission> {
+  if (!isNativeApp()) return 'unavailable';
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
-    const perm = await PushNotifications.requestPermissions();
-    if (perm.receive !== 'granted') return null;
-    await PushNotifications.register();
-
-    return await new Promise((resolve) => {
-      const timeout = window.setTimeout(() => resolve(null), 8000);
-      void PushNotifications.addListener('registration', (token) => {
-        window.clearTimeout(timeout);
-        resolve(token.value || null);
-      });
-      void PushNotifications.addListener('registrationError', () => {
-        window.clearTimeout(timeout);
-        resolve(null);
-      });
-    });
+    const current = await PushNotifications.checkPermissions();
+    if (current.receive === 'granted') return 'granted';
+    if (current.receive === 'denied') return 'denied';
+    return 'prompt';
   } catch (err) {
+    console.warn('[native] push permission unavailable', err);
+    return 'unavailable';
+  }
+}
+
+/**
+ * Register for push when the plugin and APNs are configured.
+ * Listeners are attached before `register()` and removed on token, error, timeout, or throw.
+ * Permission is requested only when `requestPermission` is true.
+ */
+export async function registerNativePush(options?: {
+  requestPermission?: boolean;
+}): Promise<NativePushRegistration> {
+  if (!isNativeApp()) return { status: 'skipped' };
+  const handles: PushListenerHandle[] = [];
+  let timeout = 0;
+  const removeHandles = async () => {
+    if (timeout) window.clearTimeout(timeout);
+    timeout = 0;
+    await Promise.all(handles.splice(0).map((handle) => handle.remove().catch(() => undefined)));
+  };
+
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    const current = await PushNotifications.checkPermissions();
+    let receive = current.receive;
+    if (receive !== 'granted') {
+      if (!options?.requestPermission || receive === 'denied') {
+        return receive === 'denied' ? { status: 'denied' } : { status: 'skipped' };
+      }
+      const next = await PushNotifications.requestPermissions();
+      receive = next.receive;
+      if (receive !== 'granted') return { status: 'denied' };
+    }
+
+    const token = await new Promise<string | null>((resolve) => {
+      let settled = false;
+      const finish = (value: string | null) => {
+        if (settled) return;
+        settled = true;
+        void removeHandles().finally(() => resolve(value));
+      };
+      timeout = window.setTimeout(() => finish(null), 8000);
+      void (async () => {
+        try {
+          handles.push(
+            await PushNotifications.addListener('registration', (registered) => {
+              finish(registered.value || null);
+            }),
+          );
+          handles.push(
+            await PushNotifications.addListener('registrationError', () => {
+              finish(null);
+            }),
+          );
+          await PushNotifications.register();
+        } catch {
+          finish(null);
+        }
+      })();
+    });
+
+    await removeHandles();
+    if (!token) return { status: 'unavailable' };
+    return { status: 'token', token };
+  } catch (err) {
+    await removeHandles();
     console.warn('[native] push registration skipped', err);
-    return null;
+    return { status: 'unavailable' };
   }
 }

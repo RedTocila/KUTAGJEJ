@@ -13,12 +13,12 @@ import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import { useCopy } from '@/hooks/use-copy';
+import { useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import { listCreditPackages } from '@/lib/payments-client';
-import { isIapAvailable, purchaseCreditsPackage } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, purchaseCreditsPackage } from '@/lib/revenuecat-client';
 import type { CreditPackage } from '@/types/payment';
 import { paths } from '@/paths';
 import { PackageCheckoutCard, PackageEurPrice, ReferralDiscountNote, StorePriceLabel, formatBc } from './package-ui';
@@ -80,6 +80,9 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStoreCatalog = useAppleIap || iosClosed;
   const lifetimePercent = useLifetimePackageDiscount();
   const [packages, setPackages] = React.useState<CreditPackage[]>(FALLBACK_CREDIT_PACKAGES);
   const [loading, setLoading] = React.useState(true);
@@ -106,19 +109,26 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
   }, []);
 
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
-  const visiblePackages = useAppleIap
+  const visiblePackages = showStoreCatalog
     ? [...packages]
         .filter((pkg) => nativeCreditKey(pkg))
         .sort((a, b) => nativeCreditRank(a) - nativeCreditRank(b))
     : packages;
 
   const buyCredits = async (pkg: CreditPackage) => {
+    if (iosClosed) {
+      setIapMessage(IOS_IAP_UNAVAILABLE_MESSAGE);
+      return;
+    }
     if (!useAppleIap) {
       router.push(checkoutCreditsHref(pkg.id));
       return;
     }
     const storeKey = nativeCreditKey(pkg);
-    if (!storeKey) return;
+    if (!storeKey || store.loading || !store.priceFor(storeKey)) {
+      setIapMessage('Çmimi i App Store nuk është i disponueshëm për këtë paketë.');
+      return;
+    }
     setIapBusy(true);
     setIapMessage(null);
     try {
@@ -169,6 +179,18 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         </Stack>
       )}
 
+      {iosClosed ? (
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          {IOS_IAP_UNAVAILABLE_MESSAGE}
+        </Alert>
+      ) : null}
+
+      {store.mode === 'store' && store.loading ? (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Duke ngarkuar çmimet nga App Store…
+        </Alert>
+      ) : null}
+
       {error ? (
         <Alert severity="warning" sx={{ borderRadius: 2 }}>
           {error}
@@ -192,10 +214,13 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
         <PackageRowsSkeleton count={6} />
       ) : (
         <Stack spacing={1.75}>
-          {!useAppleIap ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
+          {!showStoreCatalog ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
           {visiblePackages.map((pkg) => {
             const bonus = Number(pkg.bonusCredits) || 0;
             const badge = pkg.badgeSq || (bonus > 0 ? `+${formatBc(bonus)} BC` : null);
+            const storeKey = nativeCreditKey(pkg);
+            const storePrice = store.priceFor(storeKey);
+            const storeReady = useAppleIap && !store.loading && Boolean(storePrice);
             return (
               <PackageCheckoutCard
                 key={pkg.id}
@@ -206,13 +231,15 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
                 badge={badge}
                 compactPrice
                 price={
-                  useAppleIap ? (
-                    <StorePriceLabel value={appleSheetUsd(nativeCreditKey(pkg))} />
+                  showStoreCatalog ? (
+                    <StorePriceLabel value={store.loading ? null : storePrice || 'I padisponueshëm'} />
                   ) : (
                     <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} />
                   )
                 }
-                onClick={iapBusy ? undefined : () => void buyCredits(pkg)}
+                onClick={
+                  iapBusy || iosClosed || (useAppleIap && !storeReady) ? undefined : () => void buyCredits(pkg)
+                }
               />
             );
           })}

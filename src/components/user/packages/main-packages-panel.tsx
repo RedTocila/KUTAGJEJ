@@ -17,11 +17,11 @@ import type { AppMessages } from '@/lib/i18n/messages';
 import { cancelMySubscription, listMySubscriptions } from '@/lib/payments-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
-import { isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, purchasePlanByCode, restorePurchases } from '@/lib/revenuecat-client';
 import { PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import { IosActivityOverlay } from '@/components/core/ios-activity-overlay';
 import {
@@ -163,7 +163,7 @@ function BillingPeriodPillBar({
         overflow: 'hidden',
         borderRadius: 999,
         border: 'none',
-        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.055)'),
+        bgcolor: (muiTheme) => (muiTheme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.055)'),
         backdropFilter: 'none',
         WebkitBackdropFilter: 'none',
         boxShadow: 'none',
@@ -294,6 +294,9 @@ export function MainPackagesPanel() {
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStoreCatalog = useAppleIap || iosClosed;
   const subscriberKindFilter = user?.accountType === 'business' || user?.role === 'business-user' ? 'company' : 'agent';
 
   const [plans, setPlans] = React.useState<PublicContract[]>([]);
@@ -311,8 +314,8 @@ export function MainPackagesPanel() {
 
   // App Store only has 1-month plan products in v1.
   React.useEffect(() => {
-    if (useAppleIap && pickedMonths !== 1) setPickedMonths(1);
-  }, [useAppleIap, pickedMonths]);
+    if (showStoreCatalog && pickedMonths !== 1) setPickedMonths(1);
+  }, [showStoreCatalog, pickedMonths]);
 
   const activeContractId = activeSubscription?.contractId ?? null;
   const activePlanCode = activeSubscription?.planCode ? String(activeSubscription.planCode).toLowerCase() : null;
@@ -336,7 +339,15 @@ export function MainPackagesPanel() {
 
   const buyPlan = React.useCallback(
     async (planCode: string) => {
+      if (iosClosed) {
+        setIapMessage(IOS_IAP_UNAVAILABLE_MESSAGE);
+        return;
+      }
       if (!useAppleIap) return;
+      if (store.loading || !store.priceFor(planCode)) {
+        setIapMessage('Çmimi i App Store nuk është i disponueshëm për këtë plan.');
+        return;
+      }
       setIapBusy(true);
       setIapMessage(null);
       try {
@@ -353,7 +364,7 @@ export function MainPackagesPanel() {
         setIapBusy(false);
       }
     },
-    [useAppleIap, user?.id, reload],
+    [iosClosed, reload, store, useAppleIap, user?.id],
   );
 
   React.useEffect(() => {
@@ -454,6 +465,18 @@ export function MainPackagesPanel() {
 
       {iapBusy ? <IosActivityOverlay /> : null}
 
+      {iosClosed ? (
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          {IOS_IAP_UNAVAILABLE_MESSAGE}
+        </Alert>
+      ) : null}
+
+      {store.mode === 'store' && store.loading ? (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Duke ngarkuar çmimet nga App Store…
+        </Alert>
+      ) : null}
+
       {iapMessage ? (
         <Alert
           severity={iapMessage.includes('aktivizua') ? 'success' : 'warning'}
@@ -472,8 +495,8 @@ export function MainPackagesPanel() {
 
       {!loading && !error && plans.length > 0 ? (
         <Stack spacing={1.75}>
-          {!useAppleIap ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
-          {!useAppleIap ? (
+          {!showStoreCatalog ? <ReferralDiscountNote percent={lifetimePercent} /> : null}
+          {!showStoreCatalog ? (
             <BillingPeriodPillBar
               value={selectedMonths}
               onChange={setPickedMonths}
@@ -514,8 +537,10 @@ export function MainPackagesPanel() {
                 title={plan.title}
                 badge={titleBadge(t, isCurrent)}
                 price={
-                  useAppleIap ? (
-                    <StorePriceLabel value={appleSheetUsd(planCode)} />
+                  showStoreCatalog ? (
+                    <StorePriceLabel
+                      value={store.loading ? null : store.priceFor(planCode) || 'I padisponueshëm'}
+                    />
                   ) : (
                     <PackageEurPrice listPrice={opt.price} percent={lifetimePercent} />
                   )
@@ -528,7 +553,10 @@ export function MainPackagesPanel() {
                 details={details}
                 footer={isCurrent ? cancelFooter : undefined}
                 onClick={
-                  isCurrent || iapBusy
+                  isCurrent ||
+                  iapBusy ||
+                  iosClosed ||
+                  (useAppleIap && (store.loading || !store.priceFor(planCode)))
                     ? undefined
                     : () => {
                         if (useAppleIap) {

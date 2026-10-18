@@ -5,6 +5,7 @@
  * Uses env TEST_REFERRER_EMAIL / TEST_REFERRER_PASSWORD or creates ephemeral users.
  */
 require('dotenv').config();
+
 const BASE = (process.env.API_BASE || 'http://localhost:5000').replace(/\/$/, '');
 
 async function api(path, opts = {}) {

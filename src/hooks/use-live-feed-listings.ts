@@ -22,19 +22,19 @@ export function useLiveFeedListings<T extends LivePromoListing>(
   options: LiveFeedOptions = {}
 ): T[] {
   const nowMs = useSharedSecondTick();
-  const effectiveNow = nowMs > 0 ? nowMs : Date.now();
   const optionsKey = `${options.dropExpiredJobs ? 1 : 0}:${options.dropExpiredOkazion ? 1 : 0}`;
 
-  const [live, setLive] = React.useState(() => applyLiveFeedListings(listings, effectiveNow, options));
+  const [live, setLive] = React.useState(listings);
 
   React.useEffect(() => {
-    const next = applyLiveFeedListings(listings, effectiveNow, options);
+    if (!(nowMs > 0)) return;
+    const next = applyLiveFeedListings(listings, nowMs, options);
     setLive((prev) => {
-      const prevFp = liveFeedFingerprint(prev, effectiveNow, options);
-      const nextFp = liveFeedFingerprint(next, effectiveNow, options);
+      const prevFp = liveFeedFingerprint(prev, nowMs, options);
+      const nextFp = liveFeedFingerprint(next, nowMs, options);
       return prevFp === nextFp ? prev : next;
     });
-  }, [listings, effectiveNow, optionsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- options keyed
+  }, [listings, nowMs, optionsKey]); // eslint-disable-line react-hooks/exhaustive-deps -- options keyed
 
-  return live;
+  return nowMs > 0 ? live : listings;
 }

@@ -177,7 +177,6 @@ function fadedToneSx(bg: string, hoverBg: string, color: string): Record<string,
 const fadedPrimarySx = fadedToneSx(primaryMainAlpha(0.22), primaryMainAlpha(0.34), 'primary.main');
 const fadedWarningSx = fadedToneSx(warningMainAlpha(0.22), warningMainAlpha(0.34), 'warning.main');
 const fadedErrorSx = fadedToneSx(errorMainAlpha(0.22), errorMainAlpha(0.34), 'error.main');
-const fadedPrimaryStrongSx = fadedToneSx(primaryMainAlpha(0.38), primaryMainAlpha(0.5), 'primary.main');
 const fadedWarningStrongSx = fadedToneSx(warningMainAlpha(0.38), warningMainAlpha(0.5), 'warning.main');
 const fadedErrorStrongSx = fadedToneSx(errorMainAlpha(0.38), errorMainAlpha(0.5), 'error.main');
 

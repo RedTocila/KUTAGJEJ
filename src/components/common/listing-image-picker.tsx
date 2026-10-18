@@ -157,7 +157,6 @@ function ThumbPreview({
         sx={{ ...sx, width: '100%', height: '100%', cursor: 'zoom-in' }}
       >
         {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt={alt ?? ''}
@@ -452,7 +451,6 @@ export function ListingImagePicker({
                 bgcolor: 'background.paper',
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverSrc}
                 alt=""
@@ -509,7 +507,6 @@ export function ListingImagePicker({
                       bgcolor: 'transparent',
                     }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={url}
                       alt=""

@@ -11,7 +11,7 @@ import { PaintBucket as PaintBucketIcon } from '@phosphor-icons/react/dist/ssr/P
 
 import { listingCarPublicHref } from '@/paths';
 import { CAR_COLOUR_OPTIONS, FUEL_TYPE_OPTIONS, TRANSMISSION_OPTIONS } from '@/lib/car-constants';
-import { livePromoFlags } from '@/lib/listing-promo-live';
+import { promoFlagsForClock } from '@/lib/listing-promo-live';
 import type { PublicCarListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
@@ -44,7 +44,7 @@ export function CarCard({
   hideOkazionBadge?: boolean;
 }) {
   const nowMs = useSharedSecondTick();
-  const { isPremium, isOkazion } = livePromoFlags(listing, nowMs > 0 ? nowMs : Date.now());
+  const { isPremium, isOkazion } = promoFlagsForClock(listing, nowMs);
   const title = [listing.make, listing.model, listing.variant].filter(Boolean).join(' ');
   const viewCount = listing.viewCount ?? 0;
   const fuelLabel = findOptionLabel(FUEL_TYPE_OPTIONS, listing.fuelType);

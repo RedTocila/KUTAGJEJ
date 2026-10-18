@@ -7,19 +7,22 @@ import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { CheckoutSkeleton } from '@/components/core/content-skeletons';
 import { PokCheckoutView } from '@/components/payments/pok-checkout-view';
 import { PackageEurPrice } from '@/components/user/packages/package-ui';
+import { useIosStorePrices } from '@/hooks/use-ios-store-prices';
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
 import { useUser } from '@/hooks/use-user';
+import { getNativePlatform } from '@/lib/native-app';
 import {
   createAutoRefreshOrder,
   createCreditsOrder,
   createOkazionOrder,
   createPremiumOrder,
   createSubscriptionOrder,
-  listAutoRefreshPackages,
   listCreditPackages,
   listOkazionPackages,
   listPremiumPackages,
 } from '@/lib/payments-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE } from '@/lib/revenuecat-client';
 import { listPublicContracts } from '@/lib/public-contracts-client';
 import { paths } from '@/paths';
 import type { AutoRefreshPackage, CreditPackage, OkazionPackage, PremiumPackage } from '@/types/payment';
@@ -75,6 +78,9 @@ export default function UserCheckoutPage() {
   const searchParams = useSearchParams();
   const { checkSession } = useUser();
   const lifetimePercent = useLifetimePackageDiscount();
+  const nativeApp = useIsNativeApp();
+  const iosCheckout = nativeApp && getNativePlatform() === 'ios';
+  const store = useIosStorePrices();
 
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -88,6 +94,12 @@ export default function UserCheckoutPage() {
   const returnToParam = searchParams.get('returnTo');
 
   React.useEffect(() => {
+    if (iosCheckout) {
+      setLoading(false);
+      setError(null);
+      setCheckout(null);
+      return undefined;
+    }
     let cancelled = false;
     void (async () => {
       setLoading(true);
@@ -250,7 +262,7 @@ export default function UserCheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [kind, packageId, contractId, monthsRaw, quantityRaw, returnToParam]);
+  }, [iosCheckout, kind, packageId, contractId, monthsRaw, quantityRaw, returnToParam]);
 
   const goBack = React.useCallback(() => {
     router.push(checkout?.returnTo || paths.user.credits);
@@ -266,6 +278,25 @@ export default function UserCheckoutPage() {
           : checkout?.kind === 'okazion'
             ? 'Bli Okazion'
             : 'Bli kredite';
+
+  if (iosCheckout) {
+    return (
+      <Stack spacing={2} sx={{ maxWidth: 560, mx: 'auto', width: '100%' }}>
+        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+          {store.mode === 'unavailable'
+            ? IOS_IAP_UNAVAILABLE_MESSAGE
+            : 'Pagesa me kartë nuk ofrohet në aplikacionin iOS. Paketat blihen nga App Store te faqet e paketave.'}
+        </Alert>
+        <Button
+          variant="outlined"
+          onClick={() => router.push(paths.user.packages)}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Kthehu te paketat
+        </Button>
+      </Stack>
+    );
+  }
 
   return (
     <Box sx={{ width: '100%' }}>

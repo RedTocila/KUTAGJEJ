@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { Box, Link as MuiLink, Stack, Typography } from '@mui/material';
+import { Link as MuiLink, Stack, Typography } from '@mui/material';
 
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { BannerSurface, type BannerSurfaceTone } from '@/components/public/banner-surface';

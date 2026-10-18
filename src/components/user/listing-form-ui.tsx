@@ -122,6 +122,14 @@ function autosizeTextarea(el: HTMLTextAreaElement | null, minRows = DESCRIPTION_
   el.style.height = `${Math.max(el.scrollHeight, minHeight)}px`;
 }
 
+function assignTextareaRef(
+  inputRef: React.Ref<HTMLTextAreaElement> | undefined,
+  node: HTMLTextAreaElement | null,
+) {
+  if (typeof inputRef === 'function') inputRef(node);
+  else if (inputRef) inputRef.current = node;
+}
+
 export const ListingDescriptionField = React.forwardRef(function ListingDescriptionField(
   props: TextFieldProps,
   ref: React.Ref<HTMLDivElement>,
@@ -136,15 +144,11 @@ export const ListingDescriptionField = React.forwardRef(function ListingDescript
   const existingEndAdornment =
     'endAdornment' in inputSlot ? inputSlot.endAdornment : undefined;
 
-  const setTextareaRef = React.useCallback(
-    (node: HTMLTextAreaElement | null) => {
-      textareaRef.current = node;
-      autosizeTextarea(node, minRows);
-      if (typeof inputRef === 'function') inputRef(node);
-      else if (inputRef) (inputRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-    },
-    [inputRef, minRows],
-  );
+  const setTextareaRef = (node: HTMLTextAreaElement | null) => {
+    textareaRef.current = node;
+    autosizeTextarea(node, minRows);
+    assignTextareaRef(inputRef, node);
+  };
 
   React.useLayoutEffect(() => {
     autosizeTextarea(textareaRef.current, minRows);

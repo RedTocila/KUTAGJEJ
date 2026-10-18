@@ -13,7 +13,7 @@ export interface PlatformErrorIllustrationProps extends BoxProps {
  * Adapts dynamically to light and dark theme modes using brand colors and CSS variables.
  */
 export function PlatformErrorIllustration({
-  statusCode = '404',
+  statusCode: _statusCode = '404',
   sx,
   ...rest
 }: PlatformErrorIllustrationProps) {

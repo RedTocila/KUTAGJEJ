@@ -279,7 +279,6 @@ export function AccountVerificationCard() {
                   bgcolor: 'action.hover',
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={idFrontPreview}
                   alt="Paraqitja e ID-së"

@@ -48,11 +48,11 @@ import {
   listPremiumVouchers,
 } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
-import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ListRowsSkeleton, PackageRowsSkeleton } from '@/components/core/content-skeletons';
 import {
@@ -237,6 +237,9 @@ function PremiumListingSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Math.max(0, Math.round((Number(user?.boostCredits) || 0) * 10) / 10);
 
@@ -322,6 +325,14 @@ function PremiumListingSection() {
   };
 
   const onBuyCard = (pkg: PremiumPackage) => {
+    if (iosClosed) {
+      setError(IOS_IAP_UNAVAILABLE_MESSAGE);
+      return;
+    }
+    if (useAppleIap && (store.loading || !store.priceFor(pkg.id))) {
+      setError('Çmimi i App Store nuk është i disponueshëm për këtë paketë.');
+      return;
+    }
     if (!useAppleIap) {
       router.push(checkoutPremiumHref(pkg.id));
       return;
@@ -436,12 +447,12 @@ function PremiumListingSection() {
                     size="small"
                     variant="contained"
                     color="warning"
-                    disabled={busy}
+                    disabled={busy || iosClosed || (useAppleIap && (store.loading || !store.priceFor(pkg.id)))}
                     onClick={() => onBuyCard(pkg)}
                     sx={dualPayButtonSx('warning')}
                   >
-                    {useAppleIap ? (
-                      <StorePriceLabel value={appleSheetUsd(pkg.id)} />
+                    {showStorePrice ? (
+                      <StorePriceLabel value={store.loading ? null : store.priceFor(pkg.id) || 'I padisponueshëm'} />
                     ) : (
                       <PackageEurPrice listPrice={pkg.priceEur} percent={lifetimePercent} onAccent />
                     )}

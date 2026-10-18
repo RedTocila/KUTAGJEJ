@@ -24,7 +24,6 @@ import {
   emptyFreeTier,
   emptyPaidTier,
   emptyReviewMilestone,
-  emptyTrustedBadge,
 } from '@/components/dashboard/referral/referral-empty-defaults';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 

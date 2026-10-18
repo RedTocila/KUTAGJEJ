@@ -18,7 +18,7 @@ import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist
 
 import { paths } from '@/paths';
 import { primaryMainAlpha } from '@/lib/css-var-alpha';
-import { businessLocationLine, businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
+import { businessMapLocation, scrollToBusinessLocationMap } from '@/lib/google-maps-location';
 import { JOB_TYPE_OPTIONS } from '@/lib/job-constants';
 import {
   buildJobDetailSections,
@@ -111,12 +111,6 @@ export function JobListingDetailDesktop({
     : (listing.expiresAt ?? getJobListingExpiresAt(listing.createdAt).toISOString());
   const salary =
     listing.salary != null ? `${formatPrice(listing.salary, listing.currency)} / muaj` : 'Pagë e diskutueshme';
-  const locationLabel =
-    businessLocationLine({
-      locationAddress: listing.locationAddress,
-      cityName: listing.cityName,
-      zoneName: listing.zoneName,
-    }) || 'Shqipëri';
   const jobTypeLabel = findOptionLabel(JOB_TYPE_OPTIONS, listing.jobType);
 
   if (ownerPreview) return null;

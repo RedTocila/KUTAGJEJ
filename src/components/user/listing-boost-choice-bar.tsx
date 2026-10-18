@@ -27,7 +27,7 @@ import {
   type PremiumPayMode,
 } from '@/components/user/premium-boost-upsell';
 import { formatEurWithLifetime } from '@/components/user/packages/package-ui';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
+import { formatStorePriceLabel, useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
@@ -120,6 +120,12 @@ export function ListingBoostChoiceBar({
   const { user } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
+  const storePrice = (key: string) => formatStorePriceLabel(store.loading, store.priceFor(key));
+  const storeCardDisabled = (key: string) =>
+    iosClosed || (useAppleIap && (store.loading || !store.priceFor(key)));
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -246,21 +252,22 @@ export function ListingBoostChoiceBar({
                   }}
                 >
                   <Typography sx={{ fontWeight: 800, color: PREMIUM_AMBER, mb: 1 }}>
-                    {useAppleIap
-                      ? t.packages.daysStorePrice(pkg.days, appleSheetUsd(pkg.id) || '…', pkg.priceBc)
+                    {showStorePrice
+                      ? t.packages.daysStorePrice(pkg.days, storePrice(pkg.id), pkg.priceBc)
                       : t.packages.daysPrice(pkg.days, pkg.priceEur, pkg.priceBc)}
                   </Typography>
                   <Stack direction="row" spacing={1}>
                     <Button
                       type="button"
                       variant="contained"
-                      disabled={disabled || submitting}
+                      disabled={disabled || submitting || storeCardDisabled(pkg.id)}
                       onClick={() => {
+                        if (storeCardDisabled(pkg.id)) return;
                         closeDialog();
                         onPostPremium('buy-card', pkg.id);
                       }}
                       startIcon={
-                        useAppleIap ? undefined : <CreditCardIcon size={16} weight="bold" />
+                        showStorePrice ? undefined : <CreditCardIcon size={16} weight="bold" />
                       }
                       sx={{
                         ...productButtonSx,
@@ -271,8 +278,8 @@ export function ListingBoostChoiceBar({
                         '&:hover': { bgcolor: PREMIUM_AMBER_DARK, boxShadow: 'none' },
                       }}
                     >
-                      {useAppleIap
-                        ? appleSheetUsd(pkg.id) || '…'
+                      {showStorePrice
+                        ? storePrice(pkg.id)
                         : formatEurWithLifetime(pkg.priceEur, lifetimePercent)}
                     </Button>
                     <Button
@@ -332,8 +339,8 @@ export function ListingBoostChoiceBar({
               }}
             >
               <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>
-                {useAppleIap
-                  ? t.packages.daysStorePrice(7, appleSheetUsd(OKAZION_PACKAGE_ID) || '…', OKAZION_PRICE_BC)
+                {showStorePrice
+                  ? t.packages.daysStorePrice(7, storePrice(OKAZION_PACKAGE_ID), OKAZION_PRICE_BC)
                   : t.packages.daysPrice(7, OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
               </Typography>
             </Box>
@@ -341,12 +348,13 @@ export function ListingBoostChoiceBar({
               <Button
                 type="button"
                 variant="contained"
-                disabled={disabled || submitting}
+                disabled={disabled || submitting || storeCardDisabled(OKAZION_PACKAGE_ID)}
                 onClick={() => {
+                  if (storeCardDisabled(OKAZION_PACKAGE_ID)) return;
                   closeDialog();
                   onPostOkazion('buy-card');
                 }}
-                startIcon={useAppleIap ? undefined : <CreditCardIcon size={16} weight="bold" />}
+                startIcon={showStorePrice ? undefined : <CreditCardIcon size={16} weight="bold" />}
                 sx={{
                   ...productButtonSx,
                   flex: 1,
@@ -356,8 +364,8 @@ export function ListingBoostChoiceBar({
                   '&:hover': { bgcolor: OKAZION_RED_DARK, boxShadow: 'none' },
                 }}
               >
-                {useAppleIap
-                  ? appleSheetUsd(OKAZION_PACKAGE_ID) || '…'
+                {showStorePrice
+                  ? storePrice(OKAZION_PACKAGE_ID)
                   : formatEurWithLifetime(OKAZION_PRICE_EUR, lifetimePercent)}
               </Button>
               <Button

@@ -218,7 +218,6 @@ export function BusinessAnnouncementDialog({
                   bgcolor: 'action.hover',
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={bannerUrl}
                   alt=""

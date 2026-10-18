@@ -15,8 +15,8 @@ import { SealPercent as SealPercentIcon } from '@phosphor-icons/react/dist/ssr/S
 
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
+import { formatStorePriceLabel, useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -35,7 +35,7 @@ import {
   listOkazionVouchers,
 } from '@/lib/payments-client';
 import { isNativeApp } from '@/lib/native-app';
-import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, isIosNativeApp, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
 import { BcPurchaseDialog } from '@/components/user/packages/bc-purchase-dialog';
@@ -69,6 +69,11 @@ export function OkazionBoostUpsell({
   const t = useCopy();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
+  const okazionStorePrice = formatStorePriceLabel(store.loading, store.priceFor(OKAZION_PACKAGE_ID));
+  const storeCardDisabled = iosClosed || (useAppleIap && (store.loading || !store.priceFor(OKAZION_PACKAGE_ID)));
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const [planRemaining, setPlanRemaining] = React.useState(0);
@@ -105,8 +110,8 @@ export function OkazionBoostUpsell({
         <Typography sx={{ fontWeight: 800, color: OKAZION_ACCENT }}>{t.packages.okazion7Days}</Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
-        {useAppleIap
-          ? t.packages.okazionUpsellStoreBody(appleSheetUsd(OKAZION_PACKAGE_ID) || '…', OKAZION_PRICE_BC)
+        {showStorePrice
+          ? t.packages.okazionUpsellStoreBody(okazionStorePrice, OKAZION_PRICE_BC)
           : t.packages.okazionUpsellBody(OKAZION_PRICE_EUR, OKAZION_PRICE_BC)}
       </Typography>
 
@@ -134,10 +139,11 @@ export function OkazionBoostUpsell({
         />
         <FormControlLabel
           value="buy-card"
+          disabled={storeCardDisabled}
           control={<Radio size="small" sx={{ color: OKAZION_ACCENT, '&.Mui-checked': { color: OKAZION_ACCENT } }} />}
           label={
-            useAppleIap
-              ? `${t.packages.buyNow} · ${appleSheetUsd(OKAZION_PACKAGE_ID) || '…'}`
+            showStorePrice
+              ? `${t.packages.buyNow} · ${okazionStorePrice}`
               : `${t.packages.buyNow} · ${OKAZION_PRICE_EUR}€`
           }
         />
@@ -168,6 +174,11 @@ export function OkazionPostActions({
   const t = useCopy();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
+  const okazionStorePrice = formatStorePriceLabel(store.loading, store.priceFor(OKAZION_PACKAGE_ID));
+  const storeCardDisabled = iosClosed || (useAppleIap && (store.loading || !store.priceFor(OKAZION_PACKAGE_ID)));
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= OKAZION_PRICE_BC;
@@ -249,7 +260,7 @@ export function OkazionPostActions({
           <Button
             type="button"
             variant="contained"
-            disabled={disabled || submitting}
+            disabled={disabled || submitting || storeCardDisabled}
             onClick={() => onPost('buy-card')}
             startIcon={<CreditCardIcon size={18} weight="bold" />}
             sx={{
@@ -262,8 +273,8 @@ export function OkazionPostActions({
           >
             {submitting
               ? t.packages.posting
-              : useAppleIap
-                ? `${t.packages.post} · ${appleSheetUsd(OKAZION_PACKAGE_ID) || '…'}`
+              : showStorePrice
+                ? `${t.packages.post} · ${okazionStorePrice}`
                 : `${t.packages.post} · ${OKAZION_PRICE_EUR}€`}
           </Button>
           <Button
@@ -312,6 +323,9 @@ export async function activateOkazionAfterCreate(params: {
   if (mode === 'off') return { ok: true };
 
   if (mode === 'buy-card') {
+    if (isIosNativeApp() && !isIapAvailable()) {
+      return { ok: false, message: IOS_IAP_UNAVAILABLE_MESSAGE };
+    }
     if (isNativeApp() && isIapAvailable()) {
       const purchase = await purchaseOkazionPackage(OKAZION_PACKAGE_ID);
       if (!purchase.ok) {

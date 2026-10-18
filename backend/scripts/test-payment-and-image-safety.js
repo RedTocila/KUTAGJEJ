@@ -730,6 +730,135 @@ async function testStreamLimitAndPublicImage() {
   assert.strictEqual(metadata.statusCode, 400);
 }
 
+function memoryRows(tables) {
+  return {
+    from(table) {
+      const rows = tables[table] || [];
+      return {
+        select() {
+          return this;
+        },
+        eq(column, value) {
+          return Promise.resolve({
+            data: rows.filter((row) => row[column] === value),
+            error: null,
+          });
+        },
+      };
+    },
+  };
+}
+
+async function testAccountOwnedStorage() {
+  const {
+    classifyStorageUrl,
+    collectOwnedStorageTargets,
+    deleteOwnedStorageTargets,
+  } = require('../lib/account-owned-storage');
+
+  assert.strictEqual(classifyStorageUrl('https://cdn.example/photo.jpg'), null);
+  assert.deepStrictEqual(
+    classifyStorageUrl('https://proj.supabase.co/storage/v1/object/public/uploads/listings/a.jpg'),
+    { provider: 'supabase', bucket: 'uploads', path: 'listings/a.jpg' },
+  );
+  assert.deepStrictEqual(
+    classifyStorageUrl('https://abc.public.blob.vercel-storage.com/listings/b.jpg?download=1'),
+    { provider: 'vercel-blob', url: 'https://abc.public.blob.vercel-storage.com/listings/b.jpg' },
+  );
+
+  const userId = 'user-1';
+  const otherId = 'user-2';
+  const sb = memoryRows({
+    profiles: [
+      { id: userId, avatar_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/avatars/me.jpg' },
+      { id: otherId, avatar_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/avatars/other.jpg' },
+    ],
+    real_estate_listings: [
+      {
+        poster_id: userId,
+        image_urls: ['https://abc.public.blob.vercel-storage.com/listings/mine.jpg', 'https://instagram.example/x.jpg'],
+      },
+    ],
+    car_listings: [],
+    job_listings: [],
+    marketplace_listings: [],
+    directory_listings: [
+      {
+        poster_id: userId,
+        image_urls: [],
+        announcement_banner_url: null,
+        menu_items: [{ imageUrl: 'https://proj.supabase.co/storage/v1/object/public/uploads/menu/dish.jpg' }],
+        portfolio_items: [],
+      },
+    ],
+    messages: [
+      { sender_id: userId, image_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/messages/m.jpg' },
+      { sender_id: otherId, image_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/messages/theirs.jpg' },
+    ],
+    conversations: [
+      { poster_id: userId, listing_image_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/listings/cover.jpg' },
+      { poster_id: otherId, listing_image_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/listings/not-mine.jpg' },
+    ],
+    professional_verification_requests: [
+      {
+        applicant_id: userId,
+        id_front_image_url: 'https://proj.supabase.co/storage/v1/object/public/uploads/ids/front.jpg',
+        applicant_snapshot: {},
+      },
+    ],
+    job_employer_verification_requests: [],
+  });
+
+  const targets = await collectOwnedStorageTargets(sb, userId);
+  const paths = targets.filter((target) => target.provider === 'supabase').map((target) => target.path).sort();
+  assert.deepStrictEqual(paths, [
+    'avatars/me.jpg',
+    'ids/front.jpg',
+    'listings/cover.jpg',
+    'menu/dish.jpg',
+    'messages/m.jpg',
+  ]);
+  assert.deepStrictEqual(
+    targets.filter((target) => target.provider === 'vercel-blob').map((target) => target.url),
+    ['https://abc.public.blob.vercel-storage.com/listings/mine.jpg'],
+  );
+
+  const removed = [];
+  const blobs = [];
+  const ok = await deleteOwnedStorageTargets(targets, {
+    storage: {
+      from(bucket) {
+        assert.strictEqual(bucket, 'uploads');
+        return {
+          remove(chunk) {
+            removed.push(...chunk);
+            return Promise.resolve({ error: null });
+          },
+        };
+      },
+    },
+    deleteBlobs(urls) {
+      blobs.push(...urls);
+      return Promise.resolve();
+    },
+  });
+  assert.strictEqual(ok.ok, true);
+  assert.deepStrictEqual(removed.sort(), paths);
+  assert.deepStrictEqual(blobs, ['https://abc.public.blob.vercel-storage.com/listings/mine.jpg']);
+
+  const failed = await deleteOwnedStorageTargets(
+    [{ provider: 'vercel-blob', url: 'https://abc.public.blob.vercel-storage.com/listings/mine.jpg' }],
+    {
+      storage: { from: () => ({ remove: async () => ({ error: null }) }) },
+      deleteBlobs: async () => {
+        throw new Error('blob down');
+      },
+    },
+  );
+  assert.strictEqual(failed.ok, false);
+  assert.ok(failed.failures.some((message) => /blob down/.test(message)));
+}
+
 async function main() {
   await testAmountMatching();
   await testUnderpaidDoesNotGrant();
@@ -739,6 +868,7 @@ async function main() {
   await testRevenueCatRetryAfterPartialFailure();
   await testBlockedImageTargets();
   await testStreamLimitAndPublicImage();
+  await testAccountOwnedStorage();
   console.error('payment and image safety tests ok');
 }
 

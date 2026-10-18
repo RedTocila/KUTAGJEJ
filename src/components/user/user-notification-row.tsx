@@ -164,7 +164,7 @@ export function UserNotificationRow({
             sx={{
               ...iconBtnSx,
               border: 'none',
-              bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+              bgcolor: (muiTheme) => (muiTheme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
             }}
           >
             <EyeIcon size={compact ? 14 : 16} weight="bold" />

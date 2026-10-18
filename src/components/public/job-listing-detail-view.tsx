@@ -44,7 +44,6 @@ import { ListingsCarousel } from '@/components/public/listings-carousel';
 import { LocationMapEmbed } from '@/components/public/location-map-embed';
 import { OwnerContactPhone } from '@/components/public/owner-contact-phone';
 import { HistoryBackButton } from '@/components/public/product-browse-chrome';
-import { JobVerifiedBadge } from '@/components/public/professional-listing-detail-ui';
 import { RealEstateListingExpandableText } from '@/components/public/real-estate-listing-expandable-text';
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { StickyListingContact } from '@/components/public/sticky-listing-contact';

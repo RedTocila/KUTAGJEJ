@@ -4,6 +4,7 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, GlobalStyles, Stack } from '@mui/material';
 
+import { getNativePlatform } from '@/lib/native-app';
 import { paths } from '@/paths';
 import { APP_VIEWPORT_HEIGHT, MOBILE_CONTENT_BOTTOM_PADDING } from '@/lib/mobile-layout';
 import { isPostListingPath } from '@/lib/post-listing-path';
@@ -88,8 +89,11 @@ export function UserDashboardFrame({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const hostedTabs = useMainTabsHosted();
   const nativeApp = useIsNativeApp();
-  // Native app: block POK card checkout. Packages, history, and AI stay available.
-  const nativePurchaseBlocked = nativeApp && NATIVE_BLOCKED_USER_ROUTES.some((route) => pathMatches(pathname, route));
+  // Android still leaves the card-checkout route. iOS stays on the page so it can explain
+  // that App Store purchases are unavailable instead of bouncing to an empty dashboard.
+  const iosCheckout = nativeApp && getNativePlatform() === 'ios' && pathMatches(pathname, paths.user.checkout);
+  const nativePurchaseBlocked =
+    nativeApp && !iosCheckout && NATIVE_BLOCKED_USER_ROUTES.some((route) => pathMatches(pathname, route));
   const isDashboardHome = pathname === paths.user.dashboard;
   const isMessages = pathMatches(pathname, paths.user.messages);
   const isPackagesHub = pathname === paths.user.packages;

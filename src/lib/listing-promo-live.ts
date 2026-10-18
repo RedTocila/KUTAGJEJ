@@ -39,6 +39,18 @@ export function livePromoFlags(
   };
 }
 
+/** Render-safe flags. `nowMs <= 0` is the SSR/hydration clock — do not call `Date.now()`. */
+export function promoFlagsForClock(
+  listing: Pick<LivePromoListing, 'isPremium' | 'premiumUntil' | 'isOkazion' | 'okazionUntil'>,
+  nowMs: number,
+): { isOkazion: boolean; isPremium: boolean } {
+  if (!(nowMs > 0)) {
+    const isOkazion = Boolean(listing.isOkazion);
+    return { isOkazion, isPremium: isOkazion ? false : Boolean(listing.isPremium) };
+  }
+  return livePromoFlags(listing, nowMs);
+}
+
 export function withLivePromoFlags<T extends LivePromoListing>(listing: T, nowMs: number = Date.now()): T {
   const flags = livePromoFlags(listing, nowMs);
   if (listing.isOkazion === flags.isOkazion && listing.isPremium === flags.isPremium) return listing;

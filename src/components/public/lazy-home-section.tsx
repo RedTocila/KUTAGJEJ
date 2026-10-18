@@ -162,10 +162,10 @@ export function LazyHomeSection({
         return;
       }
       const session = getHomepageListingsCacheSnapshot();
-      const sessionSlice = session ? sliceHomepageVertical(session, verticalId, limit) : null;
-      if (sessionSlice && sessionSlice.listings.length > 0 && !cancelled) {
-        setListings(sessionSlice.listings as HomeListing[]);
-        setTotal(sessionSlice.total);
+      const cachedSlice = session ? sliceHomepageVertical(session, verticalId, limit) : null;
+      if (cachedSlice && cachedSlice.listings.length > 0 && !cancelled) {
+        setListings(cachedSlice.listings as HomeListing[]);
+        setTotal(cachedSlice.total);
       }
       const res = await fetchLatestVertical<HomeListing>(verticalId, limit);
       if (cancelled) return;

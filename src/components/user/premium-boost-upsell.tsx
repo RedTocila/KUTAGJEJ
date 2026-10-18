@@ -8,7 +8,7 @@ import { CrownSimple as CrownSimpleIcon } from '@phosphor-icons/react/dist/ssr/C
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { useCopy } from '@/hooks/use-copy';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
+import { formatStorePriceLabel, useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useUser } from '@/hooks/use-user';
 import type { ListingMetricKind } from '@/lib/listing-metrics';
 import {
@@ -19,7 +19,7 @@ import {
   listPremiumVouchers,
 } from '@/lib/payments-client';
 import { isNativeApp } from '@/lib/native-app';
-import { isIapAvailable, purchasePremiumPackage } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, isIosNativeApp, purchasePremiumPackage } from '@/lib/revenuecat-client';
 import { california } from '@/styles/theme/colors';
 import { productButtonSx } from '@/styles/product-sx';
 import { paths } from '@/paths';
@@ -63,6 +63,11 @@ export function PremiumPostActions({
   const t = useCopy();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
+  const premiumStorePrice = formatStorePriceLabel(store.loading, store.priceFor(PREMIUM_PACKAGE_ID));
+  const storeCardDisabled = iosClosed || (useAppleIap && (store.loading || !store.priceFor(PREMIUM_PACKAGE_ID)));
   const { user } = useUser();
   const balance = Number(user?.boostCredits) || 0;
   const canBc = balance >= PREMIUM_PRICE_BC;
@@ -144,7 +149,7 @@ export function PremiumPostActions({
           <Button
             type="button"
             variant="contained"
-            disabled={disabled || submitting}
+            disabled={disabled || submitting || storeCardDisabled}
             onClick={() => onPost('buy-card')}
             startIcon={<CreditCardIcon size={18} weight="bold" />}
             sx={{
@@ -157,8 +162,8 @@ export function PremiumPostActions({
           >
             {submitting
               ? t.packages.posting
-              : useAppleIap
-                ? `${t.packages.post} · ${appleSheetUsd(PREMIUM_PACKAGE_ID) || '…'}`
+              : showStorePrice
+                ? `${t.packages.post} · ${premiumStorePrice}`
                 : `${t.packages.post} · ${PREMIUM_PRICE_EUR}€`}
           </Button>
           <Button
@@ -208,6 +213,9 @@ export async function activatePremiumAfterCreate(params: {
   const packageId = String(params.packageId || PREMIUM_PACKAGE_ID).trim() || PREMIUM_PACKAGE_ID;
 
   if (mode === 'buy-card') {
+    if (isIosNativeApp() && !isIapAvailable()) {
+      return { ok: false, message: IOS_IAP_UNAVAILABLE_MESSAGE };
+    }
     if (isNativeApp() && isIapAvailable()) {
       const purchase = await purchasePremiumPackage(packageId);
       if (!purchase.ok) {

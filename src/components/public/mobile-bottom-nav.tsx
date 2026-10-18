@@ -38,7 +38,15 @@ function hrefPath(href: string): string {
 const NAV_INSET_PX = 4;
 
 /** Survives public ↔ dashboard shell remounts so first→last still slides. */
-let persistedFromIndex = 0;
+const pillSlideMemory = { fromIndex: 0 };
+
+function readPersistedPillIndex(): number {
+  return pillSlideMemory.fromIndex;
+}
+
+function writePersistedPillIndex(index: number): void {
+  pillSlideMemory.fromIndex = index;
+}
 
 interface NavItem {
   id: string;
@@ -126,7 +134,7 @@ export function MobileBottomNav() {
   const activeIndex = items.findIndex((item) => item.activeWhen(displayPathname));
   const hasActiveTab = activeIndex >= 0;
   const slotCount = items.length;
-  const [indicatorIndex, setIndicatorIndex] = React.useState(persistedFromIndex);
+  const [indicatorIndex, setIndicatorIndex] = React.useState(readPersistedPillIndex());
   const [transitionReady, setTransitionReady] = React.useState(false);
   const pillRef = React.useRef<HTMLDivElement | null>(null);
   const iconSlotsRef = React.useRef<Array<HTMLElement | null>>([]);
@@ -191,13 +199,13 @@ export function MobileBottomNav() {
 
     if (transitionReady) {
       setIndicatorIndex(target);
-      persistedFromIndex = target;
+      writePersistedPillIndex(target);
       return undefined;
     }
 
-    setIndicatorIndex(persistedFromIndex);
+    setIndicatorIndex(readPersistedPillIndex());
 
-    if (persistedFromIndex === target) {
+    if (readPersistedPillIndex() === target) {
       setTransitionReady(true);
       return undefined;
     }
@@ -208,7 +216,7 @@ export function MobileBottomNav() {
       frame2 = requestAnimationFrame(() => {
         if (touchPreviewRef.current != null) return;
         setIndicatorIndex(target);
-        persistedFromIndex = target;
+        writePersistedPillIndex(target);
       });
     });
 
@@ -225,7 +233,7 @@ export function MobileBottomNav() {
     touchPreviewRef.current = index === activeIndex ? null : index;
     hasActiveTabRef.current = true;
     paintPill(index, true);
-    persistedFromIndex = index;
+    writePersistedPillIndex(index);
 
     const href = item.kind === 'search' ? paths.public.search : item.href;
     const tab = href ? mainTabFromPath(hrefPath(href)) : null;
@@ -234,9 +242,9 @@ export function MobileBottomNav() {
 
   const revertTabSlide = () => {
     touchPreviewRef.current = null;
-    const back = activeIndex >= 0 ? activeIndex : persistedFromIndex;
+    const back = activeIndex >= 0 ? activeIndex : readPersistedPillIndex();
     paintPill(back, true);
-    persistedFromIndex = back;
+    writePersistedPillIndex(back);
     setIndicatorIndex(back);
     const item = items[back];
     if (!item) return;
@@ -279,7 +287,7 @@ export function MobileBottomNav() {
       return;
     }
     gestureRef.current = 'commit';
-    persistedFromIndex = index;
+    writePersistedPillIndex(index);
     activateTab(event, item, index);
   };
 

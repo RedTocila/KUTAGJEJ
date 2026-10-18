@@ -334,7 +334,8 @@ export default function MyPaymentsPage() {
                         p: 1.75,
                         borderRadius: 2.25,
                         border: 'none',
-                        bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                        bgcolor: (muiTheme) =>
+                          muiTheme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                       }}
                     >
                       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
@@ -400,7 +401,8 @@ export default function MyPaymentsPage() {
                       p: 1.75,
                       borderRadius: 2.25,
                       border: 'none',
-                      bgcolor: (t) => (t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                      bgcolor: (muiTheme) =>
+                        muiTheme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                     }}
                   >
                     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>

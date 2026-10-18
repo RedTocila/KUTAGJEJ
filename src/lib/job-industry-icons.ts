@@ -2,7 +2,6 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Bank as BankIcon } from '@phosphor-icons/react/dist/ssr/Bank';
 import { Briefcase as BriefcaseIcon } from '@phosphor-icons/react/dist/ssr/Briefcase';
 import { Broom as BroomIcon } from '@phosphor-icons/react/dist/ssr/Broom';
-import { Buildings as BuildingsIcon } from '@phosphor-icons/react/dist/ssr/Buildings';
 import { Calculator as CalculatorIcon } from '@phosphor-icons/react/dist/ssr/Calculator';
 import { Code as CodeIcon } from '@phosphor-icons/react/dist/ssr/Code';
 import { ForkKnife as ForkKnifeIcon } from '@phosphor-icons/react/dist/ssr/ForkKnife';

@@ -170,7 +170,6 @@ export function BusinessPromoBanner({
             bgcolor: alpha('#000', 0.2),
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={banner}
             alt=""

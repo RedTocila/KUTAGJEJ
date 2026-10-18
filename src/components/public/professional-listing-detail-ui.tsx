@@ -594,7 +594,7 @@ export function ProfessionalPortfolioSection({
   items,
   headerAction,
   listingId,
-  listingKind = 'professionals',
+  listingKind: _listingKind = 'professionals',
 }: {
   items: ProfessionalPortfolioItem[];
   headerAction?: React.ReactNode;
@@ -614,7 +614,7 @@ export function ProfessionalPortfolioSection({
         // Cover gallery uses index 0; portfolio photos continue from 1.
       }
     },
-    [listingId, listingKind]
+    [listingId]
   );
 
   if (items.length === 0 && !headerAction) return null;

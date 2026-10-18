@@ -9,7 +9,7 @@ KuTaGjej is a Next.js website. The store apps are a **Capacitor hybrid shell** i
 | 1. Mobile web polish | Ongoing | Site already responsive |
 | 2. Capacitor shell + Android | **Done** | `/mobile` + `android/` |
 | 3. Native bridges in website | **Done** | Camera, share, back button, splash/status, push register stub |
-| 4. Account deletion (store rule) | **Done** | Profili → “Fshi llogarinë” + `POST /api/account/delete` |
+| 4. Account deletion (store rule) | **Done** | Profili → “Fshi llogarinë”. Deletes owned Supabase/Vercel Blob files first; Auth user is removed only if that cleanup succeeds |
 | 5. App icons (Android PNGs) | **Done (placeholder)** | From `Ku-Ta-Gjej-Logo.png` — refine in Android Studio later |
 | 6. First local Android build | **Your turn** | Needs Android Studio + JDK 21 |
 | 7. iOS platform | **Done** | `/mobile/ios` + camera/photo/push Info.plist keys |
@@ -63,7 +63,9 @@ If `pod` is missing after a reboot, run `source scripts/ios-env.sh` again (adds 
 
 ## Apple IAP (RevenueCat)
 
-Native iOS sells packages / coins / Premium / Okazion via StoreKit + RevenueCat. The website keeps POK checkout.
+Native iOS sells packages / coins / Premium / Okazion via StoreKit + RevenueCat. Prices on those buttons come from `Purchases.getProducts` → `priceString` (the store’s localized price). If the RevenueCat key or a product is missing, the iOS button stays disabled and does not open POK checkout. The website keeps POK checkout.
+
+Auto-Refresh card checkout is not offered in the current package UI (`Auto-Refresh nuk ofrohet më` on the checkout page). Product ids `al.kutagjej.autorefresh.10` and `.20` remain in `backend/lib/revenuecat-products.js` for a future catalog; they have no purchase button today.
 
 ### Env
 
@@ -96,3 +98,31 @@ In Xcode → App target → **Signing & Capabilities** → ensure **In-App Purch
 ### DB
 
 Apply migration `iap_processed_events` (idempotency for webhook grants). Never re-run `init.sql` on production.
+
+Apply `supabase/migrations/20260927120000_content_reports_user_blocks.sql` yourself if it is not already on the live project. It adds `content_reports` and `user_blocks` (Guideline 1.2). Do not run it from an agent session against production, and do not re-run `init.sql`.
+
+## What the iOS app already does (no extra “native” screens)
+
+These flows are the website inside the Capacitor shell, plus the native bridges already wired:
+
+- Marketplace: browse and post listings (real estate, cars, jobs, marketplace, businesses, professionals)
+- Messaging: `/user/dashboard` messages, including listing inquiries
+- Reporting and blocking: message and profile menus (“Raporto”, “Blloko”) write `content_reports` / `user_blocks` once that migration is applied
+- Camera / photo library: listing image picker and ID verification use the Capacitor camera plugin, with the file input as fallback
+- IAP: package, coin, Premium, and Okazion purchases on iOS go through StoreKit when RevenueCat is configured
+
+Apple’s review decision is discretionary. Nothing here means approval is guaranteed.
+
+## Still manual before App Store review
+
+Confirm these in App Store Connect, RevenueCat, and on a device. The repo cannot complete them:
+
+1. **Privacy labels** — match App Store Connect nutrition labels to `src/app/privatesia/page.tsx` (updated 18 October 2026). Confirm the owner agrees the named processors are the ones in production: Supabase, Vercel (hosting and Blob when `BLOB_READ_WRITE_TOKEN` is set), POK Payments (website only), Apple IAP, RevenueCat, OpenAI (AI import, AI search, ID scan), and APNs after the user allows notifications. Do not add a retention period that the product does not state.
+2. **Privacy policy URL** — the live page must be the updated policy before review.
+3. **Product configuration** — create the product ids in App Store Connect and RevenueCat (see the list above), including Albania/storefront pricing. The app no longer shows hard-coded USD amounts. A missing product shows “I padisponueshëm” and cannot be bought. Confirm whether Auto-Refresh products should stay unwired.
+4. **Reviewer access** — put a demo publishing account (email + password) in App Review Information. Reviewers need it to post a listing, open messages, report/block, and attempt a Sandbox purchase. Do not put the password in this repo.
+5. **APNs** — push is not requested at launch. The user turns it on under notification settings. Delivery still needs the Apple push key / capability and a device token path that reaches the API. Until that is configured, the settings screen reports that push is not configured; the rest of the app keeps working.
+6. **Signing** — Xcode → App target → Signing & Capabilities → Team, plus In-App Purchase. `source mobile/scripts/ios-env.sh` if CocoaPods is not on PATH.
+7. **On device / TestFlight** — install a Release or TestFlight build, confirm kutagjej.al loads, camera prompt appears only when picking a photo, notification permission appears only from notification settings, a Sandbox purchase shows the App Store price, and account deletion is reachable from the profile. Do not test deletion against a real customer account.
+8. **Deep links** — replace TEAMID / SHA256 in `.well-known` after the release signing identity exists.
+9. **Deploy** — ship the website (account-deletion storage cleanup, privacy page, IAP fail-closed, push prompt) before the binary that loads `https://kutagjej.al` is reviewed.

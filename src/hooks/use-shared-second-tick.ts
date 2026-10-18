@@ -29,7 +29,9 @@ function stopIfIdle() {
 function subscribe(listener: () => void) {
   listeners.add(listener);
   subscribers += 1;
+  const before = nowMs;
   ensureTicking();
+  if (nowMs !== before) queueMicrotask(listener);
   return () => {
     listeners.delete(listener);
     subscribers -= 1;
@@ -38,7 +40,6 @@ function subscribe(listener: () => void) {
 }
 
 function getSnapshot() {
-  if (nowMs === 0) nowMs = Date.now();
   return nowMs;
 }
 

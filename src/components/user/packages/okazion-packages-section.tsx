@@ -38,11 +38,11 @@ import {
   listOkazionVouchers,
 } from '@/lib/payments-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useIosStorePrices } from '@/hooks/use-ios-store-prices';
 import { useIsNativeApp } from '@/hooks/use-is-native-app';
 import { useLifetimePackageDiscount } from '@/hooks/use-lifetime-package-discount';
-import { appleSheetUsd } from '@/lib/iap-sheet-prices';
 import { useUser } from '@/hooks/use-user';
-import { isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
+import { IOS_IAP_UNAVAILABLE_MESSAGE, isIapAvailable, purchaseOkazionPackage } from '@/lib/revenuecat-client';
 import { BoostCoinIcon } from '@/components/core/boost-coin-icon';
 import { ListRowsSkeleton } from '@/components/core/content-skeletons';
 import {
@@ -165,6 +165,9 @@ export function OkazionPackagesSection() {
   const { user, checkSession } = useUser();
   const nativeApp = useIsNativeApp();
   const useAppleIap = nativeApp && isIapAvailable();
+  const store = useIosStorePrices();
+  const iosClosed = store.mode === 'unavailable';
+  const showStorePrice = useAppleIap || iosClosed;
   const lifetimePercent = useLifetimePackageDiscount();
   const balance = Number(user?.boostCredits) || 0;
 
@@ -173,8 +176,8 @@ export function OkazionPackagesSection() {
   const [quantity, setQuantity] = React.useState(1);
 
   React.useEffect(() => {
-    if (useAppleIap && quantity !== 1) setQuantity(1);
-  }, [useAppleIap, quantity]);
+    if (showStorePrice && quantity !== 1) setQuantity(1);
+  }, [showStorePrice, quantity]);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -257,6 +260,14 @@ export function OkazionPackagesSection() {
   };
 
   const onBuyCard = (pkg: OkazionPackage) => {
+    if (iosClosed) {
+      setError(IOS_IAP_UNAVAILABLE_MESSAGE);
+      return;
+    }
+    if (useAppleIap && (store.loading || !store.priceFor(pkg.id))) {
+      setError('Çmimi i App Store nuk është i disponueshëm për këtë paketë.');
+      return;
+    }
     if (!useAppleIap) {
       router.push(checkoutOkazionHref(pkg.id, quantity));
       return;
@@ -360,7 +371,7 @@ export function OkazionPackagesSection() {
           ) : undefined
         }
         meta={
-          useAppleIap ? undefined : (
+          showStorePrice ? undefined : (
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
               Sasia (stoko për më vonë)
@@ -430,12 +441,12 @@ export function OkazionPackagesSection() {
               size="small"
               variant="contained"
               color="error"
-              disabled={busy}
+              disabled={busy || iosClosed || (useAppleIap && (store.loading || !store.priceFor(pkg.id)))}
               onClick={() => onBuyCard(pkg)}
               sx={dualPayButtonSx('error')}
             >
-              {useAppleIap ? (
-                <StorePriceLabel value={appleSheetUsd(pkg.id)} />
+              {showStorePrice ? (
+                <StorePriceLabel value={store.loading ? null : store.priceFor(pkg.id) || 'I padisponueshëm'} />
               ) : (
                 <PackageEurPrice listPrice={totalEur} percent={lifetimePercent} onAccent />
               )}

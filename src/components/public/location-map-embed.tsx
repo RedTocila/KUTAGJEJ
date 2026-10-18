@@ -143,7 +143,6 @@ export function LocationMapEmbed({
     <Box
       ref={rootRef}
       role="region"
-      aria-expanded={expanded}
       aria-label={t.common.locationMapTitle}
       onClick={openCollapsedMap}
       sx={(theme) => ({

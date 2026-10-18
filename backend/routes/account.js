@@ -4,6 +4,7 @@ const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const requirePortalUser = require('../middleware/require-portal-user');
 const rateLimit = require('../middleware/rate-limit');
+const { deleteUserOwnedFiles } = require('../lib/account-owned-storage');
 const { getSupabaseAdmin } = require('../lib/supabase');
 
 const router = express.Router();
@@ -50,7 +51,24 @@ router.post('/delete', authMiddleware, requirePortalUser, deleteRateLimit, async
       });
     }
 
-    const { error } = await getSupabaseAdmin().auth.admin.deleteUser(userId);
+    const sb = getSupabaseAdmin();
+    let cleanup;
+    try {
+      cleanup = await deleteUserOwnedFiles(sb, userId);
+    } catch (error) {
+      console.error('POST /account/delete storage lookup:', error?.message || error);
+      return res.status(500).json({
+        message: 'Fshirja e llogarisë dështoi. Skedarët e ngarkuar nuk u kontrolluan, ndaj llogaria mbeti aktive.',
+      });
+    }
+    if (!cleanup.ok) {
+      console.error('POST /account/delete storage:', cleanup.failures.join('; '));
+      return res.status(500).json({
+        message: 'Fshirja e llogarisë dështoi. Skedarët e ngarkuar nuk u fshinë, ndaj llogaria mbeti aktive.',
+      });
+    }
+
+    const { error } = await sb.auth.admin.deleteUser(userId);
     if (error) {
       console.error('POST /account/delete:', error.message || error);
       return res.status(500).json({ message: 'Fshirja e llogarisë dështoi. Provoni përsëri ose kontaktoni suportin.' });

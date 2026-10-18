@@ -15,7 +15,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from '@/lib/job-constants';
 import { getJobListingExpiresAt } from '@/lib/job-listing-expiry';
-import { isPublicJobListed, livePromoFlags } from '@/lib/listing-promo-live';
+import { isPublicJobListed, promoFlagsForClock } from '@/lib/listing-promo-live';
 import { jobListingCoverImageUrl, jobListingUsesMockupCover } from '@/lib/job-listing-cover';
 import type { PublicJobListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
@@ -55,9 +55,8 @@ export function JobCard({
   locationInPriceRow?: boolean;
 }) {
   const nowMs = useSharedSecondTick();
-  const effectiveNow = nowMs > 0 ? nowMs : Date.now();
-  const { isPremium, isOkazion } = livePromoFlags(listing, effectiveNow);
-  const stillListed = isPublicJobListed(listing, effectiveNow);
+  const { isPremium, isOkazion } = promoFlagsForClock(listing, nowMs);
+  const stillListed = nowMs > 0 ? isPublicJobListed(listing, nowMs) : true;
 
   const viewCount = listing.viewCount ?? 0;
   const industryLabel = findOptionLabel(JOB_INDUSTRY_OPTIONS, listing.industry);
@@ -115,24 +114,7 @@ export function JobCard({
             },
           }),
     }),
-    [
-      displayImageUrl,
-      industryLabel,
-      jobTypeLabel,
-      listing.cityName,
-      listing.contactPhone,
-      listing.createdAt,
-      listing.description,
-      listing.id,
-      listing.industry,
-      listing.requiredRoles,
-      listing.saveCount,
-      listing.title,
-      locationLabel,
-      salaryLabel,
-      viewCount,
-      workLocationLabel,
-    ]
+    [displayImageUrl, industryLabel, jobTypeLabel, listing, locationLabel, salaryLabel, viewCount, workLocationLabel]
   );
 
   // Listing visibility timer finished — drop from public lists (do not show "Skaduar").

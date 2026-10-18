@@ -13,7 +13,6 @@ import { Question as QuestionIcon } from '@phosphor-icons/react/dist/ssr/Questio
 import { RocketLaunch as RocketLaunchIcon } from '@phosphor-icons/react/dist/ssr/RocketLaunch';
 import { Trophy as TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 
-import { primaryMainAlpha } from '@/lib/css-var-alpha';
 import { OKAZION_RED } from '@/lib/home-categories';
 import { applyLifetimeDiscount } from '@/hooks/use-lifetime-package-discount';
 import {
@@ -169,8 +168,8 @@ export function formatBc(n: number) {
 /** Shared shell for a sellable plan / pack card. */
 export function PlanCard({
   children,
-  highlighted = false,
-  accent = 'primary',
+  highlighted: _highlighted = false,
+  accent: _accent = 'primary',
   compact = false,
 }: {
   children: React.ReactNode;
@@ -604,7 +603,7 @@ export function PackageOfferRow({
   meta,
   details = [],
   accent = 'primary',
-  highlighted = false,
+  highlighted: _highlighted = false,
   actions,
 }: {
   title: string;

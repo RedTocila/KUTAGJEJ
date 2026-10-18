@@ -218,7 +218,6 @@ export function SavedListingPreviewDialog({
               }}
             >
               {data?.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={data.imageUrl}
                   alt={title}

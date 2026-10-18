@@ -22,7 +22,7 @@ export default function BoostCoinsPackagesPage() {
         title={t.nav.buyBoostCoins}
         description={t.packages.boostCoinsDescription}
         iconSx={{
-          bgcolor: (t) => alpha(t.palette.warning.main, t.palette.mode === 'dark' ? 0.28 : 0.18),
+          bgcolor: (muiTheme) => alpha(muiTheme.palette.warning.main, muiTheme.palette.mode === 'dark' ? 0.28 : 0.18),
           color: 'warning.main',
         }}
       />

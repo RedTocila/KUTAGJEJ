@@ -32,6 +32,11 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function fadeDismissBackdrop(node: HTMLElement) {
+  node.style.transition = prefersReducedMotion() ? 'none' : `opacity ${DISMISS_MS}ms ${MOTION.ease}`;
+  node.style.opacity = '0';
+}
+
 function findBackdrop(paper: HTMLElement | null): HTMLElement | null {
   if (!paper) return null;
   const modal = paper.closest('.MuiModal-root');
@@ -152,11 +157,7 @@ export function useSwipeToDismiss({
     applyVisual(travel, true, DISMISS_MS);
 
     const backdrop = backdropRef.current ?? findBackdrop(el);
-    if (backdrop) {
-      backdropRef.current = backdrop;
-      backdrop.style.transition = prefersReducedMotion() ? 'none' : `opacity ${DISMISS_MS}ms ${MOTION.ease}`;
-      backdrop.style.opacity = '0';
-    }
+    if (backdrop) fadeDismissBackdrop(backdrop);
 
     window.setTimeout(() => {
       onDismissRef.current();

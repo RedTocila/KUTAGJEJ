@@ -288,7 +288,6 @@ export function AccountVerificationAdminPage() {
                     bgcolor: 'action.hover',
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={selected.idFrontImageUrl}
                     alt="Fotoja e përparme e ID-së"

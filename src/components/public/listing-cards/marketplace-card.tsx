@@ -9,7 +9,7 @@ import { Tag as TagIcon } from '@phosphor-icons/react/dist/ssr/Tag';
 import { MarketplaceCategoryIcon } from '@/components/public/home-vertical-icon';
 import { listingMarketplacePublicHref } from '@/paths';
 import { MARKETPLACE_CATEGORY_OPTIONS, MARKETPLACE_CONDITION_OPTIONS } from '@/lib/marketplace-constants';
-import { livePromoFlags } from '@/lib/listing-promo-live';
+import { promoFlagsForClock } from '@/lib/listing-promo-live';
 import type { PublicMarketplaceListing } from '@/lib/public-listings-client';
 import { ListingCardLink } from '@/components/public/listing-card-link';
 import { useSharedSecondTick } from '@/hooks/use-shared-second-tick';
@@ -47,7 +47,7 @@ export function MarketplaceCard({
   hideOkazionBadge?: boolean;
 }) {
   const nowMs = useSharedSecondTick();
-  const { isPremium, isOkazion } = livePromoFlags(listing, nowMs > 0 ? nowMs : Date.now());
+  const { isPremium, isOkazion } = promoFlagsForClock(listing, nowMs);
   const viewCount = listing.viewCount ?? 0;
   const categoryLabel = findOptionLabel(MARKETPLACE_CATEGORY_OPTIONS, listing.category);
   const conditionLabel = listing.condition ? findOptionLabel(MARKETPLACE_CONDITION_OPTIONS, listing.condition) : null;

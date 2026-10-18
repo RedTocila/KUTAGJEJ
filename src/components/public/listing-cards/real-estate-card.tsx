@@ -15,7 +15,7 @@ import { Stairs as StairsIcon } from '@phosphor-icons/react/dist/ssr/Stairs';
 
 import { listingRealEstatePublicHref } from '@/paths';
 import type { PublicRealEstateListing } from '@/lib/public-listings-client';
-import { livePromoFlags } from '@/lib/listing-promo-live';
+import { promoFlagsForClock } from '@/lib/listing-promo-live';
 import { propertyCategoryLabel } from '@/lib/real-estate-constants';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
@@ -53,7 +53,7 @@ export function RealEstateCard({
   const t = useCopy();
   const { language } = useLanguage();
   const nowMs = useSharedSecondTick();
-  const { isPremium, isOkazion } = livePromoFlags(listing, nowMs > 0 ? nowMs : Date.now());
+  const { isPremium, isOkazion } = promoFlagsForClock(listing, nowMs);
   const location = [listing.zoneName, listing.cityName].filter(Boolean).join(', ');
   const transactionLabel =
     listing.transactionType === 'rent' ? t.common.forRent : listing.transactionType === 'sale' ? t.common.forSale : '';

@@ -33,6 +33,18 @@ export function isIapAvailable(): boolean {
   return isNativeApp() && Boolean(publicApiKey());
 }
 
+export const IOS_IAP_UNAVAILABLE_MESSAGE =
+  'Blerjet në App Store nuk janë të disponueshme në këtë version.';
+
+export function isIosNativeApp(): boolean {
+  return getNativePlatform() === 'ios';
+}
+
+/** iOS must not fall through to website card checkout when StoreKit is missing. */
+export function iosStorePurchasesClosed(): boolean {
+  return isIosNativeApp() && !isIapAvailable();
+}
+
 async function loadPurchases() {
   const mod = await import('@revenuecat/purchases-capacitor');
   return mod;
@@ -77,6 +89,25 @@ export async function ensureRevenueCat(appUserId?: string | null): Promise<boole
 
   await configuring;
   return true;
+}
+
+/** StoreKit / Play formatted prices from `Purchases.getProducts` (`priceString`). */
+export async function loadStorePriceMap(productIds: string[]): Promise<Record<string, string>> {
+  if (!isIapAvailable()) {
+    throw new Error(IOS_IAP_UNAVAILABLE_MESSAGE);
+  }
+  await ensureRevenueCat();
+  const { Purchases } = await loadPurchases();
+  const identifiers = [...new Set(productIds.map((id) => String(id || '').trim()).filter(Boolean))];
+  if (!identifiers.length) return {};
+  const result = await Purchases.getProducts({ productIdentifiers: identifiers });
+  const prices: Record<string, string> = {};
+  for (const product of result.products ?? []) {
+    const identifier = String(product.identifier || '').trim();
+    const priceString = String(product.priceString || '').trim();
+    if (identifier && priceString) prices[identifier] = priceString;
+  }
+  return prices;
 }
 
 export async function fetchIapCatalog(): Promise<IapCatalog> {

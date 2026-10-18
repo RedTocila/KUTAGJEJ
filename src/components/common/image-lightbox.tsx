@@ -557,7 +557,6 @@ export function ImageLightbox({
         }}
       >
         {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             ref={imgRef}
             src={src}

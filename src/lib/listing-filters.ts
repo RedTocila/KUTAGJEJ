@@ -531,7 +531,7 @@ export function getActiveFilterChips(
     case 'cars': {
       const f = filters as BrowseCarFilters;
       const type = findLabel(
-        VEHICLE_TYPES.map((t) => ({ value: t.value, label: t.label })),
+        VEHICLE_TYPES.map((vehicle) => ({ value: vehicle.value, label: vehicle.label })),
         f.type,
       );
       if (type) push('type', type);

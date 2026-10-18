@@ -38,18 +38,12 @@ import { RealEstateListingExpandableText } from '@/components/public/real-estate
 import { RealEstateListingGallery } from '@/components/public/real-estate-listing-gallery';
 import { OwnerEditPencil, type OwnerEditHandlers } from '@/components/user/owner-edit-pencil';
 import { OwnerEditableSpot } from '@/components/user/owner-inline-edit';
-import { productButtonSx, productPanelSx } from '@/styles/product-sx';
 
 const FONT_BODY = '0.875rem';
 const FONT_CAPTION = '0.75rem';
 const FONT_TITLE = '1.375rem';
 
 const CONTENT_MAX = 480;
-
-const surfaceSx = {
-  ...productPanelSx,
-  p: 2,
-} as const;
 
 export function BusinessListingDetailView({
   listing,
@@ -133,7 +127,7 @@ export function BusinessListingDetailView({
   const handleReserve = async () => {
     if (usePlatformReservation) {
       const name = reserveGuestName.trim();
-      const phone = reserveGuestPhone.trim();
+      const guestPhone = reserveGuestPhone.trim();
       const partySize = Number.parseInt(reservePeople, 10);
       if (!reserveDate) {
         setReserveFeedback('Zgjidhni datën.');
@@ -147,7 +141,7 @@ export function BusinessListingDetailView({
         setReserveFeedback('Shkruani emrin e plotë.');
         return;
       }
-      if (phone.length < 6) {
+      if (guestPhone.length < 6) {
         setReserveFeedback('Shkruani numrin e telefonit.');
         return;
       }
@@ -155,7 +149,7 @@ export function BusinessListingDetailView({
       const draft = {
         listingId: listing.id,
         guestName: name,
-        guestPhone: phone,
+        guestPhone,
         partySize,
         reservationDate: reserveDate,
         timeSlot: '',

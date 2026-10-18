@@ -44,8 +44,8 @@ export function GuestListingContactDialog({
   contactPhone,
   listingTitle,
   listingUrl,
-  listingKind,
-  listingId,
+  listingKind: _listingKind,
+  listingId: _listingId,
   hideAccountOption = false,
 }: GuestListingContactDialogProps) {
   const t = useCopy();

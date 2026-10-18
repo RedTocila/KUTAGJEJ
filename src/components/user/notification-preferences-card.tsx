@@ -1,9 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Stack, Switch, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Switch, Typography } from '@mui/material';
 import { GearSix as GearSixIcon } from '@phosphor-icons/react/dist/ssr/GearSix';
 
+import { useIsNativeApp } from '@/hooks/use-is-native-app';
+import {
+  readNativePushPermission,
+  registerNativePush,
+  type NativePushPermission,
+} from '@/lib/native-app';
+import { rememberNativePushToken, syncNativePushToken } from '@/lib/native-push-client';
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
@@ -28,6 +35,87 @@ const DEFAULT_PREFS: NotificationPreferences = {
   reservations: true,
   verification: true,
 };
+
+function NativePushPermissionRow() {
+  const t = useCopy();
+  const native = useIsNativeApp();
+  const [permission, setPermission] = React.useState<NativePushPermission | 'unknown'>('unknown');
+  const [busy, setBusy] = React.useState(false);
+  const [note, setNote] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!native) return undefined;
+    let cancelled = false;
+    void readNativePushPermission().then((next) => {
+      if (!cancelled) setPermission(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [native]);
+
+  if (!native) return null;
+
+  const enable = async () => {
+    setBusy(true);
+    setNote(null);
+    const result = await registerNativePush({ requestPermission: true });
+    setBusy(false);
+    if (result.status === 'token') {
+      rememberNativePushToken(result.token);
+      await syncNativePushToken();
+      setPermission('granted');
+      setNote(t.notifications.devicePushEnabled);
+      return;
+    }
+    if (result.status === 'denied') {
+      setPermission('denied');
+      setNote(t.notifications.devicePushDenied);
+      return;
+    }
+    if (result.status === 'skipped') return;
+    setPermission('unavailable');
+    setNote(t.notifications.devicePushUnavailable);
+  };
+
+  return (
+    <Box
+      sx={{
+        px: 1.5,
+        py: 1.15,
+        borderRadius: 2,
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack spacing={0.2}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.3 }}>
+            {t.notifications.devicePushTitle}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+            {permission === 'granted'
+              ? t.notifications.devicePushOn
+              : permission === 'denied'
+                ? t.notifications.devicePushDenied
+                : permission === 'unavailable'
+                  ? t.notifications.devicePushUnavailable
+                  : t.notifications.devicePushDescription}
+          </Typography>
+        </Stack>
+        {permission === 'prompt' || permission === 'unknown' ? (
+          <Button variant="contained" disabled={busy || permission === 'unknown'} onClick={() => void enable()} sx={{ alignSelf: 'flex-start' }}>
+            {t.notifications.devicePushEnable}
+          </Button>
+        ) : null}
+        {note ? (
+          <Alert severity={permission === 'granted' ? 'success' : 'warning'} sx={{ borderRadius: 2 }}>
+            {note}
+          </Alert>
+        ) : null}
+      </Stack>
+    </Box>
+  );
+}
 
 export function NotificationPreferencesCard() {
   const t = useCopy();
@@ -80,6 +168,7 @@ export function NotificationPreferencesCard() {
       icon={React.createElement(GearSixIcon, { size: 22, weight: 'duotone' })}
     >
       <Stack spacing={1.25}>
+        <NativePushPermissionRow />
         {msg?.type === 'success' ? (
           <TransientSuccessAlert message={msg.text} onDismiss={() => setMsg(null)} />
         ) : msg ? (

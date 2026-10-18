@@ -4,7 +4,6 @@ import * as React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { BookmarkSimple as BookmarkSimpleIcon } from '@phosphor-icons/react/dist/ssr/BookmarkSimple';
 import { PaperPlaneTilt as PaperPlaneTiltIcon } from '@phosphor-icons/react/dist/ssr/PaperPlaneTilt';
@@ -200,12 +199,13 @@ export function CardMedia({
   const [displaySrc, setDisplaySrc] = React.useState<string | null>(thumbUrl);
   const [imageFailed, setImageFailed] = React.useState(false);
   const nowMs = useSharedSecondTick();
-  const effectiveNow = nowMs > 0 ? nowMs : Date.now();
   const liveOkazion =
-    okazionUntil != null && String(okazionUntil).length > 0 ? isUntilActive(okazionUntil, effectiveNow) : okazion;
+    nowMs > 0 && okazionUntil != null && String(okazionUntil).length > 0
+      ? isUntilActive(okazionUntil, nowMs)
+      : okazion;
   const livePremium =
-    premiumUntil != null && String(premiumUntil).length > 0
-      ? isUntilActive(premiumUntil, effectiveNow)
+    nowMs > 0 && premiumUntil != null && String(premiumUntil).length > 0
+      ? isUntilActive(premiumUntil, nowMs)
       : premium;
 
   const listingKeyRef = React.useRef(listingId);

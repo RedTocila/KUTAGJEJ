@@ -29,6 +29,7 @@ import { recordSearchInterest } from '@/lib/user-interest-history';
 import { paths } from '@/paths';
 
 import { HeroCategoryCircles } from './hero-category-circles';
+
 export interface HeroSearchProps {
   defaultVertical?: SearchCategoryId;
   /** Called after the user submits and navigation runs (e.g. close mobile search sheet). */

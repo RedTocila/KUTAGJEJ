@@ -43,6 +43,31 @@ import {
 import { uploadListingImages } from '@/lib/uploads-client';
 import { productButtonSx, productFieldSx, productPanelSx } from '@/styles/product-sx';
 
+function normalizeBannerHref(raw: string): { href: string; error: string | null } {
+  const href = raw.trim();
+  if (!href) return { href: '', error: null };
+  if (href.startsWith('/') && !href.startsWith('//')) {
+    return { href, error: null };
+  }
+  const hadProtocol = /^https?:\/\//i.test(href);
+  const withProto = hadProtocol ? href : href.startsWith('//') ? `https:${href}` : `https://${href}`;
+  try {
+    const url = new URL(withProto);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('bad protocol');
+    }
+    if (!url.hostname.includes('.')) {
+      throw new Error('bad host');
+    }
+    return { href: hadProtocol ? href : url.href, error: null };
+  } catch {
+    return {
+      href,
+      error: 'Linku duhet të jetë një rrugë e brendshme (p.sh. /prona) ose një URL e plotë (https://example.com).',
+    };
+  }
+}
+
 const EMPTY_FORM: HomeBannerInput = {
   title: '',
   subtitle: '',
@@ -105,11 +130,12 @@ function BannerDialog({
 
   const handleSave = async () => {
     const title = form.title.trim();
-    const href = form.ctaHref.trim();
-    if (href && !href.startsWith('/')) {
-      setError('Linku duhet të fillojë me "/" (p.sh. /prona).');
+    const link = normalizeBannerHref(form.ctaHref);
+    if (link.error) {
+      setError(link.error);
       return;
     }
+    const href = link.href;
 
     setSaving(true);
     setError(null);
@@ -161,11 +187,11 @@ function BannerDialog({
           />
           <TextField
             label="Linku (e gjithë karta)"
-            placeholder="/prona ose /user/dashboard/prona"
+            placeholder="https://example.com ose /prona"
             value={form.ctaHref}
             onChange={(e) => setForm((f) => ({ ...f, ctaHref: e.target.value }))}
             fullWidth
-            helperText="Kur përdoruesi prek banner-in, hapet ky link."
+            helperText="Link i brendshëm (/prona) ose URL e plotë. Linku i jashtëm hapet në një skedë të re."
           />
           <Stack spacing={1}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>

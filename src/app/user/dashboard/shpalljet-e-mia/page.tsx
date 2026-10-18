@@ -15,6 +15,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  Pagination,
   Skeleton,
   Stack,
   TextField,
@@ -975,6 +976,10 @@ function ProfessionalCard({
 
 const MINE_PAGE_SIZE = 24;
 
+function itemPageKey<T>(item: T, index: number, getKey?: (item: T, index: number) => string | number) {
+  return String(getKey?.(item, index) ?? (item as { id?: string }).id ?? index);
+}
+
 function TabGrid<T>({
   loading,
   error,
@@ -990,28 +995,16 @@ function TabGrid<T>({
   emptyLabel?: string;
   getKey?: (item: T, index: number) => string | number;
 }) {
-  const [visibleCount, setVisibleCount] = React.useState(MINE_PAGE_SIZE);
-  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  const [page, setPage] = React.useState(1);
+  const listTopRef = React.useRef<HTMLDivElement | null>(null);
+  const pageIdentity = items.map((item, index) => itemPageKey(item, index, getKey)).join('\0');
 
   React.useEffect(() => {
-    setVisibleCount(MINE_PAGE_SIZE);
-  }, [items]);
+    setPage(1);
+  }, [pageIdentity]);
 
-  React.useEffect(() => {
-    if (visibleCount >= items.length) return;
-    const node = sentinelRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setVisibleCount((n) => Math.min(items.length, n + MINE_PAGE_SIZE));
-        }
-      },
-      { rootMargin: '400px 0px' }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [items.length, visibleCount]);
+  const totalPages = Math.max(1, Math.ceil(items.length / MINE_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
 
   if (loading) {
     return (
@@ -1069,18 +1062,42 @@ function TabGrid<T>({
     );
   }
 
-  const visible = items.slice(0, visibleCount);
+  const start = (currentPage - 1) * MINE_PAGE_SIZE;
+  const visible = items.slice(start, start + MINE_PAGE_SIZE);
+
+  const goToPage = (nextPage: number) => {
+    if (nextPage === currentPage) return;
+    setPage(nextPage);
+    window.requestAnimationFrame(() => {
+      listTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   return (
-    <Stack spacing={2}>
+    <Stack ref={listTopRef} spacing={2} sx={{ scrollMarginTop: 16 }}>
       <Grid container spacing={2}>
         {visible.map((item, idx) => (
-          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={getKey?.(item, idx) ?? (item as { id?: string }).id ?? idx}>
+          <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={itemPageKey(item, start + idx, getKey)}>
             {renderCard(item)}
           </Grid>
         ))}
       </Grid>
-      {visibleCount < items.length ? <Box ref={sentinelRef} sx={{ height: 1 }} aria-hidden /> : null}
+      {totalPages > 1 ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1 }}>
+          <Pagination
+            page={currentPage}
+            count={totalPages}
+            shape="rounded"
+            size="medium"
+            siblingCount={0}
+            boundaryCount={1}
+            showFirstButton
+            showLastButton
+            onChange={(_event, value) => goToPage(value)}
+            aria-label="Faqet e njoftimeve"
+          />
+        </Box>
+      ) : null}
     </Stack>
   );
 }

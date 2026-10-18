@@ -6,6 +6,7 @@ import { Box, Button, Grid } from '@mui/material';
 import { BROWSE_PAGE_SIZE } from '@/lib/listing-filters';
 import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useRegisterPageRefresh } from '@/hooks/use-tab-refresh';
 import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import { useBrowseLoadContext } from '@/components/public/browse-load-context';
 import { MemberProfileCard } from '@/components/public/listing-cards/member-profile-card';
@@ -87,6 +88,17 @@ export function MembersBrowseGrid({
   }, [recoverEmpty, query, initialPage, initialMembers.length, applyFirstPage, reportResolved]);
 
   const recovering = recoverEmpty && members.length === 0 && (loading || error);
+
+  useRegisterPageRefresh(async () => {
+    try {
+      const res = await fetchPublicMemberSearch(query, BROWSE_PAGE_SIZE, initialPage);
+      if (!res.ok && res.members.length === 0) return;
+      applyFirstPage(res);
+      setError(false);
+    } catch {
+      // Keep the profiles already on screen.
+    }
+  });
 
   const retryFirstPage = React.useCallback(() => {
     setError(false);

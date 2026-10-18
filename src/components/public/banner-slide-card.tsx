@@ -511,10 +511,14 @@ export function BannerSlideCard({
 
   if (!href) return content;
 
+  const external = /^https?:\/\//i.test(href);
+
   return (
     <Box
-      component={RouterLink}
+      component={external ? 'a' : RouterLink}
       href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
       onClick={(event: React.MouseEvent) => {
         if (suppressNavRef.current) {
           event.preventDefault();

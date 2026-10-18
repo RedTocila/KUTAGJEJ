@@ -26,11 +26,36 @@ function normalizePayload(body) {
   };
 }
 
+function normalizeBannerHref(raw) {
+  const href = String(raw || '').trim();
+  if (!href) return { href: '', error: null };
+  if (href.startsWith('/') && !href.startsWith('//')) {
+    return { href, error: null };
+  }
+  const hadProtocol = /^https?:\/\//i.test(href);
+  const withProto = hadProtocol ? href : href.startsWith('//') ? `https:${href}` : `https://${href}`;
+  try {
+    const url = new URL(withProto);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('bad protocol');
+    }
+    if (!url.hostname.includes('.')) {
+      throw new Error('bad host');
+    }
+    return { href: hadProtocol ? href : url.href, error: null };
+  } catch {
+    return {
+      href,
+      error: 'Linku duhet të jetë një rrugë e brendshme (p.sh. /prona) ose një URL e plotë (https://example.com).',
+    };
+  }
+}
+
 function validate(payload) {
   // Title is optional — image-only banners are allowed.
-  if (payload.ctaHref && !payload.ctaHref.startsWith('/')) {
-    return 'Linku duhet të fillojë me "/" (p.sh. /prona).';
-  }
+  const link = normalizeBannerHref(payload.ctaHref);
+  if (link.error) return link.error;
+  payload.ctaHref = link.href;
   return null;
 }
 

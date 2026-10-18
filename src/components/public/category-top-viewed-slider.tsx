@@ -4,15 +4,17 @@ import * as React from 'react';
 import { Box, Container, Typography } from '@mui/material';
 
 import type { HomeVerticalId } from '@/lib/home-categories';
-import type {
-  PublicCarListing,
-  PublicDirectoryListing,
-  PublicJobListing,
-  PublicMarketplaceListing,
-  PublicRealEstateListing,
-  TopViewedListing,
+import {
+  fetchTopViewedListings,
+  type PublicCarListing,
+  type PublicDirectoryListing,
+  type PublicJobListing,
+  type PublicMarketplaceListing,
+  type PublicRealEstateListing,
+  type TopViewedListing,
 } from '@/lib/public-listings-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useRegisterPageRefresh } from '@/hooks/use-tab-refresh';
 import { useLiveFeedListings } from '@/hooks/use-live-feed-listings';
 import { CarCard } from '@/components/public/listing-cards/car-card';
 import { DirectoryListingCard } from '@/components/public/listing-cards/directory-listing-card';
@@ -63,7 +65,18 @@ export function CategoryTopViewedSlider({
   const t = useCopy();
   const byRating = isRatingFeaturedVertical(verticalId);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const liveListings = useLiveFeedListings(listings, {
+  const [items, setItems] = React.useState(listings);
+
+  React.useEffect(() => {
+    setItems(listings);
+  }, [listings]);
+
+  useRegisterPageRefresh(async () => {
+    const next = await fetchTopViewedListings(verticalId);
+    if (next.length > 0) setItems(next);
+  });
+
+  const liveListings = useLiveFeedListings(items, {
     dropExpiredJobs: verticalId === 'jobs',
   });
   const total = liveListings.length;

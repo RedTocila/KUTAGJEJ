@@ -53,6 +53,7 @@ import {
 import { fetchPublicMemberSearch, type PublicMemberSearchHit } from '@/lib/public-member-client';
 import { useCopy } from '@/hooks/use-copy';
 import { useLanguage } from '@/hooks/use-language';
+import { useRegisterTabRefresh } from '@/hooks/use-tab-refresh';
 import { useScrollRevealHidden } from '@/hooks/use-scroll-reveal-hidden';
 import { TransientNotification } from '@/components/core/transient-success-alert';
 import { HeroCategoryCircles } from '@/components/public/hero-category-circles';
@@ -100,7 +101,7 @@ async function fetchVerticalResults(
   verticalId: HomeVerticalId,
   query: string,
   page = 1
-): Promise<{ items: SearchItem[]; total: number }> {
+): Promise<{ items: SearchItem[]; total: number; ok: boolean }> {
   const filters = { q: query.trim() ? [query.trim()] : undefined };
   switch (verticalId) {
     case 'real-estate': {
@@ -108,6 +109,7 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'real-estate' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     case 'cars': {
@@ -115,6 +117,7 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'car' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     case 'jobs': {
@@ -122,6 +125,7 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'job' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     case 'marketplace': {
@@ -129,6 +133,7 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'marketplace' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     case 'businesses': {
@@ -136,6 +141,7 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'businesses' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     case 'professionals': {
@@ -143,10 +149,11 @@ async function fetchVerticalResults(
       return {
         items: res.listings.map((listing) => ({ kind: 'professionals' as const, listing })),
         total: res.total,
+        ok: res.ok,
       };
     }
     default:
-      return { items: [], total: 0 };
+      return { items: [], total: 0, ok: false };
   }
 }
 
@@ -445,6 +452,28 @@ export function SearchPageView({
 
     return () => window.clearTimeout(handle);
   }, [pathname, query, categoryId, runProfileSearch, runVerticalSearch, syncUrl]);
+
+  useRegisterTabRefresh('search', async () => {
+    if (isOverlay || !active || !categoryId || categoryId === 'ai') return;
+    if (isProfilesSearchCategory(categoryId)) {
+      const res = await fetchPublicMemberSearch(query, PAGE_SIZE, 1);
+      if (!res.ok) return;
+      setItems(res.members.map((member) => ({ kind: 'profile' as const, member })));
+      setTotal(res.total);
+      setSubmittedQuery(query.trim());
+      setError(null);
+      setHasSearched(true);
+      return;
+    }
+    if (!isHomeVerticalId(categoryId)) return;
+    const res = await fetchVerticalResults(categoryId, query, 1);
+    if (!res.ok) return;
+    setItems(res.items);
+    setTotal(res.total);
+    setSubmittedQuery(query.trim());
+    setError(null);
+    setHasSearched(true);
+  });
 
   const handleSelectCategory = (index: number) => {
     const next = localizedCategories[index];

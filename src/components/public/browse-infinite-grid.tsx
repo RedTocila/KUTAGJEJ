@@ -21,6 +21,7 @@ import {
   type PublicRealEstateListing,
 } from '@/lib/public-listings-client';
 import { useCopy } from '@/hooks/use-copy';
+import { useRegisterPageRefresh } from '@/hooks/use-tab-refresh';
 import { ListingCardsSkeleton } from '@/components/core/content-skeletons';
 import { useBrowseLoadContext } from '@/components/public/browse-load-context';
 import { CarCard } from '@/components/public/listing-cards/car-card';
@@ -222,6 +223,17 @@ export function BrowseInfiniteGrid({
   const liveListings = useLiveFeedListings(listings, {
     dropExpiredJobs: verticalId === 'jobs',
     dropExpiredOkazion: verticalId === 'okazion',
+  });
+
+  useRegisterPageRefresh(async () => {
+    try {
+      const res = await fetchPage(verticalId, filters, initialPage);
+      if (!res.ok && res.listings.length === 0) return;
+      applyFirstPage(res);
+      setError(false);
+    } catch {
+      // Keep the listings already on screen.
+    }
   });
 
   const retryFirstPage = React.useCallback(() => {

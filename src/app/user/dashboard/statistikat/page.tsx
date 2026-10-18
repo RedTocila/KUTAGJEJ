@@ -9,6 +9,7 @@ import {
   Grid,
   IconButton,
   InputAdornment,
+  Pagination,
   Stack,
   TextField,
   ToggleButton,
@@ -54,6 +55,8 @@ type StatRow = {
   status: string;
   imageUrl: string | null;
 };
+
+const STATS_PAGE_SIZE = 24;
 
 const STATS_PERIOD_OPTIONS: { value: StatsPeriod; label: string }[] = [
   { value: 'all', label: 'Të gjitha' },
@@ -164,6 +167,8 @@ export default function UserStatisticsPage() {
   >({});
   const [periodTotals, setPeriodTotals] = React.useState({ views: 0, shares: 0, saves: 0 });
   const [search, setSearch] = React.useState('');
+  const [page, setPage] = React.useState(1);
+  const listAnchorRef = React.useRef<HTMLDivElement | null>(null);
   const deferredSearch = React.useDeferredValue(search);
   const searchQuery = React.useMemo(() => normalizeSearch(deferredSearch), [deferredSearch]);
   const hasSearch = searchQuery.length > 0;
@@ -319,6 +324,23 @@ export default function UserStatisticsPage() {
     [displayRows, hasSearch, searchQuery],
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / STATS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filteredRows.slice((currentPage - 1) * STATS_PAGE_SIZE, currentPage * STATS_PAGE_SIZE);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchQuery, period]);
+
+  const goToPage = (nextPage: number) => {
+    const target = Math.min(Math.max(nextPage, 1), totalPages);
+    if (target === currentPage) return;
+    setPage(target);
+    window.requestAnimationFrame(() => {
+      listAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   if (!user) return null;
 
   if (!canPublish) {
@@ -413,7 +435,7 @@ export default function UserStatisticsPage() {
             </Grid>
           </Grid>
 
-          <Stack spacing={1.5} sx={{ mt: 3 }}>
+          <Stack ref={listAnchorRef} spacing={1.5} sx={{ mt: 3, scrollMarginTop: 16 }}>
             <Stack
               direction="row"
               sx={{
@@ -491,7 +513,7 @@ export default function UserStatisticsPage() {
               </Box>
             ) : (
               <Stack divider={<Box sx={{ borderTop: '1px solid', borderColor: 'divider' }} />}>
-                {filteredRows.map((row) => (
+                {pageRows.map((row) => (
                   <Stack
                     key={row.key}
                     direction={{ xs: 'column', sm: 'row' }}
@@ -567,6 +589,23 @@ export default function UserStatisticsPage() {
                 ))}
               </Stack>
             )}
+
+            {totalPages > 1 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1 }}>
+                <Pagination
+                  page={currentPage}
+                  count={totalPages}
+                  shape="rounded"
+                  size="medium"
+                  siblingCount={0}
+                  boundaryCount={1}
+                  showFirstButton
+                  showLastButton
+                  onChange={(_event, value) => goToPage(value)}
+                  aria-label="Faqet e njoftimeve"
+                />
+              </Box>
+            ) : null}
           </Stack>
         </Box>
       )}

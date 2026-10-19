@@ -32,7 +32,7 @@ export type RouteSkeletonKind =
   | 'listings'
   | 'form';
 
-const SQUARE_BROWSE = new Set([paths.public.jobs, paths.public.businesses, paths.public.professionals]);
+const SQUARE_BROWSE = new Set<string>([paths.public.jobs, paths.public.businesses, paths.public.professionals]);
 
 export function skeletonKindForPath(path: string): RouteSkeletonKind {
   if (path === paths.home) return 'home';

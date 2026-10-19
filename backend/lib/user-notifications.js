@@ -3,14 +3,11 @@
 const { getSupabaseAdmin } = require('./supabase');
 const { isUuid } = require('./public-listings/query-helpers');
 const { sendPushToUser } = require('./push-notifications');
-const { runAfterResponse } = require('./run-after');
 
-/** Mirror an in-app notification to the user's phones (native app). */
-function pushNotification(doc) {
+/** Mirror an in-app notification to the user's iPhone before the request ends. */
+async function pushNotification(doc) {
   if (!doc?.user_id) return;
-  runAfterResponse(() =>
-    sendPushToUser(doc.user_id, { title: doc.title, body: doc.message, href: doc.href }),
-  );
+  await sendPushToUser(doc.user_id, { title: doc.title, body: doc.message, href: doc.href });
 }
 
 const PREF_KEYS = [
@@ -213,7 +210,7 @@ async function createUserNotification({
       }
       throw error;
     }
-    pushNotification(data);
+    await pushNotification(data);
     return formatNotification(data);
   } catch (err) {
     console.warn('createUserNotification:', err?.message || err);
@@ -294,7 +291,7 @@ async function notifyNewMessage({
           .select('*')
           .single();
         if (!updErr && updated) {
-          pushNotification(updated);
+          await pushNotification(updated);
           return formatNotification(updated);
         }
       }

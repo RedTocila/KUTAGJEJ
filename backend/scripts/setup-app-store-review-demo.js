@@ -359,6 +359,16 @@ async function ensureConversation(sb, { posterId, inquirerId, listing, script, s
       })
       .eq('id', conversationId);
     if (updErr) throw updErr;
+
+    const recipientId = last.sender_id === posterId ? inquirerId : posterId;
+    const { notifyNewMessage } = require('../lib/user-notifications');
+    await notifyNewMessage({
+      recipientId,
+      conversationId,
+      senderId: last.sender_id,
+      listingTitle: listing.title,
+      preview: last.body,
+    });
     console.log(`Created conversation about "${listing.title}" with ${rows.length} messages`);
   } else {
     console.log(`Conversation about "${listing.title}" already exists`);

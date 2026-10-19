@@ -192,7 +192,7 @@ export function PublicHeader() {
                       fontSize: '0.95rem',
                     }}
                   >
-                    {t.common.postListing}
+                    {t.common.post}
                   </Button>
                 </>
               ) : (

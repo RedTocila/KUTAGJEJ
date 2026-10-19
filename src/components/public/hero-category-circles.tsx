@@ -245,7 +245,8 @@ export function HeroCategoryCircles({
                 px: { md: 1.25 },
                 py: { md: 1.5 },
                 boxSizing: 'border-box',
-                bgcolor: tileBg(mode),
+                // Desktop stays flat; the tile fill appears only as a hover highlight.
+                bgcolor: { xs: tileBg(mode), md: 'transparent' },
                 border: 'none',
                 boxShadow: 'none',
                 transition: `background-color ${MOTION.fast} ${MOTION.ease}, transform ${MOTION.release} ${MOTION.ease}`,

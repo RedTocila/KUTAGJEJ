@@ -56,14 +56,31 @@ function apnsJwt(cfg) {
 
 function sendToApns(host, cfg, deviceToken, payload) {
   return new Promise((resolve) => {
+    let settled = false;
     let client;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      try {
+        client?.close();
+      } catch {
+        // session already closed
+      }
+      resolve(result);
+    };
+
     try {
       client = http2.connect(host);
     } catch (err) {
       resolve({ status: 0, reason: err?.message || 'connect failed' });
       return;
     }
-    client.on('error', (err) => resolve({ status: 0, reason: err?.message || 'connection error' }));
+
+    let sawResponse = false;
+    client.on('error', (err) => {
+      if (sawResponse) return;
+      finish({ status: 0, reason: err?.message || 'connection error' });
+    });
 
     const req = client.request({
       ':method': 'POST',
@@ -74,30 +91,37 @@ function sendToApns(host, cfg, deviceToken, payload) {
       'apns-priority': '10',
       'content-type': 'application/json',
     });
-    req.setTimeout(10000, () => req.close(http2.constants.NGHTTP2_CANCEL));
+    req.setTimeout(10000, () => {
+      finish({ status: 0, reason: 'timeout' });
+      try {
+        req.close(http2.constants.NGHTTP2_CANCEL);
+      } catch {
+        // request already finished
+      }
+    });
 
     let status = 0;
     let body = '';
     req.on('response', (headers) => {
+      sawResponse = true;
       status = Number(headers[':status']) || 0;
     });
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
       body += chunk;
     });
-    req.on('close', () => {
-      client.close();
+    req.on('end', () => {
       let reason = '';
       try {
         reason = body ? JSON.parse(body).reason || '' : '';
       } catch {
         reason = body.slice(0, 120);
       }
-      resolve({ status, reason });
+      finish({ status, reason });
     });
     req.on('error', (err) => {
-      client.close();
-      resolve({ status: 0, reason: err?.message || 'request error' });
+      if (sawResponse) return;
+      finish({ status: 0, reason: err?.message || 'request error' });
     });
     req.end(JSON.stringify(payload));
   });
@@ -171,7 +195,8 @@ async function sendPushToUser(userId, { title, body, href }) {
       rows.map(async ({ token }) => {
         let result = await sendToApns(primary, cfg, token, payload);
         // Xcode debug builds get sandbox tokens; App Store / TestFlight builds get production ones.
-        if (result.status === 400 && result.reason === 'BadDeviceToken') {
+        // A dropped connection never reached Apple, so try the other host before giving up.
+        if (result.status === 0 || (result.status === 400 && result.reason === 'BadDeviceToken')) {
           result = await sendToApns(fallback, cfg, token, payload);
         }
         if (result.status === 410 || (result.status === 400 && result.reason === 'BadDeviceToken')) {

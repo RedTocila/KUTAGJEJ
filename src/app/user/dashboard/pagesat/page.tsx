@@ -189,7 +189,6 @@ export default function MyPaymentsPage() {
       <UserPageHeader
         icon={<ReceiptIcon size={20} weight="duotone" />}
         title={t.nav.payments}
-        description="Abonimet aktive dhe historiku i shpenzimeve."
       />
 
       {error ? (
@@ -211,7 +210,6 @@ export default function MyPaymentsPage() {
           {subscriptions.length > 0 ? (
             <PortalSectionCard
               title={t.myPayments.subscriptionsTitle}
-              description={t.myPayments.subscriptionsDescription}
               icon={<CreditCardIcon size={22} weight="duotone" />}
             >
               <Stack spacing={1.25}>
@@ -272,7 +270,6 @@ export default function MyPaymentsPage() {
 
           <PortalSectionCard
             title="Historiku"
-            description="Shpenzimet me para dhe me Boost Coins."
             icon={<ReceiptIcon size={22} weight="duotone" />}
             headerExtra={
               <Chip

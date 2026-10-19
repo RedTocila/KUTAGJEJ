@@ -471,7 +471,7 @@ export function AddListingPickerDialog({
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <PickerRowLabel
                       title={t.picker.freeListing}
-                      hint={scopedCanPost ? (fallbackByKey[category]?.hint || t.picker.freeListingHint) : t.picker.quotaUnavailable}
+                      hint={scopedCanPost ? undefined : t.picker.quotaUnavailable}
                       titleWeight={600}
                     />
                   </Box>
@@ -524,7 +524,7 @@ export function AddListingPickerDialog({
                     <SparkleIcon size={18} weight="duotone" />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <PickerRowLabel title={t.picker.aiImport} hint={t.picker.aiImportHint} titleColor={AI_SEARCH_BLUE} />
+                    <PickerRowLabel title={t.picker.aiImport} titleColor={AI_SEARCH_BLUE} />
                   </Box>
                 </Box>
 
@@ -583,7 +583,7 @@ export function AddListingPickerDialog({
                         <SealPercentIcon size={18} weight="regular" />
                       </Box>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <PickerRowLabel title={t.picker.postAsOkazion} hint={scopedQuotaAvailable ? t.picker.okazionHint : t.picker.quotaUnavailable} titleColor={OKAZION_ACCENT} />
+                        <PickerRowLabel title={t.picker.postAsOkazion} hint={scopedQuotaAvailable ? undefined : t.picker.quotaUnavailable} titleColor={OKAZION_ACCENT} />
                       </Box>
                     </Box>
                   </>
@@ -644,7 +644,7 @@ export function AddListingPickerDialog({
                         <CrownSimpleIcon size={18} weight="regular" />
                       </Box>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <PickerRowLabel title={t.picker.postAsPremium} hint={scopedQuotaAvailable ? t.picker.premiumHint : t.picker.quotaUnavailable} titleColor="warning.main" />
+                        <PickerRowLabel title={t.picker.postAsPremium} hint={scopedQuotaAvailable ? undefined : t.picker.quotaUnavailable} titleColor="warning.main" />
                       </Box>
                     </Box>
                   </>
@@ -693,7 +693,6 @@ export function AddListingPickerDialog({
                   <Box sx={{ minWidth: 0, flex: 1 }}>
                     <PickerRowLabel
                       title={t.picker.allListings}
-                      hint={t.picker.allListingsHint}
                       titleWeight={600}
                     />
                   </Box>
@@ -746,7 +745,7 @@ export function AddListingPickerDialog({
                     <SparkleIcon size={18} weight="duotone" />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <PickerRowLabel title={t.picker.aiImport} hint={t.picker.aiImportHint} titleColor={AI_SEARCH_BLUE} />
+                    <PickerRowLabel title={t.picker.aiImport} titleColor={AI_SEARCH_BLUE} />
                   </Box>
                 </Box>
 
@@ -798,7 +797,7 @@ export function AddListingPickerDialog({
                     <SealPercentIcon size={18} weight="regular" />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <PickerRowLabel title={t.picker.postAsOkazion} hint={t.picker.okazionHint} titleColor={OKAZION_ACCENT} />
+                    <PickerRowLabel title={t.picker.postAsOkazion} titleColor={OKAZION_ACCENT} />
                   </Box>
                 </Box>
 
@@ -849,7 +848,7 @@ export function AddListingPickerDialog({
                     <CrownSimpleIcon size={18} weight="regular" />
                   </Box>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <PickerRowLabel title={t.picker.postAsPremium} hint={t.picker.premiumHint} titleColor="warning.main" />
+                    <PickerRowLabel title={t.picker.postAsPremium} titleColor="warning.main" />
                   </Box>
                 </Box>
                 </>
@@ -922,7 +921,7 @@ export function AddListingPickerDialog({
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <PickerRowLabel
                         title={opt.title}
-                        hint={quotaAvailable ? opt.hint : t.picker.quotaUnavailable}
+                        hint={quotaAvailable ? undefined : t.picker.quotaUnavailable}
                         titleWeight={600}
                       />
                     </Box>

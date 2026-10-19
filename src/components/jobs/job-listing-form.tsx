@@ -595,7 +595,6 @@ export function JobListingForm({
         />
         <JobFormStringList
           label="Role të kërkuara (opsionale)"
-          hint="Shtoni pozicionet ose role që kërkoni për këtë punë."
           items={form.requiredRoles}
           onChange={(requiredRoles) => setForm((p) => ({ ...p, requiredRoles }))}
           minItems={0}

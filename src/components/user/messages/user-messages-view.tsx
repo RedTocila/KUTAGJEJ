@@ -2620,7 +2620,6 @@ export function UserMessagesView() {
       <UserPageHeader
         icon={<ChatsCircleIcon size={20} weight="duotone" />}
         title={t.messages.title}
-        description={t.messages.description}
         sx={{
           display: { xs: showThreadOnMobile ? 'none' : 'flex', md: 'flex' },
           px: { xs: 2, md: 0 },

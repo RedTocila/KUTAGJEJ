@@ -155,26 +155,17 @@ export function BuyBoostCreditsPanel({ showHeader = true }: { showHeader?: boole
           sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
         >
           <Box>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <BoostCoinIcon size={28} />
               <Typography variant="h4" component="h1" sx={{ fontWeight: 850 }}>
                 Boost Coins
               </Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              {t.packages.boostCoinsDescription}
-            </Typography>
           </Box>
           <BalanceChip balance={balance} label={t.packages.balance} />
         </Stack>
       ) : (
-        <Stack
-          direction="row"
-          sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            {t.packages.boostCoinsBigger}
-          </Typography>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
           <BalanceChip balance={balance} label={t.packages.balance} />
         </Stack>
       )}

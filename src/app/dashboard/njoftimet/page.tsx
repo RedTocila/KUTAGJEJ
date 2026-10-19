@@ -97,7 +97,6 @@ export default function ListingModerationPage() {
         icon={React.createElement(MegaphoneIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Njoftimet"
-        description="Njoftimet publikohen menjëherë. Hiqi ose rivendosi këtu nëse shkelin rregullat."
         actions={
           <>
             <Button

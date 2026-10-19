@@ -313,7 +313,6 @@ export function HomeBannersAdminPage() {
         icon={React.createElement(ImageIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Bannerat"
-        description="Postet e karuselit në krye të faqes kryesore. E gjithë karta është e klikueshme."
         actions={
           <Button
             variant="contained"

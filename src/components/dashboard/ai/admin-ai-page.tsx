@@ -451,7 +451,6 @@ export function AdminAiPage() {
         icon={React.createElement(SparkleIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Panel"
         title="Asistent AI"
-        description="Kontrolloni përdoruesit, Boost Coins, njoftime dhe tabela të lejuara me gjuhë natyrale. Nuk ekzekutohet SQL i lirë. Veprimet e rrezikshme kërkojnë konfirmim."
         actions={
           <Stack direction="row" spacing={1}>
             <Button variant="outlined" onClick={() => void loadAudit()} sx={productButtonSx}>

@@ -697,11 +697,6 @@ export default function UserProfilePage() {
       {canEdit ? (
         <PortalSectionCard
           title="Të dhënat e profilit"
-          description={
-            isBusiness
-              ? 'Emri, kategoria dhe kontakti që shfaqen në profilin publik të biznesit.'
-              : 'Emri dhe kontakti që shfaqen në profilin tuaj publik.'
-          }
           icon={<UserIcon size={22} weight="duotone" />}
         >
           <Box component="form" onSubmit={(e) => void onSaveProfile(e)}>
@@ -813,14 +808,9 @@ export default function UserProfilePage() {
                 }}
               >
                 <Stack spacing={1.5}>
-                  <Stack spacing={0.25}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      Rrjetet sociale
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Shtoni lidhjet që dëshironi të shfaqni në banner-in e profilit publik.
-                    </Typography>
-                  </Stack>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                    Rrjetet sociale
+                  </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                     <TextField
                       label="Instagram"
@@ -910,7 +900,6 @@ export default function UserProfilePage() {
         <Box ref={businessUpgradeRef} id="upgrade-business">
           <PortalSectionCard
             title="Kthehu në llogari biznesi"
-            description="Për të postuar në kategorinë Biznese dhe për të menaxhuar profilin e lokalit."
             icon={<BuildingsIcon size={22} weight="duotone" />}
           >
             <Box component="form" onSubmit={(e) => void onConvertToBusiness(e)}>
@@ -975,7 +964,6 @@ export default function UserProfilePage() {
       {canEdit ? (
         <PortalSectionCard
           title="Verifiko llogarinë"
-          description="Opsionale — nuk ndryshon llojin e llogarisë (Biznes / Individ)."
           icon={<ShieldCheckIcon size={22} weight="duotone" />}
         >
           <AccountVerificationCard />
@@ -984,7 +972,6 @@ export default function UserProfilePage() {
 
       <PortalSectionCard
         title="Fjalëkalimi"
-        description="Ndryshoni fjalëkalimin e llogarisë."
         icon={<LockIcon size={22} weight="duotone" />}
       >
         <Box component="form" onSubmit={(e) => void onChangePassword(e)}>

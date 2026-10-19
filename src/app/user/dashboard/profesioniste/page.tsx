@@ -17,14 +17,9 @@ export default function UserProfessionalsDashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Profesionistë
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Menaxhoni profilin publik, portofolin dhe orën e përgjigjes.
-        </Typography>
-      </Stack>
+      <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+        Profesionistë
+      </Typography>
 
       <Card sx={portalCardSx}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>

@@ -20,7 +20,6 @@ export default function BoostCoinsPackagesPage() {
       <UserPageHeader
         icon={<BoostCoinIcon size={22} />}
         title={t.nav.buyBoostCoins}
-        description={t.packages.boostCoinsDescription}
         iconSx={{
           bgcolor: (muiTheme) => alpha(muiTheme.palette.warning.main, muiTheme.palette.mode === 'dark' ? 0.28 : 0.18),
           color: 'warning.main',

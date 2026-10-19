@@ -392,9 +392,6 @@ export function ShareMyListingsDialog({
           <Stack direction="row" sx={{ alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.25, gap: 1 }}>
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1.25 }}>{t.title}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, lineHeight: 1.35 }}>
-                {t.subtitle}
-              </Typography>
             </Box>
             <IconButton aria-label={t.close} onClick={onClose} size="small" edge="end">
               <XIcon size={18} weight="bold" />

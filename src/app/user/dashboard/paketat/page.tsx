@@ -117,7 +117,7 @@ function CategoryCard({
   accent: PlanAccent;
   visual: React.ReactNode;
   title: string;
-  description: string;
+  description?: string;
   badge?: string;
   badgeColor?: string;
   cta: string;
@@ -173,20 +173,22 @@ function CategoryCard({
             />
           ) : null}
         </Stack>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            lineHeight: 1.45,
-            fontSize: '0.8rem',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {description}
-        </Typography>
+        {description ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              lineHeight: 1.45,
+              fontSize: '0.8rem',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {description}
+          </Typography>
+        ) : null}
         <Stack
           className="packages-hub-cta"
           direction="row"
@@ -255,7 +257,6 @@ export default function UserPackagesPage() {
           href={paths.user.packagesMain}
           accent="primary"
           title={t.packages.plansTitle}
-          description={t.packages.mainDescription}
           badge={activePlanLabel}
           badgeColor={activePlanBadgeColor}
           cta={t.packages.exploreNow}
@@ -265,7 +266,6 @@ export default function UserPackagesPage() {
           href={paths.user.packagesExtra}
           accent="primary"
           title={t.nav.packagesExtra}
-          description={t.packages.extraDescription}
           cta={t.packages.exploreNow}
           visual={
             <Box
@@ -288,7 +288,6 @@ export default function UserPackagesPage() {
           href={paths.user.packagesCredits}
           accent="warning"
           title={t.packages.buyCoinsTitle}
-          description={t.packages.boostCoinsDescription}
           cta={t.packages.exploreNow}
           visual={<BoostCoinIcon size={56} />}
         />

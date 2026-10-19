@@ -109,7 +109,6 @@ export function PaymentsAdminPage() {
         icon={React.createElement(CreditCardIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Financa"
         title="Pagesat"
-        description="Vetëm pagesat e suksesshme (të paguara). Porositë e hapura por të papaguara nuk shfaqen."
       />
 
       <Grid container spacing={2}>

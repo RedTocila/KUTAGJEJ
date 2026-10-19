@@ -93,7 +93,6 @@ export default function BusinessMenuPage() {
       <PostListingHeader
         icon={BusinessesCategoryIcon}
         title="Menu e biznesit"
-        description="Shtoni artikuj manualisht, ose importoni nga foto me AI."
         closeHref={paths.user.myRealEstateListings}
       />
 

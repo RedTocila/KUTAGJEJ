@@ -101,7 +101,6 @@ export default function AdminProfilePage() {
           icon={React.createElement(UserGearIcon, { size: 22, weight: 'duotone' })}
           eyebrow="Llogaria"
           title="Profili im"
-          description="Llogaria juaj menaxhohet nga administratori i platformës."
         />
         <Alert severity="info">
           Përditësimet e emailit, fjalëkalimit dhe të dhënave të tjera bëhen vetëm nga një administrator KuTaGjej.
@@ -136,7 +135,6 @@ export default function AdminProfilePage() {
         icon={React.createElement(UserGearIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Llogaria"
         title="Profili im"
-        description="Përditëso të dhënat e llogarisë së administratorit dhe fjalëkalimin."
       />
 
       <Grid container spacing={3}>

@@ -91,7 +91,6 @@ export function ReferralTrackingAdminPage() {
         icon={React.createElement(HandshakeIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Rritja"
         title="Gjurmimi i referimeve"
-        description="Shiko kush ka referuar, kush u referua dhe sa Boost Credits u dhanë."
       />
 
       {error ? <Alert severity="error">{error}</Alert> : null}

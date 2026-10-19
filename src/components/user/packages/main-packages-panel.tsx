@@ -595,12 +595,6 @@ export function MainPackagesPanel() {
         </Stack>
       ) : null}
 
-      {!loading && plans.length > 0 ? (
-        <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-          {t.packages.subscriptionNote}
-        </Typography>
-      ) : null}
-
       <ProductDialog
         open={cancelOpen}
         onClose={canceling ? undefined : () => setCancelOpen(false)}

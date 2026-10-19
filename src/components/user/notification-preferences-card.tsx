@@ -92,15 +92,15 @@ function NativePushPermissionRow() {
           <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.3 }}>
             {t.notifications.devicePushTitle}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-            {permission === 'granted'
-              ? t.notifications.devicePushOn
-              : permission === 'denied'
-                ? t.notifications.devicePushDenied
-                : permission === 'unavailable'
-                  ? t.notifications.devicePushUnavailable
-                  : t.notifications.devicePushDescription}
-          </Typography>
+          {permission === 'granted' || permission === 'denied' || permission === 'unavailable' ? (
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+              {permission === 'granted'
+                ? t.notifications.devicePushOn
+                : permission === 'denied'
+                  ? t.notifications.devicePushDenied
+                  : t.notifications.devicePushUnavailable}
+            </Typography>
+          ) : null}
         </Stack>
         {permission === 'prompt' || permission === 'unknown' ? (
           <Button variant="contained" disabled={busy || permission === 'unknown'} onClick={() => void enable()} sx={{ alignSelf: 'flex-start' }}>
@@ -164,7 +164,6 @@ export function NotificationPreferencesCard() {
   return (
     <PortalSectionCard
       title={t.notifications.prefsTitle}
-      description={t.notifications.prefsDescription}
       icon={React.createElement(GearSixIcon, { size: 22, weight: 'duotone' })}
     >
       <Stack spacing={1.25}>
@@ -190,9 +189,6 @@ export function NotificationPreferencesCard() {
               <Stack spacing={0.2} sx={{ minWidth: 0, flex: 1 }}>
                 <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.3 }}>
                   {labels[key].title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.4 }}>
-                  {labels[key].description}
                 </Typography>
               </Stack>
               <Switch

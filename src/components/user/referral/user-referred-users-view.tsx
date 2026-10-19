@@ -55,7 +55,6 @@ export function UserReferredUsersView() {
       <UserPageHeader
         icon={<UsersThreeIcon size={20} weight="duotone" />}
         title="Të referuarit"
-        description="Të gjithë përdoruesit që janë regjistruar me kodin tuaj."
         action={
           users.length > 0 ? (
             <Chip size="small" label={users.length} sx={{ height: 22, fontWeight: 800 }} />

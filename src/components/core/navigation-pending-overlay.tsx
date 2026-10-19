@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
 
-import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
+import { RouteLoadingSkeleton, skeletonKindForPath } from '@/components/core/route-loading-skeleton';
 import { paths } from '@/paths';
 import { mainTabFromPath } from '@/lib/main-tabs';
 import { HISTORY_BACK_ATTR, isModifiedClick } from '@/lib/navigate-back';
@@ -68,8 +68,8 @@ function isInternalAnchorNavigation(anchor: HTMLAnchorElement): string | null {
 }
 
 /**
- * Covers the screen with the branded splash in the same click turn, before Next.js
- * commits the new route. The bar keeps moving until the destination is ready.
+ * Covers the current page with a skeleton in the same click turn, before Next.js
+ * commits the new route. The branded splash is only the cold start.
  */
 export function NavigationPendingOverlay(): React.JSX.Element | null {
   const pathname = usePathname();
@@ -119,7 +119,7 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
     const isHome = target === paths.home;
     const timer = window.setTimeout(() => {
       clearPendingNavigation();
-      // Soft nav never committed — hard load so the user is not stuck on the splash.
+      // Soft nav never committed — hard load so the user is not stuck on the skeleton.
       if (
         isHome &&
         typeof window !== 'undefined' &&
@@ -135,5 +135,5 @@ export function NavigationPendingOverlay(): React.JSX.Element | null {
   // Hide in the same commit as the route so the settle view transition captures the real page.
   if (pathname && normalizeNavPath(pathname) === pendingPath) return null;
 
-  return <BrandLoadingScreen mode="pending" enter pendingOverlay />;
+  return <RouteLoadingSkeleton kind={skeletonKindForPath(pendingPath)} cover />;
 }

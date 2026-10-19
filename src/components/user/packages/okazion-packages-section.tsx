@@ -350,7 +350,6 @@ export function OkazionPackagesSection() {
         title={
           quantity > 1 ? `${t.packages.okazionCardTitle(pkg.days)} ×${quantity}` : t.packages.okazionCardTitle(pkg.days)
         }
-        subtitle={t.packages.okazionSubtitle}
         accent="error"
         highlighted
         details={[

@@ -156,7 +156,6 @@ export function SavedListingsView() {
       <UserPageHeader
         icon={<BookmarkIcon size={20} weight="duotone" />}
         title={t.saved.title}
-        description={t.saved.description}
         sx={{
           // Match messages: title only on mobile; keep icon + description on desktop.
           '& .MuiTypography-body2': { display: { xs: 'none', md: 'block' } },

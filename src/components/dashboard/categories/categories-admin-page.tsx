@@ -70,7 +70,6 @@ export function CategoriesAdminPage() {
         icon={React.createElement(SquaresFourIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Kategoritë"
-        description="Katër vertikale fikse — secila me slug për URL dhe lloje listimi që përdoruesit zgjedhin kur publikojnë."
       />
 
       {loadError ? (

@@ -123,7 +123,6 @@ export default function StaffUsersPage() {
         icon={React.createElement(UsersIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Ekipi"
         title="Përdoruesit"
-        description="Lista e portalit dhe stafit. Shihni verifikimin dhe ndryshoni profilin e përdoruesve."
         actions={
           <Button variant="contained" onClick={() => setCreateOpen(true)} disabled={roles.length === 0} sx={productButtonSx}>
             Shto përdorues

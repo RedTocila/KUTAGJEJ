@@ -1,6 +1,6 @@
-import { BrandLoadingScreen } from '@/components/core/brand-loading-screen';
+import { RouteLoadingSkeleton } from '@/components/core/route-loading-skeleton';
 
-/** Branded splash while this route is still loading. */
+/** Page skeleton while this route is still loading. The branded splash is only the first entry. */
 export default function Loading() {
-  return <BrandLoadingScreen />;
+  return <RouteLoadingSkeleton kind="inbox" />;
 }

@@ -44,14 +44,9 @@ export default function UserBusinessesDashboardPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Biznese
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Menaxhoni profilin e lokalit, orarin dhe rezervimet. Menunë e shtoni nga Shpalljet e mia.
-        </Typography>
-      </Stack>
+      <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+        Biznese
+      </Typography>
 
       <Box
         sx={{

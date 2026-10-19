@@ -88,7 +88,6 @@ export default function AiUsagePage() {
       <UserPageHeader
         icon={<SparkleIcon size={22} weight="duotone" />}
         title={t.aiUsage.title}
-        description={t.aiUsage.description}
       />
 
       {error ? (

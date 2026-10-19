@@ -88,7 +88,6 @@ export function AiPricesAdminPage() {
         icon={<SparkleIcon size={22} weight="duotone" />}
         eyebrow="Financa"
         title="Çmimet e përdorimit AI"
-        description="Këto tarifa shfaqen te Përdorimi AI dhe zbatohen te faturimi me Boost Coins."
       />
 
       {error ? (

@@ -177,7 +177,6 @@ export default function RealEstateLocationsAdminPage() {
         icon={React.createElement(MapPinIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Vendndodhjet"
-        description="Qytetet dhe zonat për dropdown-et e formës së pronave. Një zonë për rresht kur redaktoni."
         actions={
           <Button variant="contained" startIcon={React.createElement(PlusIcon, { size: 20 })} onClick={openCreate} sx={productButtonSx}>
             Shto qytet

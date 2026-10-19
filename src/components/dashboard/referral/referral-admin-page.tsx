@@ -70,7 +70,6 @@ export function ReferralAdminPage() {
         icon={React.createElement(HandshakeIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Rritja"
         title="Referimi"
-        description="Shiko nivelet, shpërblimet dhe badge-t; administratorët mund t'i përditësojnë vlerat."
         actions={
           isPlatformAdmin ? (
             <Button

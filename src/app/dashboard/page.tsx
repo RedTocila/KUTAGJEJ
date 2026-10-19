@@ -170,7 +170,6 @@ export default function Page() {
         icon={React.createElement(ChartPieIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Paneli"
         title="Përmbledhje"
-        description={`Mirë se erdhe, ${user?.firstName || user?.email}. Shiko njoftimet aktive, heqjet dhe stafin.`}
       />
 
       <Grid container spacing={2}>

@@ -225,10 +225,7 @@ export function ListingBoostChoiceBar({
       </Stack>
 
       <ProductDialog open={dialog === 'premium'} onClose={closeDialog} fullWidth maxWidth="xs">
-        <ProductDialogTitle
-          onClose={closeDialog}
-          subtitle={t.packages.premiumPaySubtitle}
-        >
+        <ProductDialogTitle onClose={closeDialog}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CrownSimpleIcon size={20} weight="regular" color={PREMIUM_AMBER} />
             <Box component="span" sx={{ color: PREMIUM_AMBER }}>
@@ -316,10 +313,7 @@ export function ListingBoostChoiceBar({
 
       {hideOkazion || !onPostOkazion ? null : (
         <ProductDialog open={dialog === 'okazion'} onClose={closeDialog} fullWidth maxWidth="xs">
-          <ProductDialogTitle
-            onClose={closeDialog}
-            subtitle={t.packages.okazionPaySubtitle}
-          >
+          <ProductDialogTitle onClose={closeDialog}>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <SealPercentIcon size={20} weight="regular" color={OKAZION_ACCENT} />
               <Box component="span" sx={{ color: OKAZION_ACCENT }}>

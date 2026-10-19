@@ -67,9 +67,6 @@ export function SupportContactRow({ grouped = false }: { grouped?: boolean }) {
       <ProductDialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
         <ProductDialogTitle onClose={() => setOpen(false)}>{t.support.dialogTitle}</ProductDialogTitle>
         <ProductDialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.5 }}>
-            {t.support.dialogDescription}
-          </Typography>
           <Stack spacing={1.25}>
             {callHref ? (
               <Button

@@ -80,7 +80,6 @@ export default function RolesPage() {
         icon={React.createElement(ShieldIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Ekipi"
         title="Rolet"
-        description="Individual dhe Biznes janë role kryesore. Shtoni role shtesë, pastaj zgjidhini kur krijoni staf."
         actions={
           <Button variant="contained" onClick={() => setCreateOpen(true)} sx={productButtonSx}>
             Shto rol

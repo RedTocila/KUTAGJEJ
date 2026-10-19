@@ -43,7 +43,6 @@ async function copyText(text: string): Promise<boolean> {
 const copy = {
   sq: {
     title: 'Refero & Kurse',
-    invite: 'Ftoni miqtë dhe merrni',
     off: (pct: number) => `${pct}% ZBRITJE`,
     forever: 'PËRGJITHMONË',
     codeLabel: 'Kodi yt i referimit',
@@ -55,7 +54,6 @@ const copy = {
   },
   en: {
     title: 'Refer & Save',
-    invite: 'Invite friends and get',
     off: (pct: number) => `${pct}% OFF`,
     forever: 'FOREVER',
     codeLabel: 'Your referral code',
@@ -246,17 +244,6 @@ export function ReferralSummaryCard() {
               }}
             >
               {t.title}
-            </Typography>
-            <Typography
-              sx={{
-                mt: 0.25,
-                fontSize: { xs: '0.78rem', sm: '0.82rem' },
-                lineHeight: 1.3,
-                fontWeight: 550,
-                color: 'text.secondary',
-              }}
-            >
-              {t.invite}
             </Typography>
             <Stack
               direction="row"

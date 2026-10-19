@@ -1721,7 +1721,6 @@ export default function UserMyListingsPage() {
           <UserPageHeader
             icon={<ListBulletsIcon size={20} weight="duotone" />}
             title={t.nav.myListings}
-            description="Menaxhoni njoftimet tuaja sipas kategorisë."
             sx={{ flex: 1, minWidth: 0 }}
           />
           <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0, mt: 0.15 }}>

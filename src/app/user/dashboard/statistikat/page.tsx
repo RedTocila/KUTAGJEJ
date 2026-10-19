@@ -359,7 +359,6 @@ export default function UserStatisticsPage() {
       <UserPageHeader
         icon={<ChartLineUpIcon size={20} weight="duotone" />}
         title={t.nav.statistics}
-        description="Si kanë shkuar njoftimet tuaja — shikime, ndarje dhe ruajtje."
       />
 
       {error ? (

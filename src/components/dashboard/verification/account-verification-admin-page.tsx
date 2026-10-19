@@ -151,7 +151,6 @@ export function AccountVerificationAdminPage() {
         icon={React.createElement(ShieldCheckIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Kategoritë"
         title="Verifikimi"
-        description="Një verifikim llogarie për Punëdhënësit dhe Profesionistët."
         actions={
           <>
             <Button variant={filter === 'pending' ? 'contained' : 'outlined'} onClick={() => setFilter('pending')} sx={productButtonSx}>

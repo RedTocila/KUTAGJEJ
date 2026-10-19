@@ -112,7 +112,6 @@ export default function ContentReportsPage() {
         icon={React.createElement(FlagIcon, { size: 22, weight: 'duotone' })}
         eyebrow="Përmbajtja"
         title="Raportimet"
-        description="Raportimet nga përdoruesit për njoftime, mesazhe dhe profile. Shqyrtoji brenda 24 orëve; hiq njoftimin nga faqja Njoftimet nëse shkel rregullat."
         actions={
           <Button component={Link} href={paths.dashboard.listingModeration} variant="outlined" sx={productButtonSx}>
             Hap Njoftimet

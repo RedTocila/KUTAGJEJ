@@ -72,9 +72,11 @@ function TierLine({
         <Typography variant="body2" sx={{ fontWeight: 750, lineHeight: 1.25, fontSize: '0.82rem' }}>
           {title}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-          {hint}
-        </Typography>
+        {hint ? (
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
+            {hint}
+          </Typography>
+        ) : null}
         {showProgress ? (
           <LinearProgress
             variant="determinate"
@@ -163,11 +165,7 @@ function MiniBadge({
           {earned ? 'Kompletuar' : 'Në progres'}
           {pct > 0 ? ` · −${pct}% në paketa` : ''}
         </Typography>
-        {badge.description ? (
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-            {badge.description}
-          </Typography>
-        ) : isTrusted ? (
+        {isTrusted ? (
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
             {(badge as ReferralTrustedBadge).reviewsRequired} vlerësime
           </Typography>
@@ -181,7 +179,6 @@ function GroupCard({
   icon: Icon,
   kindLabel,
   title,
-  howItWorks,
   current,
   unit,
   thresholds,
@@ -192,7 +189,6 @@ function GroupCard({
   icon: PhosphorIcon;
   kindLabel: string;
   title: string;
-  howItWorks: string;
   current: number;
   unit: string;
   thresholds: number[];
@@ -269,9 +265,6 @@ function GroupCard({
             <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', mt: 0.45, lineHeight: 1.25 }}>
               {title}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2, lineHeight: 1.35 }}>
-              {howItWorks}
-            </Typography>
           </Box>
         </Stack>
 
@@ -334,23 +327,13 @@ export function ProgramDisplay({
           <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}>
             {program.pageTitle}
           </Typography>
-          {program.pageSubtitle ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 640 }}>
-              {program.pageSubtitle}
-            </Typography>
-          ) : null}
         </Box>
-      ) : (
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 650 }}>
-          Çdo grup më poshtë është një lloj shpërblimi i ndryshëm — progresi juaj matet veç e veç.
-        </Typography>
-      )}
+      ) : null}
 
       <GroupCard
         icon={UserPlusIcon}
         kindLabel="1 · Referime falas"
         title={program.freeSignUpTitle || 'Regjistrime falas'}
-        howItWorks="Ftoni miq që krijojnë llogari falas. Sa më shumë referime, aq më shumë Boost Coins."
         current={referralCount}
         unit="referime"
         thresholds={freeThresholds}
@@ -382,7 +365,6 @@ export function ProgramDisplay({
         icon={BoostCoinIcon as PhosphorIcon}
         kindLabel="2 · Referime të paguara"
         title={program.paidTitle || 'Referime të paguara'}
-        howItWorks="Kur personi i ftuar blen një paketë me pagesë, llogaritet si referim i paguar (shpërblime më të mëdha)."
         current={paidReferralCount}
         unit="të paguara"
         thresholds={paidThresholds}
@@ -418,7 +400,6 @@ export function ProgramDisplay({
         icon={StarIcon}
         kindLabel="3 · Vlerësime"
         title={program.reviewsTitle || 'Vlerësime'}
-        howItWorks="Fitoni Boost Coins kur merrni vlerësime nga klientët në njoftimet tuaja."
         current={reviewCount}
         unit="vlerësime"
         thresholds={reviewThresholds}
@@ -438,7 +419,7 @@ export function ProgramDisplay({
           <TierLine
             key={`${m.reviewsRequired}-${i}`}
             title={`${m.reviewsRequired} vlerësime`}
-            hint="Milestone i vlerësimeve"
+            hint=""
             reward={`+${m.boostCredits} BC`}
             done={reviewCount >= m.reviewsRequired}
             accent="warning"
@@ -486,10 +467,6 @@ export function ProgramDisplay({
             />
             <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', lineHeight: 1.25 }}>
               {program.completionTitle || 'Badge i platformës'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
-              {program.completionSubtitle ||
-                'Badge speciale kur arrini nivelet më të larta të programit të referimit.'}
             </Typography>
           </Box>
         </Stack>
@@ -550,20 +527,12 @@ export function ProgramDisplay({
             <Typography sx={{ fontWeight: 850, fontSize: '0.92rem', lineHeight: 1.25 }}>
               {program.loginStreakTitle || 'Aktivitet ditor'}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
-              {program.loginStreakSubtitle ||
-                'Shpërblime të vogla për aktivitet të rregullt — të ndara nga referimet.'}
-            </Typography>
           </Box>
         </Stack>
         <Stack spacing={0.15} sx={{ px: 1.15, py: 1 }}>
           <TierLine
             title={`${streakRequired} ditë radhazi`}
-            hint={
-              streakCurrent > 0
-                ? `${streakCurrent}/${streakRequired} ditë`
-                : 'Hyr çdo ditë në platformë'
-            }
+            hint={streakCurrent > 0 ? `${streakCurrent}/${streakRequired} ditë` : ''}
             reward={`+${loginStreak.boostCredits} BC`}
             done={streakCurrent >= streakRequired}
             accent="primary"

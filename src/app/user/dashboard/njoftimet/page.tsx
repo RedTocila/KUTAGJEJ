@@ -100,7 +100,6 @@ export default function UserNotificationsPage() {
         <UserPageHeader
           icon={React.createElement(BellIcon, { size: 22, weight: 'duotone' })}
           title={t.notifications.title}
-          description={t.notifications.pageDescription}
         />
         <Stack
           direction="row"

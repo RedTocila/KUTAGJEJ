@@ -154,7 +154,6 @@ export function UserReferralView() {
       <UserPageHeader
         icon={<HandshakeIcon size={20} weight="duotone" />}
         title="Referimi"
-        description="Ndani linkun — miqtë regjistrohen, ju fitoni Boost Coins."
       />
 
       {error ? (
@@ -379,9 +378,6 @@ export function UserReferralView() {
             <Stack spacing={1}>
               <Box sx={{ px: 0.25 }}>
                 <Typography sx={{ fontWeight: 850, fontSize: '1rem' }}>Llojet e shpërblimeve</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  5 grupe të ndryshme — çdo grup ka rregullat dhe progresin e vet.
-                </Typography>
               </Box>
               <ProgramDisplay
                 program={program}
